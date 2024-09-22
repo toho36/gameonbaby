@@ -9,7 +9,7 @@ const prisma = new PrismaClient()
 
 interface CreateRegistrationCommand {
   firstName: string;
-  lastName: number;
+  lastName: string;
   email: string;
   phoneNumber?: string | null;
   eventId: string;
@@ -18,7 +18,7 @@ interface CreateRegistrationCommand {
 
 interface RegistragionDto {
   firstName: string;
-  lastName: number;
+  lastName: string;
   email: string;
   registrationId: string;
   paymentType: PaymentType;
@@ -27,7 +27,7 @@ interface RegistragionDto {
 
 export async function createRegistration(command: CreateRegistrationCommand): Promise<RegistragionDto> {
 
-  const event: Event = await prisma.event.findFirst({
+  const event: Event | null = await prisma.event.findFirst({
     where: {
       id: command.eventId
     }
@@ -41,7 +41,7 @@ export async function createRegistration(command: CreateRegistrationCommand): Pr
     )
   }
 
-  const existingRegistration: Registration = await prisma.registration.findFirst({
+  const existingRegistration: Registration | null = await prisma.registration.findFirst({
     where: {
       event_id: command.eventId,
       email: {
@@ -86,7 +86,7 @@ export async function createRegistration(command: CreateRegistrationCommand): Pr
     lastName: registration.last_name,
     email: registration.email,
     registrationId: registration.id,
-    paymentType: registration.payment_type,
+    paymentType: PaymentType[registration.payment_type as keyof typeof PaymentType],
     qrCodeData: paymentData
   }
 }

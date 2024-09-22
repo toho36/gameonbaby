@@ -1,6 +1,9 @@
+export const dynamic = "force-dynamic";
+
 import {NextResponse} from 'next/server';
 import {type Event, PrismaClient} from "@prisma/client";
 import getCode, {ErrorCodes, Modules} from "~/app/api/error/error-codes";
+import {ApiError} from "~/utils/ApiError";
 
 const prisma = new PrismaClient()
 
@@ -13,7 +16,7 @@ type LatestEventResponse = {
 
 
 export async function GET() {
-  const event: Event = await prisma.event.findFirst({
+  const event: Event | null = await prisma.event.findFirst({
     where: {
       from: {
         gt: new Date()
@@ -25,10 +28,7 @@ export async function GET() {
   });
 
   if (!event) {
-    return NextResponse.json<ErrorResponse>({
-      code: getCode(Modules.EVENT, ErrorCodes.NOT_FOUND),
-      message: 'There is no event available at the moment.'
-    }, {status: 404})
+    throw new ApiError("There is no event available at the moment.", 404, getCode(Modules.EVENT, ErrorCodes.NOT_FOUND))
   }
 
   const response: LatestEventResponse = {

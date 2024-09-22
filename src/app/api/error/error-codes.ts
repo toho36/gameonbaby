@@ -1,5 +1,3 @@
-import {Simulate} from "react-dom/test-utils";
-
 export enum ErrorCodes {
   NOT_FOUND,
   BAD_PAYMENT_TYPE,

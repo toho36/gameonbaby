@@ -4,6 +4,7 @@ import {NextResponse} from 'next/server';
 import {type Event, PrismaClient} from "@prisma/client";
 import getCode, {ErrorCodes, Modules} from "~/app/api/error/error-codes";
 import {ApiError} from "~/utils/ApiError";
+import {withErrorHandling} from "~/utils/errorHandler";
 
 const prisma = new PrismaClient()
 
@@ -15,7 +16,7 @@ type LatestEventResponse = {
 }
 
 
-export async function GET() {
+export const GET = withErrorHandling(async (req: Request): Promise<NextResponse> => {
   const event: Event | null = await prisma.event.findFirst({
     where: {
       from: {
@@ -39,4 +40,4 @@ export async function GET() {
   }
 
   return NextResponse.json(response);
-}
+});

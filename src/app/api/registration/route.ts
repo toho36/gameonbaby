@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import {NextResponse} from "next/server";
 import {PaymentType} from "~/app/constant/paymentType";
 import getCode, {ErrorCodes, Modules} from "~/app/api/error/error-codes";
@@ -7,7 +9,7 @@ import {withErrorHandling} from "~/utils/errorHandler";
 
 interface CreateRegistrationRequest {
   firstName: string;
-  lastName: number;
+  lastName: string;
   email: string;
   phoneNumber?: string | null;
   eventId: string;
@@ -16,7 +18,7 @@ interface CreateRegistrationRequest {
 
 interface CreateRegistrationResponse {
   firstName: string;
-  lastName: number;
+  lastName: string;
   email: string;
   registrationId: string;
   paymentType: PaymentType;
@@ -24,8 +26,8 @@ interface CreateRegistrationResponse {
 }
 
 export const POST = withErrorHandling(async (req: Request): Promise<NextResponse> => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const request: CreateRegistrationRequest = await req.json();
-  console.log(request);
 
   // Validate payment type
   if (!Object.values(PaymentType).includes(request.paymentType)) {

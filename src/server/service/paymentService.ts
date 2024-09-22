@@ -12,7 +12,7 @@ enum QrParamType {
 
 export interface CreatePaymentCommand {
   firstName: string;
-  lastName: number;
+  lastName: string;
   price: number;
 }
 

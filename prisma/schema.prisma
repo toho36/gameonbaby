@@ -76,7 +76,7 @@ model Registration {
   first_name   String
   last_name    String
   email        String
-  phone_number String
+  phone_number String?
   payment_type String
   created_at   DateTime
   payment      Payment?

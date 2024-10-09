@@ -1,4 +1,5 @@
 "use client";
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 import { useForm, SubmitHandler } from "react-hook-form";
 
 interface FormData {
@@ -27,7 +28,7 @@ const PaymentForm: React.FC = () => {
       className="flex w-full max-w-lg flex-col gap-6 rounded-lg bg-white p-8 shadow-lg"
     >
       <div>
-        <label className="mb-2 block font-semibold text-gray-700">Name:</label>
+        <label className="mb-2 block font-semibold text-gray-700">Names:</label>
         <input
           type="text"
           className="w-full rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"

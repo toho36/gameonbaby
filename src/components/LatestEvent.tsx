@@ -32,13 +32,20 @@ const LatestEvent = () => {
     return <div>Loading...</div>;
   }
 
+  const eventWithId = event as {
+    id: number;
+    price: number;
+    from: string;
+    to: string;
+  };
+
   return (
     <div>
       <h1>Latest Event</h1>
-      <p>ID: {event.id}</p>
-      <p>Price: ${event.price}</p>
-      <p>From: {new Date(event.from).toLocaleString()}</p>
-      <p>To: {new Date(event.to).toLocaleString()}</p>
+      <p>ID: {eventWithId.id}</p>
+      <p>Price: ${eventWithId.price}</p>
+      <p>From: {new Date(eventWithId.from).toLocaleString()}</p>
+      <p>To: {new Date(eventWithId.to).toLocaleString()}</p>
     </div>
   );
 };

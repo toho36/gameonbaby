@@ -1,5 +1,3 @@
-import Link from "next/link";
-import LatestEvent from "~/components/LatestEvent";
 import PaymentForm from "~/components/PaymentForm";
 
 export default function HomePage() {
@@ -9,7 +7,6 @@ export default function HomePage() {
         <h1 className="text-5xl font-extrabold tracking-tight text-white sm:text-[5rem]">
           Game <span className="text-[hsl(280,100%,70%)]">On</span> Registration
         </h1>
-        <LatestEvent />
         <PaymentForm />
       </div>
     </main>

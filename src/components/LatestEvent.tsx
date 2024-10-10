@@ -42,10 +42,14 @@ const LatestEvent = () => {
   return (
     <div>
       <h1>Latest Event</h1>
-      <p>ID: {eventWithId.id}</p>
-      <p>Price: ${eventWithId.price}</p>
-      <p>From: {new Date(eventWithId.from).toLocaleString()}</p>
-      <p>To: {new Date(eventWithId.to).toLocaleString()}</p>
+      {event && (
+        <>
+          <p>ID: {eventWithId.id}</p>
+          <p>Price: ${eventWithId.price}</p>
+          <p>From: {new Date(eventWithId.from).toLocaleString()}</p>
+          <p>To: {new Date(eventWithId.to).toLocaleString()}</p>
+        </>
+      )}
     </div>
   );
 };

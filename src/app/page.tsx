@@ -1,5 +1,6 @@
 import PaymentForm from "~/components/PaymentForm";
 import { PrismaClient } from "@prisma/client";
+import RegistrationForm from "~/components/RegistrationForm";
 
 const db = new PrismaClient();
 export default async function HomePage() {
@@ -15,7 +16,9 @@ export default async function HomePage() {
             {user.price} {user.from.toISOString()} {user.to.toISOString()}
           </div>
         ))}
-        <PaymentForm />
+        {/* <PaymentForm />
+         */}
+        <RegistrationForm />
       </div>
     </main>
   );

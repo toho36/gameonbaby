@@ -1,165 +1,189 @@
-// components/RegistrationForm.tsx
 "use client";
-import React from "react";
-import { useForm, type SubmitHandler } from "react-hook-form";
+import React, { useEffect, useState } from "react";
 
-interface FormData {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phoneNumber?: string; // optional field
-  eventId: string;
-  paymentType: "QR" | "Cash"; // update as necessary
-}
+type Event = {
+  id: string;
+  price: number;
+  from: string;
+  to: string;
+  created_at: string;
+};
 
 const RegistrationForm: React.FC = () => {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<FormData>();
+  const [events, setEvents] = useState<Event[]>([]);
+  const [formData, setFormData] = useState({
+    eventId: "",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phoneNumber: "",
+    paymentType: "credit_card", // default value
+  });
 
-  const onSubmit: SubmitHandler<FormData> = async (data) => {
+  // Fetch events on component mount
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        try {
+          const response = await fetch("/api/events/all");
+          if (!response.ok) throw new Error("Network response was not ok");
+          const data = (await response.json()) as Event[];
+          setEvents(data);
+        } catch (error) {
+          console.error("Failed to fetch events:", error);
+        }
+      } catch (error) {
+        console.error("Failed to fetch events:", error);
+      }
+    };
+    fetchEvents().catch((error) => {
+      console.error("Failed to fetch events:", error);
+    });
+  }, []);
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  // Submit the registration form
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
       const response = await fetch("/api/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          firstName: data.firstName,
-          lastName: data.lastName,
-          email: data.email,
-          phoneNumber: data.phoneNumber,
-          eventId: data.eventId,
-          paymentType: data.paymentType,
-        }),
+        body: JSON.stringify(formData),
       });
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.statusText}`);
-      }
-
-      const result = (await response.json()) as Record<string, unknown>;
-      console.log("Registration successful:", result);
+      if (!response.ok) throw new Error("Network response was not ok");
+      alert("Registration successful!");
     } catch (error) {
-      console.error(
-        "Unexpected error:",
-        error instanceof Error ? error.message : String(error),
-      );
+      console.error("Failed to register:", error);
+      alert("Registration failed.");
     }
   };
 
   return (
     <form
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={handleSubmit}
       className="flex w-full max-w-lg flex-col gap-6 rounded-lg bg-white p-8 shadow-lg"
     >
       <div>
-        <label className="mb-2 block font-semibold text-gray-700">
-          First Name:
+        <label
+          htmlFor="eventId"
+          className="mb-2 block font-semibold text-gray-700"
+        >
+          Select Event
+        </label>
+        <select
+          name="eventId"
+          onChange={handleChange}
+          value={formData.eventId}
+          required
+          className="w-full rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          <option value="">Choose an event</option>
+          {events.map((event) => (
+            <option key={event.id} value={event.id}>
+              Event from {new Date(event.from).toLocaleDateString()} to{" "}
+              {new Date(event.to).toLocaleDateString()} - ${event.price}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label
+          htmlFor="firstName"
+          className="mb-2 block font-semibold text-gray-700"
+        >
+          First Name
         </label>
         <input
           type="text"
+          name="firstName"
+          value={formData.firstName}
+          onChange={handleChange}
+          required
           className="w-full rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          {...register("firstName", { required: "First name is required" })}
         />
-        {errors.firstName && (
-          <p className="text-sm text-red-500">{errors.firstName.message}</p>
-        )}
       </div>
-
       <div>
-        <label className="mb-2 block font-semibold text-gray-700">
-          Last Name:
+        <label
+          htmlFor="lastName"
+          className="mb-2 block font-semibold text-gray-700"
+        >
+          Last Name
         </label>
         <input
           type="text"
+          name="lastName"
+          value={formData.lastName}
+          onChange={handleChange}
+          required
           className="w-full rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          {...register("lastName", { required: "Last name is required" })}
         />
-        {errors.lastName && (
-          <p className="text-sm text-red-500">{errors.lastName.message}</p>
-        )}
       </div>
-
       <div>
-        <label className="mb-2 block font-semibold text-gray-700">Email:</label>
+        <label
+          htmlFor="email"
+          className="mb-2 block font-semibold text-gray-700"
+        >
+          Email
+        </label>
         <input
           type="email"
+          name="email"
+          value={formData.email}
+          onChange={handleChange}
+          required
           className="w-full rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          {...register("email", {
-            required: "Email is required",
-            pattern: {
-              value: /^[^@]+@[^@]+\.[^@]+$/,
-              message: "Invalid email format",
-            },
-          })}
         />
-        {errors.email && (
-          <p className="text-sm text-red-500">{errors.email.message}</p>
-        )}
       </div>
-
       <div>
-        <label className="mb-2 block font-semibold text-gray-700">
-          Phone Number:
+        <label
+          htmlFor="phoneNumber"
+          className="mb-2 block font-semibold text-gray-700"
+        >
+          Phone Number
         </label>
         <input
           type="tel"
+          name="phoneNumber"
+          value={formData.phoneNumber}
+          onChange={handleChange}
           className="w-full rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          {...register("phoneNumber", {
-            required: "Phone number is required",
-            minLength: {
-              value: 9,
-              message: "Phone number must be at least 9 digits",
-            },
-            pattern: {
-              value: /^\d+$/,
-              message: "Phone number must be numeric",
-            },
-          })}
         />
-        {errors.phoneNumber && (
-          <p className="text-sm text-red-500">{errors.phoneNumber.message}</p>
-        )}
       </div>
-
       <div>
-        <label className="mb-2 block font-semibold text-gray-700">
-          Event ID:
-        </label>
-        <input
-          type="text"
-          className="w-full rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          {...register("eventId", { required: "Event ID is required" })}
-        />
-        {errors.eventId && (
-          <p className="text-sm text-red-500">{errors.eventId.message}</p>
-        )}
-      </div>
-
-      <div>
-        <label className="mb-2 block font-semibold text-gray-700">
-          Payment Method:
+        <label
+          htmlFor="paymentType"
+          className="mb-2 block font-semibold text-gray-700"
+        >
+          Payment Type
         </label>
         <select
+          name="paymentType"
+          onChange={handleChange}
+          value={formData.paymentType}
           className="w-full rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          {...register("paymentType", { required: true })}
         >
-          <option value="QR">QR</option>
-          <option value="Cash">Cash</option>
+          <option value="credit_card">Credit Card</option>
+          <option value="paypal">PayPal</option>
+          <option value="bank_transfer">Bank Transfer</option>
         </select>
       </div>
-
       <button
         type="submit"
         className="w-full rounded-md bg-indigo-600 p-2 font-semibold text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
       >
-        Submit
+        Register
       </button>
     </form>
   );
 };
-
 export default RegistrationForm;

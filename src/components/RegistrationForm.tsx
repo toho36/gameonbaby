@@ -53,7 +53,7 @@ const RegistrationForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await fetch("/api/register", {
+      const response = await fetch("/api/registration", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

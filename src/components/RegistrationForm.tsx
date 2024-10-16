@@ -172,9 +172,8 @@ const RegistrationForm: React.FC = () => {
           value={formData.paymentType}
           className="w-full rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
-          <option value="credit_card">Credit Card</option>
-          <option value="paypal">PayPal</option>
-          <option value="bank_transfer">Bank Transfer</option>
+          <option value="CASH">CASH</option>
+          <option value="CARD">CARD</option>
         </select>
       </div>
       <button

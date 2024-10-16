@@ -49,30 +49,8 @@ const RegistrationForm: React.FC = () => {
     });
   };
 
-  // Submit the registration form
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const response = await fetch("/api/registration", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
-      if (!response.ok) throw new Error("Network response was not ok");
-      alert("Registration successful!");
-    } catch (error) {
-      console.error("Failed to register:", error);
-      alert("Registration failed.");
-    }
-  };
-
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex w-full max-w-lg flex-col gap-6 rounded-lg bg-white p-8 shadow-lg"
-    >
+    <form className="flex w-full max-w-lg flex-col gap-6 rounded-lg bg-white p-8 shadow-lg">
       <div>
         <label
           htmlFor="eventId"

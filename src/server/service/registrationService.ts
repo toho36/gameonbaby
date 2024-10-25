@@ -79,14 +79,14 @@ export async function createRegistration(
     command.paymentType === PaymentType.CARD
       ? await paymentService.createPayment({
           firstName: command.firstName,
-          lastName: command.lastName,
+          // lastName: command.lastName,
           price: event.price,
         })
       : null;
 
   return {
     firstName: registration.first_name || "",
-    lastName: registration.last_name || "",
+    lastName: registration.last_name ?? "",
     email: registration.email || "",
     registrationId: registration.id,
     paymentType:

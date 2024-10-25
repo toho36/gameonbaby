@@ -1,9 +1,26 @@
 // components/RegistrationForm.tsx
+"use client";
 import { createRegistration } from "~/actions/actions";
+import { createPayment } from "~/server/service/paymentService";
+import { useState } from "react";
+import Image from "next/image";
 // import prisma from "~/lib/db";
-export default async function RegistrationForm() {
+export default function RegistrationForm() {
   // const events = await prisma.event.findMany();
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
 
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const formData = new FormData(event.currentTarget);
+    const firstName = formData.get("first_name") as string;
+    // const lastName = formData.get("last_name") as string;
+    const price = 150; // Replace with the actual price or fetch it dynamically
+
+    const paymentCommand = { firstName, price };
+    const qrCode = await createPayment(paymentCommand);
+    setQrCodeUrl(qrCode);
+  };
   return (
     <div className="mx-auto w-full max-w-md rounded bg-white p-4 shadow-md">
       <h2 className="mb-4 text-2xl font-bold">
@@ -17,7 +34,11 @@ export default async function RegistrationForm() {
         {/* Kapacita: 32 / 42 */}
       </h3>
       <br />
-      <form action={createRegistration} className="space-y-4">
+      <form
+        action={createRegistration}
+        onSubmit={handleSubmit}
+        className="space-y-4"
+      >
         <div>
           <label className="block text-sm font-medium text-gray-700">
             Jméno
@@ -84,6 +105,18 @@ export default async function RegistrationForm() {
           Register
         </button>
       </form>
+      {qrCodeUrl && (
+        <div className="mt-4">
+          <h3 className="text-lg font-semibold">QR Code for Payment:</h3>
+          <Image
+            src={qrCodeUrl}
+            alt="QR Code for Payment"
+            width={200}
+            height={200}
+            className="mt-2"
+          />
+        </div>
+      )}
     </div>
   );
 }

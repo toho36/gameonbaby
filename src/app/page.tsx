@@ -11,6 +11,7 @@ export default async function HomePage() {
         {allUsers.map((user) => (
           <div key={user.id}>
             {user.price} {user.from.toISOString()} {user.to.toISOString()}
+            test
           </div>
         ))}
         {/* <PaymentForm />

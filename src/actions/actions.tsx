@@ -1,18 +1,28 @@
 "use server";
 
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import prisma from "~/lib/db";
 
 export async function createEvent(formData: FormData) {
-  await prisma.event.create({
-    data: {
-      price: Number(formData.get("price")),
-      from: new Date(formData.get("from") as string),
-      to: new Date(formData.get("to") as string),
-      created_at: new Date(),
-    },
-  });
-  revalidatePath("/events");
+  try {
+    await prisma.event.create({
+      data: {
+        price: Number(formData.get("price")),
+        from: new Date(formData.get("from") as string),
+        to: new Date(formData.get("to") as string),
+        created_at: new Date(),
+      },
+    });
+    revalidatePath("/events");
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2002") {
+        return { error: "Event with this price already exists" };
+      }
+    }
+    console.error(error);
+  }
 }
 
 export async function editEvent(formData: FormData) {
@@ -31,6 +41,11 @@ export async function deleteEvent(id: string) {
 }
 
 export async function createRegistration(formData: FormData) {
+  const firstEvent = await prisma.event.findFirst();
+
+  if (!firstEvent) {
+    throw new Error("No event available for registration.");
+  }
   await prisma.registration.create({
     data: {
       first_name: formData.get("first_name") as string,
@@ -39,7 +54,7 @@ export async function createRegistration(formData: FormData) {
       phone_number: formData.get("phone_number") as string,
       created_at: new Date(),
       event: {
-        connect: { id: formData.get("event_id") as string },
+        connect: { id: firstEvent.id },
       },
       payment_type: formData.get("payment_type") as string,
     },

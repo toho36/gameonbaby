@@ -1,49 +1,30 @@
 // components/RegistrationForm.tsx
 import { createRegistration } from "~/actions/actions";
-import prisma from "~/lib/db";
+// import prisma from "~/lib/db";
 export default async function RegistrationForm() {
-  const events = await prisma.event.findMany();
+  // const events = await prisma.event.findMany();
 
   return (
-    <div className="mx-auto max-w-md rounded bg-white p-4 shadow-md">
-      <h2 className="mb-4 text-2xl font-bold">Register for Event</h2>
+    <div className="mx-auto w-full max-w-md rounded bg-white p-4 shadow-md">
+      <h2 className="mb-4 text-2xl font-bold">
+        26.10 18:15-21:15 GameOn Volleyball Registrace
+      </h2>
+      <h3>
+        Kde: Sportovní hala TJ JM Chodov, Mírového hnutí 2137
+        <br />
+        Vstupné : 150Kč
+        <br />
+        {/* Kapacita: 32 / 42 */}
+      </h3>
+      <br />
       <form action={createRegistration} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700">
-            Select Event
-          </label>
-          <select
-            name="event_id" // Renamed to "event_id" to capture the correct event ID
-            required
-            className="w-full rounded border border-gray-300 p-2"
-          >
-            <option value="">Choose an event</option>
-            {events.map((event) => (
-              <option key={event.id} value={event.id}>
-                Event from {new Date(event.from).toLocaleDateString()} to{" "}
-                {new Date(event.to).toLocaleDateString()} - ${event.price}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            First Name
+            Jméno
           </label>
           <input
             type="text"
             name="first_name"
-            required
-            className="w-full rounded border border-gray-300 p-2"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Last Name
-          </label>
-          <input
-            type="text"
-            name="last_name"
             required
             className="w-full rounded border border-gray-300 p-2"
           />
@@ -61,7 +42,7 @@ export default async function RegistrationForm() {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">
-            Phone Number
+            Telefoní číslo
           </label>
           <input
             type="tel"
@@ -71,15 +52,30 @@ export default async function RegistrationForm() {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">
-            Payment Type
+            Způsob platby
           </label>
-          <select
-            name="payment_type"
-            className="w-full rounded border border-gray-300 p-2"
-          >
-            <option value="CASH">CASH</option>
-            <option value="CARD">CARD</option>
-          </select>
+          <div className="flex flex-col space-y-2">
+            <label className="flex items-center space-x-2">
+              <input
+                type="radio"
+                name="payment_type"
+                value="CARD"
+                required
+                className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">QR</span>
+            </label>
+            <label className="flex items-center space-x-2">
+              <input
+                type="radio"
+                name="payment_type"
+                value="CASH"
+                required
+                className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">Hotově</span>
+            </label>
+          </div>
         </div>
         <button
           type="submit"

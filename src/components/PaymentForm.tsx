@@ -85,7 +85,7 @@ const PaymentForm: React.FC = () => {
 
       <div>
         <label className="mb-2 block font-semibold text-gray-700">
-          Payment Method:
+          Payment Method: s
         </label>
         <select
           className="w-full rounded-md border p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"

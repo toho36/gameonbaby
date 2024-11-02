@@ -40,25 +40,46 @@ export async function deleteEvent(id: string) {
   });
 }
 
-export async function createRegistration(formData: FormData) {
-  const firstEvent = await prisma.event.findFirst();
+export async function createRegistration(
+  formData: FormData,
+): Promise<{ success: boolean; message?: string }> {
+  try {
+    console.log(
+      "Received form data:",
+      formData.get("first_name"),
+      formData.get("email"),
+    );
 
-  if (!firstEvent) {
-    throw new Error("No event available for registration.");
-  }
-  await prisma.registration.create({
-    data: {
-      first_name: formData.get("first_name") as string,
-      last_name: formData.get("last_name") as string,
-      email: formData.get("email") as string,
-      phone_number: formData.get("phone_number") as string,
-      created_at: new Date(),
-      event: {
-        connect: { id: firstEvent.id },
+    const firstEvent = await prisma.event.findFirst();
+    if (!firstEvent) {
+      console.log("No event found for registration.");
+      return {
+        success: false,
+        message: "No event available for registration.",
+      };
+    }
+
+    console.log("Creating new registration...");
+    await prisma.registration.create({
+      data: {
+        first_name: formData.get("first_name") as string,
+        email: formData.get("email") as string,
+        phone_number: formData.get("phone_number") as string,
+        created_at: new Date(),
+        event: { connect: { id: firstEvent.id } },
+        payment_type: formData.get("payment_type") as string,
       },
-      payment_type: formData.get("payment_type") as string,
-    },
-  });
+    });
+
+    console.log("Registration created successfully.");
+    return { success: true };
+  } catch (error) {
+    console.error("Error creating registration:", error);
+    return {
+      success: false,
+      message: "Failed to complete registration. Please try again later.",
+    };
+  }
 }
 
 export async function deleteRegistration(id: string) {

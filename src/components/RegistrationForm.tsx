@@ -1,7 +1,6 @@
-// components/RegistrationForm.tsx
 "use client";
-import { createRegistration } from "~/actions/actions";
 import { useState } from "react";
+import { createRegistration } from "~/actions/actions"; // Assuming this is the correct path
 import { sendRegistrationEmail } from "~/server/service/emailService"; // Import the new email service
 
 // Define the event date globally to use in QR code generation
@@ -16,6 +15,8 @@ function generateQRCodeURL(name: string) {
 
 export default function RegistrationForm() {
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -24,13 +25,22 @@ export default function RegistrationForm() {
     const firstName = formData.get("first_name") as string;
     const email = formData.get("email") as string;
 
+    // Generate QR code URL
     const qrCode = generateQRCodeURL(firstName);
     setQrCodeUrl(qrCode);
-    // Send the email with the QR code
-    if (qrCode) {
+
+    // Send registration and handle response
+    const response = await createRegistration(formData);
+
+    if (response.success) {
+      setSuccess("Registration completed successfully!");
+      // Send the email with the QR code
       await sendRegistrationEmail(email, firstName, qrCode);
+    } else {
+      setError(response.message ?? "Registration failed. Please try again.");
     }
-    console.log("qrcode", qrCodeUrl);
+
+    console.log("qrcode", qrCode, email, firstName);
   };
 
   return (
@@ -44,11 +54,7 @@ export default function RegistrationForm() {
         Vstupné : 150Kč
       </h3>
       <br />
-      <form
-        action={createRegistration}
-        onSubmit={handleSubmit}
-        className="space-y-4"
-      >
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700">
             Jméno
@@ -115,6 +121,10 @@ export default function RegistrationForm() {
           Register
         </button>
       </form>
+
+      {success && <p className="mt-4 text-green-600">{success}</p>}
+      {error && <p className="mt-4 text-red-600">{error}</p>}
+
       {qrCodeUrl && (
         <div className="mt-4">
           <h3 className="text-lg font-semibold">QR Code for Payment:</h3>

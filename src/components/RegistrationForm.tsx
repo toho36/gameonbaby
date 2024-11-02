@@ -118,6 +118,9 @@ export default function RegistrationForm() {
       {qrCodeUrl && (
         <div className="mt-4">
           <h3 className="text-lg font-semibold">QR Code for Payment:</h3>
+          <h2>
+            QR Code: potvrzení registrace platbou QR a email pro potvrzení
+          </h2>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={qrCodeUrl}

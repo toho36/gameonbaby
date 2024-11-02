@@ -27,7 +27,6 @@ export default function RegistrationForm() {
 
     // Generate QR code URL
     const qrCode = generateQRCodeURL(firstName);
-    setQrCodeUrl(qrCode);
 
     // Send registration and handle response
     const response = await createRegistration(formData);
@@ -35,7 +34,8 @@ export default function RegistrationForm() {
     if (response.success) {
       setSuccess("Registration completed successfully!");
       // Send the email with the QR code
-      await sendRegistrationEmail(email, firstName, qrCode);
+      // await sendRegistrationEmail(email, firstName, qrCode);
+      setQrCodeUrl(qrCode);
     } else {
       setError(response.message ?? "Registration failed. Please try again.");
     }

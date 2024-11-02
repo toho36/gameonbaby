@@ -4,9 +4,9 @@ import { createRegistration } from "~/actions/actions";
 import { createPayment } from "~/server/service/paymentService";
 import { useState } from "react";
 import Image from "next/image";
-// import prisma from "~/lib/db";
+import { sendRegistrationEmail } from "~/server/service/emailService"; // Import the new email service
+
 export default function RegistrationForm() {
-  // const events = await prisma.event.findMany();
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -14,13 +14,19 @@ export default function RegistrationForm() {
 
     const formData = new FormData(event.currentTarget);
     const firstName = formData.get("first_name") as string;
-    // const lastName = formData.get("last_name") as string;
+    const email = formData.get("email") as string;
     const price = 150; // Replace with the actual price or fetch it dynamically
 
     const paymentCommand = { firstName, price };
     const qrCode = await createPayment(paymentCommand);
     setQrCodeUrl(qrCode);
+
+    // Send the email with the QR code
+    if (qrCode) {
+      await sendRegistrationEmail(email, firstName, qrCode);
+    }
   };
+
   return (
     <div className="mx-auto w-full max-w-md rounded bg-white p-4 shadow-md">
       <h2 className="mb-4 text-2xl font-bold">
@@ -30,8 +36,6 @@ export default function RegistrationForm() {
         Kde: Sportovní hala TJ JM Chodov, Mírového hnutí 2137
         <br />
         Vstupné : 150Kč
-        <br />
-        {/* Kapacita: 32 / 42 */}
       </h3>
       <br />
       <form

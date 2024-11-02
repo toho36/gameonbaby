@@ -1,7 +1,7 @@
 "use server";
 // server/service/emailService.ts
 import { Resend } from "resend";
-import { EmailTemplate } from "~/components/email-template";
+import { EmailTemplate } from "~/components/EmailTemplate";
 
 const resend = new Resend(process.env.NEXT_PUBLIC_RESEND_API_KEY);
 
@@ -13,7 +13,7 @@ export async function sendRegistrationEmail(
   try {
     const { data, error } = await resend.emails.send({
       from: "info@gameon.baby",
-      to: ["toho0036@gmail.com"],
+      to: [toEmail],
       subject: "Your Registration QR Code",
       react: EmailTemplate({ firstName, qrCodeUrl }),
     });

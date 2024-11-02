@@ -1,10 +1,18 @@
 // components/RegistrationForm.tsx
 "use client";
 import { createRegistration } from "~/actions/actions";
-import { createPayment } from "~/server/service/paymentService";
 import { useState } from "react";
-import Image from "next/image";
 import { sendRegistrationEmail } from "~/server/service/emailService"; // Import the new email service
+
+// Define the event date globally to use in QR code generation
+const eventDate = "26.10. 18:15-21:15"; // Adjust this date accordingly
+
+// QR Code URL generator function
+function generateQRCodeURL(name: string) {
+  const paymentString = `SPD*1.0*ACC:CZ9130300000001628400020*RN:VU LOAN TIKOVSKA*AM:150*CC:CZK*MSG:GameOn ${name} for event on ${eventDate}`;
+  const encodedPaymentString = encodeURIComponent(paymentString);
+  return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodedPaymentString}`;
+}
 
 export default function RegistrationForm() {
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
@@ -15,16 +23,14 @@ export default function RegistrationForm() {
     const formData = new FormData(event.currentTarget);
     const firstName = formData.get("first_name") as string;
     const email = formData.get("email") as string;
-    const price = 150; // Replace with the actual price or fetch it dynamically
 
-    const paymentCommand = { firstName, price };
-    const qrCode = await createPayment(paymentCommand);
+    const qrCode = generateQRCodeURL(firstName);
     setQrCodeUrl(qrCode);
-
     // Send the email with the QR code
     if (qrCode) {
       await sendRegistrationEmail(email, firstName, qrCode);
     }
+    console.log("qrcode", qrCodeUrl);
   };
 
   return (
@@ -112,7 +118,8 @@ export default function RegistrationForm() {
       {qrCodeUrl && (
         <div className="mt-4">
           <h3 className="text-lg font-semibold">QR Code for Payment:</h3>
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src={qrCodeUrl}
             alt="QR Code for Payment"
             width={200}

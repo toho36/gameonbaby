@@ -38,9 +38,9 @@ export default function RegistrationForm() {
 
     if (response.success) {
       setSuccess("Registration completed successfully!");
-      // await sendRegistrationEmail(email, firstName, qrCode); // Uncomment to send email
+      await sendRegistrationEmail(email, firstName, qrCode, eventDate); // Pass eventDate here
       setQrCodeUrl(qrCode);
-      setIsRegistered(true); // Show the summary
+      setIsRegistered(true);
     } else {
       setError(response.message ?? "Registration failed. Please try again.");
     }
@@ -174,6 +174,7 @@ export default function RegistrationForm() {
           <p className="mt-2">
             Jestli jste neobdrželi email prosíme kontaktujte nás.
           </p>
+          <strong>Kontakt:</strong> 792 397 669
         </div>
       )}
     </div>

@@ -55,22 +55,32 @@ export const env = createEnv({
     KINDE_CLIENT_ID: process.env.KINDE_CLIENT_ID,
     KINDE_CLIENT_SECRET: process.env.KINDE_CLIENT_SECRET,
     KINDE_ISSUER_URL: process.env.KINDE_ISSUER_URL,
-    KINDE_SITE_URL: process.env.KINDE_SITE_URL,
-    KINDE_POST_LOGOUT_REDIRECT_URL: process.env.KINDE_POST_LOGOUT_REDIRECT_URL,
-    KINDE_POST_LOGIN_REDIRECT_URL: process.env.KINDE_POST_LOGIN_REDIRECT_URL,
+    KINDE_SITE_URL: process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.KINDE_SITE_URL,
+    KINDE_POST_LOGOUT_REDIRECT_URL: process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.KINDE_POST_LOGOUT_REDIRECT_URL,
+    KINDE_POST_LOGIN_REDIRECT_URL: process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}/dashboard`
+      : process.env.KINDE_POST_LOGIN_REDIRECT_URL,
     NEXT_PUBLIC_KINDE_AUTH_URL: process.env.NEXT_PUBLIC_KINDE_AUTH_URL,
     NEXT_PUBLIC_KINDE_CLIENT_ID: process.env.NEXT_PUBLIC_KINDE_CLIENT_ID,
-    NEXT_PUBLIC_KINDE_LOGOUT_URL: process.env.NEXT_PUBLIC_KINDE_LOGOUT_URL,
-    NEXT_PUBLIC_KINDE_REDIRECT_URL: process.env.NEXT_PUBLIC_KINDE_REDIRECT_URL,
+    NEXT_PUBLIC_KINDE_LOGOUT_URL: process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.NEXT_PUBLIC_KINDE_LOGOUT_URL,
+    NEXT_PUBLIC_KINDE_REDIRECT_URL: process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}/dashboard`
+      : process.env.NEXT_PUBLIC_KINDE_REDIRECT_URL,
   },
   /**
-   * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially
-   * useful for Docker builds.
+   * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.
+   * This is especially useful for Docker builds.
    */
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   /**
-   * Makes it so that empty strings are treated as undefined. `SOME_VAR: z.string()` and
-   * `SOME_VAR=''` will throw an error.
+   * Makes it so that empty strings are treated as undefined.
+   * `SOME_VAR: z.string()` and `SOME_VAR=''` will throw an error.
    */
   emptyStringAsUndefined: true,
 });

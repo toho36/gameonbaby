@@ -1,13 +1,12 @@
 import { withAuth } from "@kinde-oss/kinde-auth-nextjs/middleware";
 import { NextRequest } from "next/server";
 
+// Export a simple middleware function
 export default function middleware(req: NextRequest) {
-  return withAuth(req, {
-    isReturnToCurrentPage: true,
-    authUrl: process.env.NEXT_PUBLIC_KINDE_AUTH_URL,
-  });
+  return withAuth(req);
 }
 
+// Only protect these routes
 export const config = {
-  matcher: ["/dashboard/:path*", "/createEvent/:path*", "/api/auth/:path*"],
+  matcher: ["/dashboard/:path*", "/createEvent/:path*"],
 };

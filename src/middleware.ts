@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 export default function middleware(req: NextRequest) {
   return withAuth(req, {
     isReturnToCurrentPage: true,
+    authUrl: process.env.NEXT_PUBLIC_KINDE_AUTH_URL,
   });
 }
 

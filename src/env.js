@@ -1,6 +1,11 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
+// Check if we're in a build environment
+const isBuildEnv =
+  process.env.NODE_ENV === "production" &&
+  process.env.VERCEL_ENV === "production";
+
 export const env = createEnv({
   /**
    * Specify your server-side environment variables schema here. This way you can ensure the app
@@ -15,12 +20,18 @@ export const env = createEnv({
     DATABASE_USER: z.string(),
     DATABASE_PASSWORD: z.string(),
     DATABASE_DATABASE: z.string(),
-    KINDE_CLIENT_ID: z.string(),
-    KINDE_CLIENT_SECRET: z.string(),
-    KINDE_ISSUER_URL: z.string().url(),
-    KINDE_SITE_URL: z.string().url(),
-    KINDE_POST_LOGOUT_REDIRECT_URL: z.string().url(),
-    KINDE_POST_LOGIN_REDIRECT_URL: z.string().url(),
+    KINDE_CLIENT_ID: isBuildEnv ? z.string().optional() : z.string(),
+    KINDE_CLIENT_SECRET: isBuildEnv ? z.string().optional() : z.string(),
+    KINDE_ISSUER_URL: isBuildEnv
+      ? z.string().url().optional()
+      : z.string().url(),
+    KINDE_SITE_URL: isBuildEnv ? z.string().url().optional() : z.string().url(),
+    KINDE_POST_LOGOUT_REDIRECT_URL: isBuildEnv
+      ? z.string().url().optional()
+      : z.string().url(),
+    KINDE_POST_LOGIN_REDIRECT_URL: isBuildEnv
+      ? z.string().url().optional()
+      : z.string().url(),
   },
 
   /**
@@ -31,10 +42,18 @@ export const env = createEnv({
   client: {
     NEXT_PUBLIC_RESEND_API_KEY: z.string(),
     NEXT_PUBLIC_BANK_ACCOUNT: z.string(),
-    NEXT_PUBLIC_KINDE_AUTH_URL: z.string().url(),
-    NEXT_PUBLIC_KINDE_CLIENT_ID: z.string(),
-    NEXT_PUBLIC_KINDE_LOGOUT_URL: z.string().url(),
-    NEXT_PUBLIC_KINDE_REDIRECT_URL: z.string().url(),
+    NEXT_PUBLIC_KINDE_AUTH_URL: isBuildEnv
+      ? z.string().url().optional()
+      : z.string().url(),
+    NEXT_PUBLIC_KINDE_CLIENT_ID: isBuildEnv
+      ? z.string().optional()
+      : z.string(),
+    NEXT_PUBLIC_KINDE_LOGOUT_URL: isBuildEnv
+      ? z.string().url().optional()
+      : z.string().url(),
+    NEXT_PUBLIC_KINDE_REDIRECT_URL: isBuildEnv
+      ? z.string().url().optional()
+      : z.string().url(),
   },
 
   /**

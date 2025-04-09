@@ -4,6 +4,7 @@ import { GeistSans } from "geist/font/sans";
 import { type Metadata } from "next";
 import { Providers } from "./providers";
 import { Navbar } from "~/components/navbar";
+import { SessionProvider } from "~/components/session-provider";
 
 export const metadata: Metadata = {
   title: "GameOn Baby",
@@ -18,8 +19,10 @@ export default function RootLayout({
     <html lang="en" className={`${GeistSans.variable}`}>
       <body>
         <Providers>
-          <Navbar />
-          <main className="min-h-screen">{children}</main>
+          <SessionProvider>
+            <Navbar />
+            <main className="min-h-screen">{children}</main>
+          </SessionProvider>
         </Providers>
       </body>
     </html>

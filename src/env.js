@@ -1,6 +1,11 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
+// Check if we're in a build environment
+const isBuildEnv =
+  process.env.NODE_ENV === "production" &&
+  process.env.VERCEL_ENV === "production";
+
 export const env = createEnv({
   /**
    * Specify your server-side environment variables schema here. This way you can ensure the app
@@ -8,23 +13,25 @@ export const env = createEnv({
    */
   server: {
     DATABASE_URL: z.string().url(),
-    NODE_ENV: z
-      .enum(["development", "test", "production"])
-      .default("development"),
-    NEXTAUTH_SECRET:
-      process.env.NODE_ENV === "production"
-        ? z.string()
-        : z.string().optional(),
-    NEXTAUTH_URL: z.preprocess(
-      // This makes Vercel deployments not fail if you don't set NEXTAUTH_URL
-      // Since NextAuth.js automatically uses the VERCEL_URL if present.
-      (str) => process.env.VERCEL_URL ?? str,
-      // VERCEL_URL doesn't include `https` so it cant be validated as a URL
-      process.env.VERCEL ? z.string() : z.string().url()
-    ),
-    BANK_ACCOUNT: z.string(),
-    // DISCORD_CLIENT_ID: z.string(),
-    // DISCORD_CLIENT_SECRET: z.string(),
+    DATABASE_URL_NO_SSL: z.string().url(),
+    DATABASE_URL_NON_POOLING: z.string().url(),
+    DATABASE_PRISMA_URL: z.string().url(),
+    DATABASE_HOST: z.string(),
+    DATABASE_USER: z.string(),
+    DATABASE_PASSWORD: z.string(),
+    DATABASE_DATABASE: z.string(),
+    KINDE_CLIENT_ID: isBuildEnv ? z.string().optional() : z.string(),
+    KINDE_CLIENT_SECRET: isBuildEnv ? z.string().optional() : z.string(),
+    KINDE_ISSUER_URL: isBuildEnv
+      ? z.string().url().optional()
+      : z.string().url(),
+    KINDE_SITE_URL: isBuildEnv ? z.string().url().optional() : z.string().url(),
+    KINDE_POST_LOGOUT_REDIRECT_URL: isBuildEnv
+      ? z.string().url().optional()
+      : z.string().url(),
+    KINDE_POST_LOGIN_REDIRECT_URL: isBuildEnv
+      ? z.string().url().optional()
+      : z.string().url(),
   },
 
   /**
@@ -33,7 +40,20 @@ export const env = createEnv({
    * `NEXT_PUBLIC_`.
    */
   client: {
-    // NEXT_PUBLIC_CLIENTVAR: z.string(),
+    NEXT_PUBLIC_RESEND_API_KEY: z.string(),
+    NEXT_PUBLIC_BANK_ACCOUNT: z.string(),
+    NEXT_PUBLIC_KINDE_AUTH_URL: isBuildEnv
+      ? z.string().url().optional()
+      : z.string().url(),
+    NEXT_PUBLIC_KINDE_CLIENT_ID: isBuildEnv
+      ? z.string().optional()
+      : z.string(),
+    NEXT_PUBLIC_KINDE_LOGOUT_URL: isBuildEnv
+      ? z.string().url().optional()
+      : z.string().url(),
+    NEXT_PUBLIC_KINDE_REDIRECT_URL: isBuildEnv
+      ? z.string().url().optional()
+      : z.string().url(),
   },
 
   /**
@@ -42,19 +62,44 @@ export const env = createEnv({
    */
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,
-    NODE_ENV: process.env.NODE_ENV,
-    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
-    NEXTAUTH_URL: process.env.NEXTAUTH_URL,
-    BANK_ACCOUNT: process.env.BANK_ACCOUNT,
+    DATABASE_URL_NO_SSL: process.env.DATABASE_URL_NO_SSL,
+    DATABASE_URL_NON_POOLING: process.env.DATABASE_URL_NON_POOLING,
+    DATABASE_PRISMA_URL: process.env.DATABASE_PRISMA_URL,
+    DATABASE_HOST: process.env.DATABASE_HOST,
+    DATABASE_USER: process.env.DATABASE_USER,
+    DATABASE_PASSWORD: process.env.DATABASE_PASSWORD,
+    DATABASE_DATABASE: process.env.DATABASE_DATABASE,
+    NEXT_PUBLIC_RESEND_API_KEY: process.env.NEXT_PUBLIC_RESEND_API_KEY,
+    NEXT_PUBLIC_BANK_ACCOUNT: process.env.NEXT_PUBLIC_BANK_ACCOUNT,
+    KINDE_CLIENT_ID: process.env.KINDE_CLIENT_ID,
+    KINDE_CLIENT_SECRET: process.env.KINDE_CLIENT_SECRET,
+    KINDE_ISSUER_URL: process.env.KINDE_ISSUER_URL,
+    KINDE_SITE_URL: process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.KINDE_SITE_URL,
+    KINDE_POST_LOGOUT_REDIRECT_URL: process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.KINDE_POST_LOGOUT_REDIRECT_URL,
+    KINDE_POST_LOGIN_REDIRECT_URL: process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}/dashboard`
+      : process.env.KINDE_POST_LOGIN_REDIRECT_URL,
+    NEXT_PUBLIC_KINDE_AUTH_URL: process.env.NEXT_PUBLIC_KINDE_AUTH_URL,
+    NEXT_PUBLIC_KINDE_CLIENT_ID: process.env.NEXT_PUBLIC_KINDE_CLIENT_ID,
+    NEXT_PUBLIC_KINDE_LOGOUT_URL: process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.NEXT_PUBLIC_KINDE_LOGOUT_URL,
+    NEXT_PUBLIC_KINDE_REDIRECT_URL: process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}/dashboard`
+      : process.env.NEXT_PUBLIC_KINDE_REDIRECT_URL,
   },
   /**
-   * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially
-   * useful for Docker builds.
+   * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.
+   * This is especially useful for Docker builds.
    */
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   /**
-   * Makes it so that empty strings are treated as undefined. `SOME_VAR: z.string()` and
-   * `SOME_VAR=''` will throw an error.
+   * Makes it so that empty strings are treated as undefined.
+   * `SOME_VAR: z.string()` and `SOME_VAR=''` will throw an error.
    */
   emptyStringAsUndefined: true,
 });

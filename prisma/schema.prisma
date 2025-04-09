@@ -74,7 +74,7 @@ model Registration {
   event        Event    @relation(fields: [event_id], references: [id])
   event_id     String
   first_name   String
-  last_name    String
+  last_name    String?
   email        String
   phone_number String?
   payment_type String

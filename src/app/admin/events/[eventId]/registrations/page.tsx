@@ -450,11 +450,24 @@ export default function RegistrationManagement({
   }
 
   function formatDateTime(dateStr: string) {
-    const date = new Date(dateStr);
-    return new Intl.DateTimeFormat("cs-CZ", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(date);
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) {
+        return "Invalid date";
+      }
+
+      // Use local time instead of UTC
+      const day = date.getDate().toString().padStart(2, "0");
+      const month = (date.getMonth() + 1).toString().padStart(2, "0");
+      const year = date.getFullYear().toString().slice(2);
+      const hours = date.getHours().toString().padStart(2, "0");
+      const minutes = date.getMinutes().toString().padStart(2, "0");
+
+      return `${day}.${month}.${year}, ${hours}:${minutes}`;
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "Invalid date";
+    }
   }
 
   // Sort registrations: non-arrived first, then last arrived, then the rest

@@ -78,16 +78,10 @@ export function Navbar() {
             {isAuthenticated && (
               <div className="ml-10 hidden space-x-4 md:flex">
                 <Link
-                  href="/events"
+                  href="/"
                   className="rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
                 >
                   Events
-                </Link>
-                <Link
-                  href="/dashboard"
-                  className="rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-                >
-                  Dashboard
                 </Link>
                 {(isAdmin || isModerator) && (
                   <>
@@ -166,18 +160,11 @@ export function Navbar() {
                       {/* Mobile-only navigation items */}
                       <div className="md:hidden">
                         <Link
-                          href="/events"
+                          href="/"
                           className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                           onClick={() => setMenuOpen(false)}
                         >
                           Events
-                        </Link>
-                        <Link
-                          href="/dashboard"
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                          onClick={() => setMenuOpen(false)}
-                        >
-                          Dashboard
                         </Link>
                         {(isAdmin || isModerator) && (
                           <>
@@ -219,10 +206,10 @@ export function Navbar() {
               </div>
             ) : (
               <>
-                <LoginLink postLoginRedirectURL="/dashboard">
+                <LoginLink postLoginRedirectURL="/">
                   <Button variant="outline">Sign in</Button>
                 </LoginLink>
-                <RegisterLink postLoginRedirectURL="/dashboard">
+                <RegisterLink postLoginRedirectURL="/">
                   <Button>Sign up</Button>
                 </RegisterLink>
               </>

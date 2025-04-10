@@ -10,7 +10,8 @@ export async function createEvent(formData: FormData) {
       data: {
         title: formData.get("title") as string,
         description: formData.get("description") as string,
-        price: Number(formData.get("price")),
+        price: Number(formData.get("price") || 0),
+        place: (formData.get("place") as string) || null,
         from: new Date(formData.get("from") as string),
         to: new Date(formData.get("to") as string),
         created_at: new Date(),
@@ -33,14 +34,23 @@ export async function createEvent(formData: FormData) {
 
 export async function updateEvent(id: string, formData: FormData) {
   try {
+    // Parse dates correctly to avoid timezone issues
+    const fromString = formData.get("from") as string;
+    const toString = formData.get("to") as string;
+
+    // Create dates in local timezone context
+    const fromDate = new Date(fromString);
+    const toDate = new Date(toString);
+
     await prisma.event.update({
       where: { id },
       data: {
         title: formData.get("title") as string,
         description: formData.get("description") as string,
-        price: Number(formData.get("price")),
-        from: new Date(formData.get("from") as string),
-        to: new Date(formData.get("to") as string),
+        price: Number(formData.get("price") || 0),
+        place: (formData.get("place") as string) || null,
+        from: fromDate,
+        to: toDate,
         visible: formData.get("visible") === "true",
       },
     });
@@ -69,6 +79,7 @@ export async function duplicateEvent(id: string) {
         title: `${existingEvent.title} (Copy)`,
         description: existingEvent.description,
         price: existingEvent.price,
+        place: existingEvent.place,
         from: existingEvent.from,
         to: existingEvent.to,
         created_at: new Date(),

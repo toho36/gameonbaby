@@ -110,16 +110,15 @@ export default function CreateEventPage() {
           </div>
 
           <div>
-            <label htmlFor="price" className="mb-1 block text-sm font-medium">
-              Price (Kč)
+            <label htmlFor="place" className="mb-1 block text-sm font-medium">
+              Place/Address
             </label>
             <input
-              type="number"
-              id="price"
-              name="price"
-              required
-              min="0"
+              type="text"
+              id="place"
+              name="place"
               className="w-full rounded-md border border-gray-300 px-4 py-2"
+              placeholder="e.g., Sportovní hala TJ JM Chodov, Mírového hnutí 2137"
             />
           </div>
 

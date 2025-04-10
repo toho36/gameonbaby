@@ -60,59 +60,79 @@ export async function POST(request: NextRequest) {
 
     // Parse the request body
     const data = await request.json();
-    const { registrationId } = data;
+    const { eventId, firstName, lastName, email, phoneNumber, paymentType } =
+      data;
 
-    if (!registrationId) {
+    // Validate required fields
+    if (!eventId || !firstName || !email || !paymentType) {
       return NextResponse.json(
-        { success: false, message: "Registration ID is required" },
+        { success: false, message: "Missing required fields" },
         { status: 400 },
       );
     }
 
-    // Check if registration exists
-    const registration = await prisma.registration.findUnique({
-      where: { id: registrationId },
-      include: { payment: true },
+    // Check if the event exists
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
     });
 
-    if (!registration) {
+    if (!event) {
       return NextResponse.json(
-        { success: false, message: "Registration not found" },
+        { success: false, message: "Event not found" },
         { status: 404 },
       );
     }
 
-    // If payment already exists, just update the paid status
-    if (registration.payment) {
-      await prisma.payment.update({
-        where: { registration_id: registrationId },
-        data: { paid: true },
-      });
-    } else {
-      // Create a new payment record
-      await prisma.payment.create({
-        data: {
-          registration: { connect: { id: registrationId } },
-          variable_symbol: `VS${Math.floor(Math.random() * 10000)
-            .toString()
-            .padStart(4, "0")}`,
-          qr_data: "Generated on admin mark as paid",
-          paid: true,
-          created_at: new Date(),
+    // Check if a registration with this email already exists for this event
+    const existingRegistration = await prisma.registration.findFirst({
+      where: {
+        event_id: eventId,
+        email,
+      },
+    });
+
+    if (existingRegistration) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "A registration with this email already exists for this event",
         },
-      });
+        { status: 400 },
+      );
     }
+
+    // Create the registration
+    const newRegistration = await prisma.registration.create({
+      data: {
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        phone_number: phoneNumber,
+        payment_type: paymentType,
+        created_at: new Date(),
+        event: { connect: { id: eventId } },
+      },
+    });
 
     return NextResponse.json({
       success: true,
-      message: "Registration marked as paid",
+      registration: {
+        id: newRegistration.id,
+        firstName: newRegistration.first_name,
+        lastName: newRegistration.last_name,
+        email: newRegistration.email,
+        phoneNumber: newRegistration.phone_number,
+        paymentType: newRegistration.payment_type,
+        createdAt: newRegistration.created_at.toISOString(),
+      },
     });
   } catch (error) {
-    console.error("Error marking registration as paid:", error);
+    console.error("Error adding registration:", error);
     return NextResponse.json(
       {
         success: false,
-        message: "Failed to mark registration as paid",
+        message: "Failed to add registration",
       },
       { status: 500 },
     );

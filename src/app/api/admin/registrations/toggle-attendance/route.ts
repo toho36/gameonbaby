@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
 
     // Parse the request body
     const data = await request.json();
-    const { registrationId } = data;
+    const { registrationId, attended } = data;
 
     if (!registrationId) {
       return NextResponse.json(
@@ -72,7 +72,6 @@ export async function POST(request: NextRequest) {
     // Check if registration exists
     const registration = await prisma.registration.findUnique({
       where: { id: registrationId },
-      include: { payment: true },
     });
 
     if (!registration) {
@@ -82,37 +81,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // If payment already exists, just update the paid status
-    if (registration.payment) {
-      await prisma.payment.update({
-        where: { registration_id: registrationId },
-        data: { paid: true },
-      });
-    } else {
-      // Create a new payment record
-      await prisma.payment.create({
-        data: {
-          registration: { connect: { id: registrationId } },
-          variable_symbol: `VS${Math.floor(Math.random() * 10000)
-            .toString()
-            .padStart(4, "0")}`,
-          qr_data: "Generated on admin mark as paid",
-          paid: true,
-          created_at: new Date(),
-        },
-      });
-    }
+    // Update the registration's attended status
+    await prisma.registration.update({
+      where: { id: registrationId },
+      data: { attended: attended },
+    });
 
     return NextResponse.json({
       success: true,
-      message: "Registration marked as paid",
+      message: attended
+        ? "Attendance confirmed"
+        : "Attendance marked as not attended",
     });
   } catch (error) {
-    console.error("Error marking registration as paid:", error);
+    console.error("Error toggling attendance status:", error);
     return NextResponse.json(
       {
         success: false,
-        message: "Failed to mark registration as paid",
+        message: "Failed to update attendance status",
       },
       { status: 500 },
     );

@@ -23,6 +23,16 @@ export default function EventManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPastEvents, setShowPastEvents] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [eventToDuplicate, setEventToDuplicate] = useState<Event | null>(null);
+  const [duplicateFormData, setDuplicateFormData] = useState({
+    title: "",
+    description: "",
+    price: 0,
+    from: "",
+    to: "",
+    visible: true,
+  });
   const router = useRouter();
 
   useEffect(() => {
@@ -68,19 +78,76 @@ export default function EventManagement() {
 
   function formatDateTime(dateStr: string) {
     const date = new Date(dateStr);
-    return new Intl.DateTimeFormat("cs-CZ", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(date);
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const year = date.getFullYear().toString().slice(2);
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+
+    return `${day}.${month}.${year} - ${hours}:${minutes}`;
   }
 
   async function handleDuplicate(id: string) {
-    const result = await duplicateEvent(id);
-    if (result.success) {
-      fetchEvents();
-    } else {
-      setError(result.error || "Failed to duplicate event");
+    const eventToClone = events.find((event) => event.id === id);
+    if (!eventToClone) return;
+
+    setEventToDuplicate(eventToClone);
+    setDuplicateFormData({
+      title: `${eventToClone.title} (Copy)`,
+      description: eventToClone.description || "",
+      price: eventToClone.price,
+      from: new Date(eventToClone.from).toISOString().slice(0, 16),
+      to: new Date(eventToClone.to).toISOString().slice(0, 16),
+      visible: eventToClone.visible,
+    });
+    setShowDuplicateModal(true);
+  }
+
+  async function handleDuplicateSubmit() {
+    if (!eventToDuplicate) return;
+
+    try {
+      const response = await fetch("/api/admin/events/duplicate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sourceEventId: eventToDuplicate.id,
+          ...duplicateFormData,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setShowDuplicateModal(false);
+        fetchEvents();
+      } else {
+        setError(data.message || "Failed to duplicate event");
+      }
+    } catch (error) {
+      console.error("Error duplicating event:", error);
+      setError("Failed to duplicate event");
     }
+  }
+
+  function handleFormChange(
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) {
+    const { name, value, type } = e.target;
+
+    setDuplicateFormData({
+      ...duplicateFormData,
+      [name]:
+        type === "checkbox"
+          ? (e.target as HTMLInputElement).checked
+          : name === "price"
+            ? parseInt(value, 10) || 0
+            : value,
+    });
   }
 
   async function handleDelete(id: string) {
@@ -108,9 +175,9 @@ export default function EventManagement() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
         <h1 className="text-2xl font-bold">Event Management</h1>
-        <div className="flex space-x-4">
+        <div className="flex flex-col space-y-3 sm:flex-row sm:space-x-4 sm:space-y-0">
           <div className="flex items-center">
             <input
               type="checkbox"
@@ -121,12 +188,16 @@ export default function EventManagement() {
             />
             <label htmlFor="showPastEvents">Show past events</label>
           </div>
-          <Link href="/admin">
-            <Button variant="outline">User Management</Button>
-          </Link>
-          <Link href="/admin/events/new">
-            <Button>Create New Event</Button>
-          </Link>
+          <div className="flex space-x-2">
+            <Link href="/admin" className="w-full sm:w-auto">
+              <Button variant="outline" className="w-full">
+                User Management
+              </Button>
+            </Link>
+            <Link href="/admin/events/new" className="w-full sm:w-auto">
+              <Button className="w-full">Create New Event</Button>
+            </Link>
+          </div>
         </div>
       </div>
 
@@ -138,42 +209,102 @@ export default function EventManagement() {
           </Link>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-          <table className="w-full table-auto">
-            <thead>
-              <tr className="border-b bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                <th className="px-6 py-3">Title</th>
-                <th className="px-6 py-3">Date</th>
-                <th className="px-6 py-3">Time</th>
-                <th className="px-6 py-3">Price</th>
-                <th className="px-6 py-3">Visibility</th>
-                <th className="px-6 py-3">Registrations</th>
-                <th className="px-6 py-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredEvents.map((event) => (
-                <tr
-                  key={event.id}
-                  className={`hover:bg-gray-50 ${new Date(event.to) < new Date() ? "bg-gray-100" : ""}`}
-                >
-                  <td className="px-6 py-4">
-                    <div className="font-medium">{event.title}</div>
-                    {event.description && (
-                      <div className="mt-1 max-w-xs truncate text-sm text-gray-500">
-                        {event.description}
+        <>
+          {/* Desktop view - Table */}
+          <div className="hidden overflow-x-auto rounded-lg border border-gray-200 bg-white sm:block">
+            <table className="w-full table-auto">
+              <thead>
+                <tr className="border-b bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  <th className="px-6 py-3">Title</th>
+                  <th className="px-6 py-3">Date</th>
+                  <th className="px-6 py-3">Visibility</th>
+                  <th className="px-6 py-3">Registrations</th>
+                  <th className="px-6 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filteredEvents.map((event) => (
+                  <tr
+                    key={event.id}
+                    className={`hover:bg-gray-50 ${new Date(event.to) < new Date() ? "bg-gray-100" : ""}`}
+                  >
+                    <td className="px-6 py-4">
+                      <div className="font-medium">{event.title}</div>
+                      {event.description && (
+                        <div className="mt-1 max-w-xs truncate text-sm text-gray-500">
+                          {event.description}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">{formatDateTime(event.from)}</td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
+                          event.visible
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {event.visible ? "Visible" : "Hidden"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-sm font-medium text-blue-800">
+                        {event.registrationCount}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-2">
+                        <Link href={`/admin/events/${event.id}/registrations`}>
+                          <Button
+                            variant="outline"
+                            className="px-2 py-1 text-xs"
+                          >
+                            View Registrations
+                          </Button>
+                        </Link>
+                        <Link href={`/admin/events/${event.id}/edit`}>
+                          <Button
+                            variant="outline"
+                            className="px-2 py-1 text-xs"
+                          >
+                            Edit
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="outline"
+                          className="px-2 py-1 text-xs"
+                          onClick={() => handleDuplicate(event.id)}
+                        >
+                          Duplicate
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="px-2 py-1 text-xs text-red-500 hover:bg-red-50"
+                          onClick={() => handleDelete(event.id)}
+                        >
+                          Delete
+                        </Button>
                       </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    {formatDateTime(event.from).split(",")[0]}
-                  </td>
-                  <td className="px-6 py-4">
-                    {formatDateTime(event.from).split(",")[1]} -
-                    {formatDateTime(event.to).split(",")[1]}
-                  </td>
-                  <td className="px-6 py-4">{event.price} Kč</td>
-                  <td className="px-6 py-4">
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile view - Cards */}
+          <div className="space-y-4 sm:hidden">
+            {filteredEvents.map((event) => (
+              <div
+                key={event.id}
+                className={`rounded-lg border border-gray-200 bg-white p-4 shadow ${
+                  new Date(event.to) < new Date() ? "bg-gray-50" : ""
+                }`}
+              >
+                <div className="mb-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-medium">{event.title}</h3>
                     <span
                       className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
                         event.visible
@@ -183,44 +314,172 @@ export default function EventManagement() {
                     >
                       {event.visible ? "Visible" : "Hidden"}
                     </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-sm font-medium text-blue-800">
+                  </div>
+                  {event.description && (
+                    <p className="mt-1 text-sm text-gray-600">
+                      {event.description}
+                    </p>
+                  )}
+                </div>
+
+                <div className="mb-3 grid grid-cols-1 gap-2 text-sm">
+                  <div>
+                    <span className="text-gray-500">Date:</span>
+                    <div>{formatDateTime(event.from)}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Registrations:</span>
+                    <div className="font-medium text-blue-800">
                       {event.registrationCount}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-2">
-                      <Link href={`/admin/events/${event.id}/registrations`}>
-                        <Button variant="outline" className="px-2 py-1 text-xs">
-                          View Registrations
-                        </Button>
-                      </Link>
-                      <Link href={`/admin/events/${event.id}/edit`}>
-                        <Button variant="outline" className="px-2 py-1 text-xs">
-                          Edit
-                        </Button>
-                      </Link>
-                      <Button
-                        variant="outline"
-                        className="px-2 py-1 text-xs"
-                        onClick={() => handleDuplicate(event.id)}
-                      >
-                        Duplicate
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        className="px-2 py-1 text-xs"
-                        onClick={() => handleDelete(event.id)}
-                      >
-                        Delete
-                      </Button>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Link
+                    href={`/admin/events/${event.id}/registrations`}
+                    className="col-span-2"
+                  >
+                    <Button variant="outline" className="w-full py-1 text-xs">
+                      View Registrations
+                    </Button>
+                  </Link>
+                  <Link href={`/admin/events/${event.id}/edit`}>
+                    <Button variant="outline" className="w-full py-1 text-xs">
+                      Edit
+                    </Button>
+                  </Link>
+                  <Button
+                    variant="outline"
+                    className="w-full py-1 text-xs"
+                    onClick={() => handleDuplicate(event.id)}
+                  >
+                    Duplicate
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="col-span-2 w-full py-1 text-xs text-red-500 hover:bg-red-50"
+                    onClick={() => handleDelete(event.id)}
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {showDuplicateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-4 shadow-lg sm:p-6">
+            <h2 className="mb-4 text-xl font-semibold">Duplicate Event</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  name="title"
+                  value={duplicateFormData.title}
+                  onChange={handleFormChange}
+                  className="w-full rounded-md border border-gray-300 p-2"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Description
+                </label>
+                <textarea
+                  name="description"
+                  value={duplicateFormData.description}
+                  onChange={handleFormChange}
+                  className="w-full rounded-md border border-gray-300 p-2"
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Price (Kč)
+                  </label>
+                  <input
+                    type="number"
+                    name="price"
+                    value={duplicateFormData.price}
+                    onChange={handleFormChange}
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Visibility
+                  </label>
+                  <select
+                    name="visible"
+                    value={duplicateFormData.visible ? "true" : "false"}
+                    onChange={handleFormChange}
+                    className="w-full rounded-md border border-gray-300 p-2"
+                  >
+                    <option value="true">Visible</option>
+                    <option value="false">Hidden</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Start Date & Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    name="from"
+                    value={duplicateFormData.from}
+                    onChange={handleFormChange}
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    End Date & Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    name="to"
+                    value={duplicateFormData.to}
+                    onChange={handleFormChange}
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col-reverse space-y-2 space-y-reverse sm:flex-row sm:justify-end sm:space-x-3 sm:space-y-0">
+              <Button
+                variant="outline"
+                onClick={() => setShowDuplicateModal(false)}
+                className="w-full sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDuplicateSubmit}
+                className="w-full sm:w-auto"
+              >
+                Duplicate Event
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

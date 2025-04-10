@@ -14,12 +14,14 @@ function generateQRCodeURL(name: string, eventDate: string) {
 interface RegistrationFormProps {
   eventId: string;
   eventDate?: string;
+  eventPlace?: string | null;
   eventPrice?: number;
 }
 
 export default function RegistrationForm({
   eventId,
   eventDate = "26.10. 18:15-21:15",
+  eventPlace = "Sportovní hala TJ JM Chodov, Mírového hnutí 2137",
   eventPrice = 150,
 }: RegistrationFormProps) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
@@ -59,134 +61,175 @@ export default function RegistrationForm({
   };
 
   return (
-    <div className="mx-auto w-full max-w-xl rounded bg-white p-4 shadow-md">
+    <div className="w-full">
       {!isRegistered ? (
         <>
-          <h2 className="mb-4 text-2xl font-bold">
-            GameOn Volleyball Registrace
+          <h2 className="mb-6 text-center text-2xl font-bold text-white">
+            Game On - Registration
           </h2>
-          <h3>
-            Kde: {eventLocation}
-            <br />
-            Vstupné : {eventPrice}Kč
-          </h3>
-          <br />
-          <form onSubmit={handleSubmit} className="space-y-4">
+
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Jméno
+              <label className="mb-2 block text-sm font-medium text-white">
+                Name
               </label>
               <input
                 type="text"
                 name="first_name"
                 required
-                className="w-full rounded border border-gray-300 p-2"
+                placeholder="Your name"
+                className="w-full rounded-md border border-purple-400 bg-[#1e114a] p-3 text-white placeholder:text-white/70 focus:border-purple-300 focus:outline-none focus:ring-1 focus:ring-purple-300"
               />
             </div>
+
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="mb-2 block text-sm font-medium text-white">
                 Email
               </label>
               <input
                 type="email"
                 name="email"
                 required
-                className="w-full rounded border border-gray-300 p-2"
+                placeholder="your@email.com"
+                className="w-full rounded-md border border-purple-400 bg-[#1e114a] p-3 text-white placeholder:text-white/70 focus:border-purple-300 focus:outline-none focus:ring-1 focus:ring-purple-300"
               />
             </div>
+
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Telefoní číslo
+              <label className="mb-2 block text-sm font-medium text-white">
+                Phone Number
               </label>
               <input
                 type="tel"
                 name="phone_number"
-                className="w-full rounded border border-gray-300 p-2"
+                placeholder="Your phone"
+                className="w-full rounded-md border border-purple-400 bg-[#1e114a] p-3 text-white placeholder:text-white/70 focus:border-purple-300 focus:outline-none focus:ring-1 focus:ring-purple-300"
               />
             </div>
+
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Způsob platby
+              <label className="mb-2 block text-sm font-medium text-white">
+                Payment Method
               </label>
-              <div className="flex flex-col space-y-2">
-                <label className="flex items-center space-x-2">
+              <div className="flex flex-wrap gap-3">
+                <label className="flex flex-1 cursor-pointer items-center rounded-md border border-purple-400 bg-[#1e114a] px-4 py-3 hover:border-purple-300 hover:bg-[#2a1a63]">
                   <input
                     type="radio"
                     name="payment_type"
                     value="CARD"
                     required
-                    className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="mr-2 h-4 w-4 accent-purple-500"
                   />
-                  <span className="text-sm text-gray-700">QR</span>
+                  <span className="text-sm text-white">QR Code</span>
                 </label>
-                <label className="flex items-center space-x-2">
+                <label className="flex flex-1 cursor-pointer items-center rounded-md border border-purple-400 bg-[#1e114a] px-4 py-3 hover:border-purple-300 hover:bg-[#2a1a63]">
                   <input
                     type="radio"
                     name="payment_type"
                     value="CASH"
                     required
-                    className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="mr-2 h-4 w-4 accent-purple-500"
                   />
-                  <span className="text-sm text-gray-700">Hotově</span>
+                  <span className="text-sm text-white">Cash on Site</span>
                 </label>
               </div>
             </div>
+
             <button
               type="submit"
-              className="w-full rounded bg-blue-600 p-2 text-white transition hover:bg-blue-700"
+              className="w-full rounded-md bg-purple-600 p-3 font-medium text-white transition hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
             >
               Register
             </button>
           </form>
-          {success && <p className="mt-4 text-green-600">{success}</p>}
-          {error && <p className="mt-4 text-red-600">{error}</p>}
-        </>
-      ) : (
-        <div className="mt-4 text-center">
-          <h2>Prosíme ověřte si své údaje</h2>
-          <p className="mt-2 text-sm">
-            <strong> email:</strong> {formData.email} <br />
-            <strong>tel. číslo:</strong> {formData.phoneNumber}
-          </p>
-          <p className="mt-2">
-            Děkujeme za registraci na událost GameOn Volleyball, která se koná{" "}
-            <br />
-            <strong>{eventDate}</strong>
-            <br />
-            <strong>ve {eventLocation}</strong>.<br />
-            <br />
-            Pro potvrzení účasti prosíme o platbu prostřednictvím následujícího
-            QR.
-            <br />
-            Každý QR kód je ojedinělý.
-          </p>
-          {qrCodeUrl && (
-            <div className="mt-4">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={qrCodeUrl}
-                alt="QR Code for Payment"
-                width={200}
-                height={200}
-                className="mx-auto"
-              />
+
+          {error && (
+            <div className="mt-4 rounded-md border border-red-400/40 bg-red-900/40 p-3 text-center text-red-200">
+              {error}
             </div>
           )}
-          <p className="mt-4">
-            Sledujte nás na{" "}
-            <a
-              href="https://instagram.com/gameon.vb"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline"
-            >
-              instagram.com/gameon.vb
-            </a>
-          </p>
-          <p className="mt-2">
-            Jestli jste neobdrželi email prosíme kontaktujte nás.
-          </p>
-          <strong>Kontakt:</strong> 792 397 669
+        </>
+      ) : (
+        <div className="rounded-md border border-green-400/30 bg-[#11372a] p-5 text-center text-white">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="mx-auto h-12 w-12 text-green-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+
+          <h2 className="mb-3 mt-2 text-xl font-bold text-white">
+            Registration Successful!
+          </h2>
+
+          <div className="mb-4 rounded bg-[#0d2d22] p-3 text-left">
+            <p className="mb-1">
+              <span className="font-medium">Name:</span> {formData.firstName}
+            </p>
+            <p className="mb-1">
+              <span className="font-medium">Email:</span> {formData.email}
+            </p>
+            {formData.phoneNumber && (
+              <p>
+                <span className="font-medium">Phone:</span>{" "}
+                {formData.phoneNumber}
+              </p>
+            )}
+          </div>
+
+          <div className="mb-4 text-white/90">
+            <p>
+              Thank you for registering for GameOn event on{" "}
+              <span className="font-medium text-white">{eventDate}</span>{" "}
+              {eventPlace && (
+                <>
+                  at location{" "}
+                  <span className="font-medium text-white">{eventPlace}</span>
+                </>
+              )}
+            </p>
+          </div>
+
+          {qrCodeUrl && (
+            <div className="mb-4">
+              <p className="mb-2 font-medium text-white">Payment QR Code:</p>
+              <div className="mx-auto inline-flex rounded bg-white p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={qrCodeUrl}
+                  alt="QR Code for Payment"
+                  width={180}
+                  height={180}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="mt-4 text-sm text-white/80">
+            <p className="mb-1">
+              A confirmation has been sent to your email. Follow us on{" "}
+              <a
+                href="https://instagram.com/gameon.vb"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-purple-300 hover:text-purple-200 hover:underline"
+              >
+                instagram.com/gameon.vb
+              </a>
+            </p>
+            <p className="mt-2">
+              <span className="font-medium text-white">Contact:</span> 792 397
+              669
+            </p>
+          </div>
         </div>
       )}
     </div>

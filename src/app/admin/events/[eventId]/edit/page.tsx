@@ -11,6 +11,7 @@ interface EventData {
   title: string;
   description: string | null;
   price: number;
+  place: string | null;
   from: string;
   to: string;
   visible: boolean;
@@ -77,7 +78,14 @@ export default function EditEventPage({
   }, [params.eventId, router]);
 
   function formatDateForInput(date: Date) {
-    return date.toISOString().slice(0, 16);
+    // Fix timezone issues by using local timezone format
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -86,6 +94,11 @@ export default function EditEventPage({
 
     try {
       const formData = new FormData(e.currentTarget);
+
+      // Log the dates for debugging
+      console.log("Form from date:", formData.get("from"));
+      console.log("Form to date:", formData.get("to"));
+
       const result = await updateEvent(params.eventId, formData);
 
       if (result.success) {
@@ -169,17 +182,16 @@ export default function EditEventPage({
           </div>
 
           <div>
-            <label htmlFor="price" className="mb-1 block text-sm font-medium">
-              Price (Kč)
+            <label htmlFor="place" className="mb-1 block text-sm font-medium">
+              Place/Address
             </label>
             <input
-              type="number"
-              id="price"
-              name="price"
-              defaultValue={event.price}
-              required
-              min="0"
+              type="text"
+              id="place"
+              name="place"
+              defaultValue={event.place || ""}
               className="w-full rounded-md border border-gray-300 px-4 py-2"
+              placeholder="e.g., Sportovní hala TJ JM Chodov, Mírového hnutí 2137"
             />
           </div>
 

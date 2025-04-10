@@ -1,14 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { Button } from "~/components/ui/button";
 
 interface Event {
   id: string;
   title: string;
   description: string | null;
   price: number;
+  place: string | null;
   from: Date;
   to: Date;
   visible?: boolean;
@@ -19,8 +18,6 @@ interface EventListProps {
 }
 
 export default function EventList({ events }: EventListProps) {
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat("cs-CZ", {
       dateStyle: "medium",
@@ -48,14 +45,10 @@ export default function EventList({ events }: EventListProps) {
     <div className="space-y-8">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {events.map((event) => (
-          <div
+          <Link
             key={event.id}
-            className={`cursor-pointer rounded-lg border p-5 transition-all ${
-              selectedEventId === event.id
-                ? "border-purple-400 bg-white/10"
-                : "hover:bg-white/8 border-white/10 bg-white/5 hover:border-white/20"
-            }`}
-            onClick={() => setSelectedEventId(event.id)}
+            href={`/events/${event.id}`}
+            className="rounded-lg border border-white/10 bg-white/5 p-5 transition-all hover:border-purple-400 hover:bg-white/10"
           >
             <h3 className="mb-2 text-xl font-semibold">{event.title}</h3>
 
@@ -66,35 +59,14 @@ export default function EventList({ events }: EventListProps) {
               </span>
             </div>
 
-            {event.description && (
-              <p className="mb-4 text-sm text-gray-300">{event.description}</p>
-            )}
-
-            <div className="mt-4 flex items-center justify-between">
-              <span className="text-lg font-bold">{event.price} Kč</span>
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.location.href = `/events/${event.id}`;
-                }}
-                className="px-3 py-1 text-sm"
-              >
-                Register
-              </Button>
+            <div className="mt-4">
+              <span className="text-sm font-medium text-gray-300">
+                {event.place || "Location TBA"}
+              </span>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
-
-      {selectedEventId && (
-        <div className="flex justify-center">
-          <Link href={`/events/${selectedEventId}`}>
-            <Button className="px-6 py-2 text-lg">
-              Register for Selected Event
-            </Button>
-          </Link>
-        </div>
-      )}
     </div>
   );
 }

@@ -75,6 +75,7 @@ model Event {
   title        String
   description  String?
   price        Int
+  place        String?
   from         DateTime
   to           DateTime
   created_at   DateTime

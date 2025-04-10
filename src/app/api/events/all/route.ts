@@ -12,6 +12,7 @@ type EventResponse = {
   title: string;
   description: string | null;
   price: number;
+  place: string | null;
   from: Date;
   to: Date;
 }[];
@@ -54,6 +55,7 @@ export const GET = withErrorHandling(
       title: event.title,
       description: event.description,
       price: event.price,
+      place: event.place,
       from: event.from,
       to: event.to,
     }));

@@ -60,8 +60,16 @@ export async function POST(request: NextRequest) {
 
     // Parse the request body
     const data = await request.json();
-    const { sourceEventId, title, description, price, from, to, visible } =
-      data;
+    const {
+      sourceEventId,
+      title,
+      description,
+      price,
+      place,
+      from,
+      to,
+      visible,
+    } = data;
 
     if (!sourceEventId || !title || !from || !to) {
       return NextResponse.json(
@@ -91,6 +99,7 @@ export async function POST(request: NextRequest) {
         title,
         description: description || null,
         price: Number(price),
+        place: place || null,
         from: new Date(from),
         to: new Date(to),
         created_at: new Date(),

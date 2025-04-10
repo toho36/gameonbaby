@@ -21,7 +21,10 @@ export async function GET() {
     const kindeUser = await getUser();
 
     if (!kindeUser || !kindeUser.id) {
-      return NextResponse.json({ isAdmin: false }, { status: 401 });
+      return NextResponse.json(
+        { isAdmin: false, isModerator: false },
+        { status: 401 },
+      );
     }
 
     // Find the user in our database
@@ -47,20 +50,25 @@ export async function GET() {
           },
         });
 
-        return NextResponse.json({ isAdmin: true });
+        return NextResponse.json({ isAdmin: true, isModerator: false });
       }
 
-      return NextResponse.json({ isAdmin: false });
+      return NextResponse.json({ isAdmin: false, isModerator: false });
     }
 
-    // Check if user is an admin
+    // Check user roles
     const isAdmin = user.role === "ADMIN";
+    const isModerator = user.role === "MODERATOR" || isAdmin; // Admins have moderator privileges
 
-    return NextResponse.json({ isAdmin });
+    return NextResponse.json({ isAdmin, isModerator });
   } catch (error) {
     console.error("Error checking admin status:", error);
     return NextResponse.json(
-      { isAdmin: false, error: "Failed to check admin status" },
+      {
+        isAdmin: false,
+        isModerator: false,
+        error: "Failed to check admin status",
+      },
       { status: 500 },
     );
   }

@@ -75,6 +75,7 @@ export async function GET(
       success: true,
       event: {
         id: event.id,
+        title: event.title,
         price: event.price,
         from: event.from.toISOString(),
         to: event.to.toISOString(),
@@ -89,6 +90,7 @@ export async function GET(
         paymentType: reg.payment_type,
         createdAt: reg.created_at.toISOString(),
         paid: reg.payment?.paid || false,
+        attended: reg.attended,
       })),
     });
   } catch (error) {

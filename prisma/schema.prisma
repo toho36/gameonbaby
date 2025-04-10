@@ -93,6 +93,7 @@ model Registration {
   payment_type String
   created_at   DateTime
   payment      Payment?
+  attended     Boolean  @default(false)
 
   @@unique([event_id, email])
 }

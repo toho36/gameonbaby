@@ -72,10 +72,13 @@ model VerificationToken {
 
 model Event {
   id           String         @id @default(cuid())
+  title        String
+  description  String?
   price        Int
   from         DateTime
   to           DateTime
   created_at   DateTime
+  visible      Boolean        @default(true)
   Registration Registration[]
 }
 

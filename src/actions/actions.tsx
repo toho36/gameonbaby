@@ -8,20 +8,107 @@ export async function createEvent(formData: FormData) {
   try {
     await prisma.event.create({
       data: {
+        title: formData.get("title") as string,
+        description: formData.get("description") as string,
         price: Number(formData.get("price")),
         from: new Date(formData.get("from") as string),
         to: new Date(formData.get("to") as string),
         created_at: new Date(),
+        visible: formData.get("visible") === "true",
       },
     });
     revalidatePath("/events");
+    revalidatePath("/admin/events");
+    return { success: true };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === "P2002") {
-        return { error: "Event with this price already exists" };
+        return { error: "Event with this data already exists" };
       }
     }
     console.error(error);
+    return { error: "Failed to create event" };
+  }
+}
+
+export async function updateEvent(id: string, formData: FormData) {
+  try {
+    await prisma.event.update({
+      where: { id },
+      data: {
+        title: formData.get("title") as string,
+        description: formData.get("description") as string,
+        price: Number(formData.get("price")),
+        from: new Date(formData.get("from") as string),
+        to: new Date(formData.get("to") as string),
+        visible: formData.get("visible") === "true",
+      },
+    });
+    revalidatePath("/events");
+    revalidatePath("/admin/events");
+    revalidatePath(`/admin/events/${id}`);
+    return { success: true };
+  } catch (error) {
+    console.error(error);
+    return { error: "Failed to update event" };
+  }
+}
+
+export async function duplicateEvent(id: string) {
+  try {
+    const existingEvent = await prisma.event.findUnique({
+      where: { id },
+    });
+
+    if (!existingEvent) {
+      return { error: "Event not found" };
+    }
+
+    const newEvent = await prisma.event.create({
+      data: {
+        title: `${existingEvent.title} (Copy)`,
+        description: existingEvent.description,
+        price: existingEvent.price,
+        from: existingEvent.from,
+        to: existingEvent.to,
+        created_at: new Date(),
+        visible: existingEvent.visible,
+      },
+    });
+
+    revalidatePath("/events");
+    revalidatePath("/admin/events");
+    return { success: true, eventId: newEvent.id };
+  } catch (error) {
+    console.error(error);
+    return { error: "Failed to duplicate event" };
+  }
+}
+
+export async function deleteEvent(id: string) {
+  try {
+    // Check if event has registrations
+    const registrationCount = await prisma.registration.count({
+      where: { event_id: id },
+    });
+
+    if (registrationCount > 0) {
+      return {
+        error:
+          "Cannot delete event with existing registrations. Consider hiding it instead.",
+      };
+    }
+
+    await prisma.event.delete({
+      where: { id },
+    });
+
+    revalidatePath("/events");
+    revalidatePath("/admin/events");
+    return { success: true };
+  } catch (error) {
+    console.error(error);
+    return { error: "Failed to delete event" };
   }
 }
 
@@ -31,12 +118,6 @@ export async function editEvent(formData: FormData) {
     data: {
       price: Number(formData.get("price")),
     },
-  });
-}
-
-export async function deleteEvent(id: string) {
-  await prisma.event.delete({
-    where: { id },
   });
 }
 
@@ -50,8 +131,20 @@ export async function createRegistration(
       formData.get("email"),
     );
 
-    const firstEvent = await prisma.event.findFirst();
-    if (!firstEvent) {
+    const eventId = formData.get("event_id") as string;
+    let event;
+
+    if (eventId) {
+      // If eventId is provided, use it
+      event = await prisma.event.findUnique({
+        where: { id: eventId },
+      });
+    } else {
+      // Fallback to first event if no eventId is provided
+      event = await prisma.event.findFirst();
+    }
+
+    if (!event) {
       console.log("No event found for registration.");
       return {
         success: false,
@@ -66,7 +159,7 @@ export async function createRegistration(
         email: formData.get("email") as string,
         phone_number: formData.get("phone_number") as string,
         created_at: new Date(),
-        event: { connect: { id: firstEvent.id } },
+        event: { connect: { id: event.id } },
         payment_type: formData.get("payment_type") as string,
       },
     });

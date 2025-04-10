@@ -7,8 +7,10 @@ import { ApiError } from "~/utils/ApiError";
 import { withErrorHandling } from "~/utils/errorHandler";
 const prisma = new PrismaClient();
 
-type LatestEventResponse = {
+type EventResponse = {
   id: string;
+  title: string;
+  description: string | null;
   price: number;
   from: Date;
   to: Date;
@@ -16,7 +18,24 @@ type LatestEventResponse = {
 
 export const GET = withErrorHandling(
   async (req: Request): Promise<NextResponse> => {
+    // Check if we should include past events
+    const url = new URL(req.url);
+    const includePast = url.searchParams.get("includePast") === "true";
+
+    // Create filter conditions
+    const whereConditions: any = {
+      visible: true,
+    };
+
+    // Only add date filter if not including past events
+    if (!includePast) {
+      whereConditions.to = {
+        gte: new Date(),
+      };
+    }
+
     const events: Event[] = await prisma.event.findMany({
+      where: whereConditions,
       orderBy: {
         from: "asc",
       },
@@ -30,8 +49,10 @@ export const GET = withErrorHandling(
       );
     }
 
-    const response: LatestEventResponse = events.map((event) => ({
+    const response: EventResponse = events.map((event) => ({
       id: event.id,
+      title: event.title,
+      description: event.description,
       price: event.price,
       from: event.from,
       to: event.to,

@@ -14,7 +14,10 @@ interface DbUser {
   image: string | null;
 }
 
-export async function GET(request: NextRequest) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { eventId: string } },
+) {
   try {
     // Get authenticated user
     const { getUser } = getKindeServerSession();
@@ -44,36 +47,36 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch events with registration counts
-    const events = await prisma.event.findMany({
-      orderBy: { from: "desc" },
-      include: {
-        _count: {
-          select: { Registration: true },
-        },
-      },
+    // Fetch event by ID
+    const event = await prisma.event.findUnique({
+      where: { id: params.eventId },
     });
+
+    if (!event) {
+      return NextResponse.json(
+        { success: false, message: "Event not found" },
+        { status: 404 },
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      events: events.map((event) => ({
+      event: {
         id: event.id,
         title: event.title,
         description: event.description,
         price: event.price,
         from: event.from.toISOString(),
         to: event.to.toISOString(),
-        created_at: event.created_at.toISOString(),
         visible: event.visible,
-        registrationCount: event._count.Registration,
-      })),
+      },
     });
   } catch (error) {
-    console.error("Error fetching events:", error);
+    console.error("Error fetching event:", error);
     return NextResponse.json(
       {
         success: false,
-        message: "Failed to fetch events",
+        message: "Failed to fetch event",
       },
       { status: 500 },
     );

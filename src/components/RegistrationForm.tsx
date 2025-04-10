@@ -3,16 +3,25 @@ import { useState } from "react";
 import { createRegistration } from "~/actions/actions";
 import { sendRegistrationEmail } from "~/server/service/emailService";
 
-const eventDate = "26.10. 18:15-21:15";
 const eventLocation = "Sportovní hala TJ JM Chodov, Mírového hnutí 2137";
 
-function generateQRCodeURL(name: string) {
+function generateQRCodeURL(name: string, eventDate: string) {
   const paymentString = `SPD*1.0*ACC:CZ9130300000001628400020*RN:VU LOAN TIKOVSKA*AM:150*CC:CZK*MSG:GameOn ${name} for event on ${eventDate}`;
   const encodedPaymentString = encodeURIComponent(paymentString);
   return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodedPaymentString}`;
 }
 
-export default function RegistrationForm() {
+interface RegistrationFormProps {
+  eventId: string;
+  eventDate?: string;
+  eventPrice?: number;
+}
+
+export default function RegistrationForm({
+  eventId,
+  eventDate = "26.10. 18:15-21:15",
+  eventPrice = 150,
+}: RegistrationFormProps) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -33,12 +42,15 @@ export default function RegistrationForm() {
 
     setFormData({ firstName, email, phoneNumber });
 
-    const qrCode = generateQRCodeURL(firstName);
+    // Add the event ID to the form data
+    formDataObj.append("event_id", eventId);
+
+    const qrCode = generateQRCodeURL(firstName, eventDate);
     const response = await createRegistration(formDataObj);
 
     if (response.success) {
       setSuccess("Registration completed successfully!");
-      await sendRegistrationEmail(email, firstName, qrCode, eventDate); // Pass eventDate here
+      await sendRegistrationEmail(email, firstName, qrCode, eventDate);
       setQrCodeUrl(qrCode);
       setIsRegistered(true);
     } else {
@@ -51,12 +63,12 @@ export default function RegistrationForm() {
       {!isRegistered ? (
         <>
           <h2 className="mb-4 text-2xl font-bold">
-            26.10 18:15-21:15 GameOn Volleyball Registrace
+            GameOn Volleyball Registrace
           </h2>
           <h3>
             Kde: {eventLocation}
             <br />
-            Vstupné : 150Kč
+            Vstupné : {eventPrice}Kč
           </h3>
           <br />
           <form onSubmit={handleSubmit} className="space-y-4">

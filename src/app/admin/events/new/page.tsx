@@ -12,6 +12,28 @@ export default function CreateEventPage() {
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    price: 0,
+    place: "",
+    capacity: 0,
+    from: "",
+    to: "",
+    visible: true,
+    manualDateInput: false,
+  });
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === "price" || name === "capacity" ? Number(value) : value,
+    }));
+  };
+
   useEffect(() => {
     async function checkPermission() {
       try {
@@ -122,19 +144,42 @@ export default function CreateEventPage() {
             />
           </div>
 
-          <div>
-            <label htmlFor="price" className="mb-1 block text-sm font-medium">
-              Price (CZK)
-            </label>
-            <input
-              type="number"
-              id="price"
-              name="price"
-              required
-              min="0"
-              className="w-full rounded-md border border-gray-300 px-4 py-2"
-              placeholder="Enter price in CZK"
-            />
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="price"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Price (CZK)
+              </label>
+              <input
+                type="number"
+                name="price"
+                id="price"
+                value={formData.price}
+                onChange={handleInputChange}
+                className="mt-1 block w-full rounded-md border border-gray-300 p-2 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                required
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="capacity"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Capacity
+              </label>
+              <input
+                type="number"
+                name="capacity"
+                id="capacity"
+                value={formData.capacity}
+                onChange={handleInputChange}
+                className="mt-1 block w-full rounded-md border border-gray-300 p-2 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                required
+                min="0"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">

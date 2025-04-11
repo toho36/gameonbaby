@@ -12,11 +12,14 @@ interface Event {
   description: string | null;
   price: number;
   place: string | null;
+  capacity: number;
   from: string;
   to: string;
-  created_at: string;
   visible: boolean;
-  registrationCount: number;
+  created_at: string;
+  _count: {
+    Registration: number;
+  };
 }
 
 export default function EventManagement() {
@@ -32,6 +35,7 @@ export default function EventManagement() {
     description: "",
     price: 0,
     place: "",
+    capacity: 0,
     from: "",
     to: "",
     visible: true,
@@ -144,6 +148,7 @@ export default function EventManagement() {
       description: eventToClone.description || "",
       price: eventToClone.price,
       place: eventToClone.place || "",
+      capacity: eventToClone.capacity || 0,
       from: toISODateTimeString(eventToClone.from),
       to: toISODateTimeString(eventToClone.to),
       visible: eventToClone.visible,
@@ -167,6 +172,7 @@ export default function EventManagement() {
           description: duplicateFormData.description || null,
           price: duplicateFormData.price,
           place: duplicateFormData.place || null,
+          capacity: duplicateFormData.capacity || null,
           from: duplicateFormData.from,
           to: duplicateFormData.to,
           visible: duplicateFormData.visible,
@@ -406,7 +412,7 @@ export default function EventManagement() {
                     </td>
                     <td className="px-6 py-4">
                       <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-sm font-medium text-blue-800">
-                        {event.registrationCount}
+                        {event._count.Registration}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -486,7 +492,7 @@ export default function EventManagement() {
                   <div>
                     <span className="text-gray-500">Registrations:</span>
                     <div className="font-medium text-blue-800">
-                      {event.registrationCount}
+                      {event._count.Registration}
                     </div>
                   </div>
                 </div>
@@ -558,21 +564,45 @@ export default function EventManagement() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Price (Kč)
+                  <label
+                    htmlFor="price"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Price (CZK)
                   </label>
                   <input
                     type="number"
                     name="price"
+                    id="price"
                     value={duplicateFormData.price}
                     onChange={handleFormChange}
-                    className="w-full rounded-md border border-gray-300 p-2"
+                    className="mt-1 block w-full rounded-md border border-gray-300 p-2 shadow-sm focus:border-purple-500 focus:ring-purple-500"
                     required
                   />
                 </div>
+                <div>
+                  <label
+                    htmlFor="capacity"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Capacity
+                  </label>
+                  <input
+                    type="number"
+                    name="capacity"
+                    id="capacity"
+                    value={duplicateFormData.capacity}
+                    onChange={handleFormChange}
+                    className="mt-1 block w-full rounded-md border border-gray-300 p-2 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                    required
+                    min="0"
+                  />
+                </div>
+              </div>
 
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">
                     Place/Address

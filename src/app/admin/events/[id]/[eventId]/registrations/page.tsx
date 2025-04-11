@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "~/components/ui/button";
@@ -32,10 +32,10 @@ interface RegistrationSummary {
   attended: number;
 }
 
-export default function RegistrationManagement({
+export default function EventRegistrationsPage({
   params,
 }: {
-  params: { eventId: string };
+  params: { id: string };
 }) {
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [event, setEvent] = useState<Event | null>(null);
@@ -69,6 +69,27 @@ export default function RegistrationManagement({
     string | null
   >(null);
 
+  const fetchRegistrations = useCallback(async () => {
+    try {
+      const response = await fetch(
+        `/api/admin/events/${params.id}/registrations`,
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch registrations");
+      }
+      const data = await response.json();
+      setRegistrations(data.registrations);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  }, [params.id]);
+
+  useEffect(() => {
+    fetchRegistrations();
+  }, [fetchRegistrations]);
+
   // Clear the lastArrivedId after 60 seconds
   useEffect(() => {
     if (lastArrivedId) {
@@ -100,7 +121,7 @@ export default function RegistrationManagement({
     }
 
     checkPermission();
-  }, [router, params.eventId]);
+  }, [router, params.id]);
 
   useEffect(() => {
     setSummary({
@@ -109,45 +130,6 @@ export default function RegistrationManagement({
       attended: registrations.filter((reg) => reg.attended).length,
     });
   }, [registrations]);
-
-  async function fetchRegistrations() {
-    try {
-      setLoading(true);
-      const response = await fetch(
-        `/api/admin/events/${params.eventId}/registrations`,
-      );
-      const data = await response.json();
-
-      if (data.success) {
-        const regsWithAttendance = data.registrations.map((reg: any) => ({
-          ...reg,
-          attended: reg.attended || false,
-        }));
-
-        // If we have a lastArrivedId, check if it still exists in the new data
-        if (lastArrivedId) {
-          const lastArrivedStillExists = regsWithAttendance.some(
-            (reg: Registration) => reg.id === lastArrivedId && reg.attended,
-          );
-
-          // If the registration doesn't exist anymore or is no longer marked as attended, clear lastArrivedId
-          if (!lastArrivedStillExists) {
-            setLastArrivedId(null);
-          }
-        }
-
-        setRegistrations(regsWithAttendance);
-        setEvent(data.event);
-      } else {
-        setError(data.message || "Failed to load registrations");
-      }
-    } catch (error) {
-      console.error("Error fetching registrations:", error);
-      setError("Failed to load registrations");
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function togglePaymentStatus(registrationId: string) {
     try {
@@ -298,7 +280,7 @@ export default function RegistrationManagement({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          eventId: params.eventId,
+          eventId: params.id,
           firstName: registration.firstName,
           lastName: registration.lastName,
           email: email,
@@ -344,7 +326,7 @@ export default function RegistrationManagement({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          eventId: params.eventId,
+          eventId: params.id,
           firstName: formData.firstName,
           lastName: formData.lastName || null,
           email: email,

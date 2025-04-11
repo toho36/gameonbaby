@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { eventId: string } },
+  { params }: { params: { id: string } },
 ) {
   try {
     const { getUser } = getKindeServerSession();
@@ -22,7 +22,7 @@ export async function GET(
     // Find registration for this user and event
     const registration = await prisma.registration.findFirst({
       where: {
-        event_id: params.eventId,
+        event_id: params.id,
         email: kindeUser.email,
       },
     });

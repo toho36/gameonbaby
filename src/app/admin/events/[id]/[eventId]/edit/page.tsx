@@ -15,18 +15,40 @@ interface EventData {
   from: string;
   to: string;
   visible: boolean;
+  capacity: number;
 }
 
-export default function EditEventPage({
-  params,
-}: {
-  params: { eventId: string };
-}) {
+export default function EditEventPage({ params }: { params: { id: string } }) {
   const [event, setEvent] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
+
+  function toISODateTimeString(dateStr: string) {
+    try {
+      // First strip any milliseconds and timezone info
+      const cleanDateStr = dateStr.replace(/\.\d{3}Z$/, "");
+
+      // Parse the date string
+      const date = new Date(cleanDateStr);
+      if (isNaN(date.getTime())) {
+        return "";
+      }
+
+      // Format in local timezone
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const hours = String(date.getHours()).padStart(2, "0");
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    } catch (error) {
+      console.error("Error converting to ISO date:", error);
+      return "";
+    }
+  }
 
   useEffect(() => {
     async function checkPermissionAndLoadEvent() {
@@ -41,9 +63,7 @@ export default function EditEventPage({
         }
 
         // Load event data
-        const eventResponse = await fetch(
-          `/api/admin/events/${params.eventId}`,
-        );
+        const eventResponse = await fetch(`/api/admin/events/${params.id}`);
         if (!eventResponse.ok) {
           setError("Failed to load event data");
           setLoading(false);
@@ -57,17 +77,37 @@ export default function EditEventPage({
           return;
         }
 
-        // Format dates for input
+        // Convert UTC dates to local format for datetime-local input
         const fromDate = new Date(eventData.event.from);
         const toDate = new Date(eventData.event.to);
 
-        setEvent({
+        // Format dates as yyyy-MM-ddThh:mm
+        const fromFormatted =
+          fromDate.toLocaleDateString("en-CA") +
+          "T" +
+          fromDate.toLocaleTimeString("en-GB", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+        const toFormatted =
+          toDate.toLocaleDateString("en-CA") +
+          "T" +
+          toDate.toLocaleTimeString("en-GB", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+
+        // Create a new event object with formatted dates
+        const formattedEvent = {
           ...eventData.event,
-          from: formatDateForInput(fromDate),
-          to: formatDateForInput(toDate),
+          from: fromFormatted,
+          to: toFormatted,
           place: eventData.event.place || "",
           description: eventData.event.description || "",
-        });
+          capacity: eventData.event.capacity || 0,
+        };
+
+        setEvent(formattedEvent);
       } catch (error) {
         console.error("Error loading event:", error);
         setError("An error occurred while loading event data");
@@ -77,18 +117,7 @@ export default function EditEventPage({
     }
 
     checkPermissionAndLoadEvent();
-  }, [params.eventId, router]);
-
-  function formatDateForInput(date: Date) {
-    // Fix timezone issues by using local timezone format
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  }
+  }, [params.id, router]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -96,12 +125,29 @@ export default function EditEventPage({
 
     try {
       const formData = new FormData(e.currentTarget);
+      const fromInput = formData.get("from") as string;
+      const toInput = formData.get("to") as string;
 
-      // Log the dates for debugging
-      console.log("Form from date:", formData.get("from"));
-      console.log("Form to date:", formData.get("to"));
+      // Validate date inputs
+      if (!fromInput || !toInput) {
+        setError("Please select both start and end dates");
+        return;
+      }
 
-      const result = await updateEvent(params.eventId, formData);
+      // Create dates in local timezone
+      const fromDate = new Date(fromInput);
+      const toDate = new Date(toInput);
+
+      // Validate dates are valid
+      if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+        setError("Invalid date format");
+        return;
+      }
+
+      formData.set("from", fromDate.toISOString());
+      formData.set("to", toDate.toISOString());
+
+      const result = await updateEvent(params.id, formData);
 
       if (result.success) {
         router.push("/admin/events");
@@ -183,6 +229,41 @@ export default function EditEventPage({
             />
           </div>
 
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div>
+              <label htmlFor="price" className="mb-1 block text-sm font-medium">
+                Price (CZK)
+              </label>
+              <input
+                type="number"
+                id="price"
+                name="price"
+                defaultValue={event.price}
+                required
+                min="0"
+                className="w-full rounded-md border border-gray-300 px-4 py-2"
+                placeholder="Enter price in CZK"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="capacity"
+                className="mb-1 block text-sm font-medium"
+              >
+                Capacity
+              </label>
+              <input
+                type="number"
+                id="capacity"
+                name="capacity"
+                defaultValue={event.capacity}
+                min="0"
+                className="w-full rounded-md border border-gray-300 px-4 py-2"
+                placeholder="Enter maximum capacity (optional)"
+              />
+            </div>
+          </div>
+
           <div>
             <label htmlFor="place" className="mb-1 block text-sm font-medium">
               Place/Address
@@ -191,29 +272,9 @@ export default function EditEventPage({
               type="text"
               id="place"
               name="place"
-              value={event.place || ""}
-              onChange={(e) => {
-                const newEvent = { ...event, place: e.target.value };
-                setEvent(newEvent);
-              }}
+              defaultValue={event.place || ""}
               className="w-full rounded-md border border-gray-300 px-4 py-2"
               placeholder="e.g., Sportovní hala TJ JM Chodov, Mírového hnutí 2137"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="price" className="mb-1 block text-sm font-medium">
-              Price (CZK)
-            </label>
-            <input
-              type="number"
-              id="price"
-              name="price"
-              defaultValue={event.price}
-              required
-              min="0"
-              className="w-full rounded-md border border-gray-300 px-4 py-2"
-              placeholder="Enter price in CZK"
             />
           </div>
 
@@ -226,7 +287,18 @@ export default function EditEventPage({
                 type="datetime-local"
                 id="from"
                 name="from"
-                defaultValue={event.from}
+                defaultValue={
+                  event.from && !event.from.includes(".000Z")
+                    ? event.from
+                    : event.from
+                      ? new Date(event.from).toLocaleDateString("en-CA") +
+                        "T" +
+                        new Date(event.from).toLocaleTimeString("en-GB", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : ""
+                }
                 required
                 className="w-full rounded-md border border-gray-300 px-4 py-2"
               />
@@ -240,7 +312,18 @@ export default function EditEventPage({
                 type="datetime-local"
                 id="to"
                 name="to"
-                defaultValue={event.to}
+                defaultValue={
+                  event.to && !event.to.includes(".000Z")
+                    ? event.to
+                    : event.to
+                      ? new Date(event.to).toLocaleDateString("en-CA") +
+                        "T" +
+                        new Date(event.to).toLocaleTimeString("en-GB", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : ""
+                }
                 required
                 className="w-full rounded-md border border-gray-300 px-4 py-2"
               />

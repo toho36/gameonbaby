@@ -16,14 +16,13 @@ interface DbUser {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { eventId: string } },
+  { params }: { params: { id: string } },
 ) {
   try {
-    // Get authenticated user
-    const { getUser } = getKindeServerSession();
-    const kindeUser = await getUser();
+    const { getUser, isAuthenticated } = getKindeServerSession();
+    const user = await getUser();
 
-    if (!kindeUser || !kindeUser.id) {
+    if (!(await isAuthenticated()) || !user?.email) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 },
@@ -33,7 +32,7 @@ export async function GET(
     // Find the user in our database
     const currentUser = (await prisma.user.findFirst({
       where: {
-        OR: [{ email: kindeUser.email }],
+        OR: [{ email: user.email }],
       },
     })) as unknown as DbUser;
 
@@ -47,37 +46,57 @@ export async function GET(
       );
     }
 
-    // Fetch event by ID
+    // Verify the event exists
     const event = await prisma.event.findUnique({
-      where: { id: params.eventId },
+      where: { id: params.id },
     });
 
     if (!event) {
       return NextResponse.json(
-        { success: false, message: "Event not found" },
+        {
+          success: false,
+          message: "Event not found",
+        },
         { status: 404 },
       );
     }
+
+    // Fetch registrations for this event
+    const registrations = await prisma.registration.findMany({
+      where: { event_id: params.id },
+      include: {
+        event: true,
+      },
+    });
 
     return NextResponse.json({
       success: true,
       event: {
         id: event.id,
         title: event.title,
-        description: event.description,
         price: event.price,
-        place: event.place,
         from: event.from.toISOString(),
         to: event.to.toISOString(),
-        visible: event.visible,
+        created_at: event.created_at.toISOString(),
       },
+      registrations: registrations.map((reg) => ({
+        id: reg.id,
+        firstName: reg.first_name,
+        lastName: reg.last_name,
+        email: reg.email,
+        phoneNumber: reg.phone_number,
+        paymentType: reg.payment_type,
+        createdAt: reg.created_at.toISOString(),
+        paid: reg.payment?.paid || false,
+        attended: reg.attended,
+      })),
     });
   } catch (error) {
-    console.error("Error fetching event:", error);
+    console.error("Error fetching registrations:", error);
     return NextResponse.json(
       {
         success: false,
-        message: "Failed to fetch event",
+        message: "Failed to fetch registrations",
       },
       { status: 500 },
     );

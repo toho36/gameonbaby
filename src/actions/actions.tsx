@@ -38,9 +38,14 @@ export async function updateEvent(id: string, formData: FormData) {
     const fromString = formData.get("from") as string;
     const toString = formData.get("to") as string;
 
-    // Create dates in local timezone context
+    // Create dates from ISO strings
     const fromDate = new Date(fromString);
     const toDate = new Date(toString);
+
+    // Validate dates
+    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+      return { error: "Invalid date format" };
+    }
 
     await prisma.event.update({
       where: { id },
@@ -52,6 +57,7 @@ export async function updateEvent(id: string, formData: FormData) {
         from: fromDate,
         to: toDate,
         visible: formData.get("visible") === "true",
+        capacity: Number(formData.get("capacity") || 0),
       },
     });
     revalidatePath("/events");

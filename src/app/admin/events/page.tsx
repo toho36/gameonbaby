@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "~/components/ui/button";
-import { duplicateEvent, deleteEvent } from "~/actions/actions";
+import { duplicateEvent, deleteEvent, updateEvent } from "~/actions/actions";
 
 interface Event {
   id: string;
@@ -28,9 +28,21 @@ export default function EventManagement() {
   const [error, setError] = useState<string | null>(null);
   const [showPastEvents, setShowPastEvents] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [eventToDuplicate, setEventToDuplicate] = useState<Event | null>(null);
+  const [eventToEdit, setEventToEdit] = useState<Event | null>(null);
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [duplicateFormData, setDuplicateFormData] = useState({
+    title: "",
+    description: "",
+    price: 0,
+    place: "",
+    from: "",
+    to: "",
+    visible: true,
+    capacity: 0,
+  });
+  const [editFormData, setEditFormData] = useState({
     title: "",
     description: "",
     price: 0,
@@ -116,6 +128,53 @@ export default function EventManagement() {
     }
   }
 
+  async function handleEdit(id: string) {
+    const eventToModify = events.find((event) => event.id === id);
+    if (!eventToModify) return;
+
+    setEventToEdit(eventToModify);
+    setEditFormData({
+      title: eventToModify.title,
+      description: eventToModify.description || "",
+      price: eventToModify.price,
+      place: eventToModify.place || "",
+      capacity: eventToModify.capacity || 0,
+      from: toISODateTimeString(eventToModify.from),
+      to: toISODateTimeString(eventToModify.to),
+      visible: eventToModify.visible,
+    });
+    setShowEditModal(true);
+  }
+
+  async function handleEditSubmit() {
+    if (!eventToEdit) return;
+
+    try {
+      // Create FormData
+      const formData = new FormData();
+      formData.append("title", editFormData.title);
+      formData.append("description", editFormData.description);
+      formData.append("price", editFormData.price.toString());
+      formData.append("place", editFormData.place);
+      formData.append("capacity", editFormData.capacity.toString());
+      formData.append("from", new Date(editFormData.from).toISOString());
+      formData.append("to", new Date(editFormData.to).toISOString());
+      formData.append("visible", editFormData.visible ? "true" : "false");
+
+      const result = await updateEvent(eventToEdit.id, formData);
+
+      if (result.success) {
+        setShowEditModal(false);
+        fetchEvents();
+      } else {
+        setError(result.error || "Failed to update event");
+      }
+    } catch (error) {
+      console.error("Error updating event:", error);
+      setError("Failed to update event");
+    }
+  }
+
   async function handleDuplicate(id: string) {
     const eventToClone = events.find((event) => event.id === id);
     if (!eventToClone) return;
@@ -174,18 +233,28 @@ export default function EventManagement() {
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >,
+    formType: "duplicate" | "edit",
   ) {
     const { name, value, type } = e.target;
 
-    setDuplicateFormData({
-      ...duplicateFormData,
-      [name]:
-        type === "checkbox"
-          ? (e.target as HTMLInputElement).checked
-          : name === "price"
-            ? parseInt(value, 10) || 0
-            : value,
-    });
+    const newValue =
+      type === "checkbox"
+        ? (e.target as HTMLInputElement).checked
+        : name === "price" || name === "capacity"
+          ? parseInt(value, 10) || 0
+          : value;
+
+    if (formType === "duplicate") {
+      setDuplicateFormData({
+        ...duplicateFormData,
+        [name]: newValue,
+      });
+    } else {
+      setEditFormData({
+        ...editFormData,
+        [name]: newValue,
+      });
+    }
   }
 
   async function handleDelete(id: string) {
@@ -355,6 +424,7 @@ export default function EventManagement() {
                     </div>
                   </th>
                   <th className="px-6 py-3">Visibility</th>
+                  <th className="px-6 py-3">Capacity</th>
                   <th className="px-6 py-3">Registrations</th>
                   <th className="px-6 py-3">Actions</th>
                 </tr>
@@ -388,6 +458,11 @@ export default function EventManagement() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
+                      <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-sm font-medium text-gray-800">
+                        {event.capacity || "No limit"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
                       <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-sm font-medium text-blue-800">
                         {event._count.Registration}
                       </span>
@@ -396,18 +471,21 @@ export default function EventManagement() {
                       <div className="flex flex-wrap gap-2">
                         <Link
                           href={`/admin/events/${event.id}/${event.id}/registrations`}
-                          className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
                         >
-                          Registrations
-                        </Link>
-                        <Link href={`/admin/events/${event.id}/edit`}>
                           <Button
                             variant="outline"
-                            className="px-2 py-1 text-xs"
+                            className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
                           >
-                            Edit
+                            Registrations
                           </Button>
                         </Link>
+                        <Button
+                          variant="outline"
+                          className="px-2 py-1 text-xs"
+                          onClick={() => handleEdit(event.id)}
+                        >
+                          Edit
+                        </Button>
                         <Button
                           variant="outline"
                           className="px-2 py-1 text-xs"
@@ -465,6 +543,12 @@ export default function EventManagement() {
                     <div>{formatDateTime(new Date(event.from))}</div>
                   </div>
                   <div>
+                    <span className="text-gray-500">Capacity:</span>
+                    <div className="font-medium text-gray-800">
+                      {event.capacity || "No limit"}
+                    </div>
+                  </div>
+                  <div>
                     <span className="text-gray-500">Registrations:</span>
                     <div className="font-medium text-blue-800">
                       {event._count.Registration}
@@ -484,11 +568,13 @@ export default function EventManagement() {
                       View Registrations
                     </Button>
                   </Link>
-                  <Link href={`/admin/events/${event.id}/edit`}>
-                    <Button variant="outline" className="w-full py-1 text-xs">
-                      Edit
-                    </Button>
-                  </Link>
+                  <Button
+                    variant="outline"
+                    className="w-full py-1 text-xs"
+                    onClick={() => handleEdit(event.id)}
+                  >
+                    Edit
+                  </Button>
                   <Button
                     variant="outline"
                     className="w-full py-1 text-xs"
@@ -523,7 +609,7 @@ export default function EventManagement() {
                   type="text"
                   name="title"
                   value={duplicateFormData.title}
-                  onChange={handleFormChange}
+                  onChange={(e) => handleFormChange(e, "duplicate")}
                   className="w-full rounded-md border border-gray-300 p-2"
                   required
                 />
@@ -536,7 +622,7 @@ export default function EventManagement() {
                 <textarea
                   name="description"
                   value={duplicateFormData.description}
-                  onChange={handleFormChange}
+                  onChange={(e) => handleFormChange(e, "duplicate")}
                   className="w-full rounded-md border border-gray-300 p-2"
                   rows={3}
                 />
@@ -555,7 +641,7 @@ export default function EventManagement() {
                     name="price"
                     id="price"
                     value={duplicateFormData.price}
-                    onChange={handleFormChange}
+                    onChange={(e) => handleFormChange(e, "duplicate")}
                     className="mt-1 block w-full rounded-md border border-gray-300 p-2 shadow-sm focus:border-purple-500 focus:ring-purple-500"
                     required
                   />
@@ -572,7 +658,7 @@ export default function EventManagement() {
                     name="capacity"
                     id="capacity"
                     value={duplicateFormData.capacity}
-                    onChange={handleFormChange}
+                    onChange={(e) => handleFormChange(e, "duplicate")}
                     className="mt-1 block w-full rounded-md border border-gray-300 p-2 shadow-sm focus:border-purple-500 focus:ring-purple-500"
                     required
                     min="0"
@@ -589,7 +675,7 @@ export default function EventManagement() {
                     type="text"
                     name="place"
                     value={duplicateFormData.place}
-                    onChange={handleFormChange}
+                    onChange={(e) => handleFormChange(e, "duplicate")}
                     className="w-full rounded-md border border-gray-300 p-2"
                     placeholder="e.g., Sportovní hala TJ JM Chodov"
                   />
@@ -604,7 +690,7 @@ export default function EventManagement() {
                   <select
                     name="visible"
                     value={duplicateFormData.visible ? "true" : "false"}
-                    onChange={handleFormChange}
+                    onChange={(e) => handleFormChange(e, "duplicate")}
                     className="w-full rounded-md border border-gray-300 p-2"
                   >
                     <option value="true">Visible</option>
@@ -622,7 +708,7 @@ export default function EventManagement() {
                     type="datetime-local"
                     name="from"
                     value={duplicateFormData.from}
-                    onChange={handleFormChange}
+                    onChange={(e) => handleFormChange(e, "duplicate")}
                     className="w-full rounded-md border border-gray-300 p-2"
                     required
                   />
@@ -636,7 +722,7 @@ export default function EventManagement() {
                     type="datetime-local"
                     name="to"
                     value={duplicateFormData.to}
-                    onChange={handleFormChange}
+                    onChange={(e) => handleFormChange(e, "duplicate")}
                     className="w-full rounded-md border border-gray-300 p-2"
                     required
                   />
@@ -657,6 +743,156 @@ export default function EventManagement() {
                 className="w-full sm:w-auto"
               >
                 Duplicate Event
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-4 shadow-lg sm:p-6">
+            <h2 className="mb-4 text-xl font-semibold">Edit Event</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  name="title"
+                  value={editFormData.title}
+                  onChange={(e) => handleFormChange(e, "edit")}
+                  className="w-full rounded-md border border-gray-300 p-2"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Description
+                </label>
+                <textarea
+                  name="description"
+                  value={editFormData.description}
+                  onChange={(e) => handleFormChange(e, "edit")}
+                  className="w-full rounded-md border border-gray-300 p-2"
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor="price"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Price (CZK)
+                  </label>
+                  <input
+                    type="number"
+                    name="price"
+                    id="price"
+                    value={editFormData.price}
+                    onChange={(e) => handleFormChange(e, "edit")}
+                    className="mt-1 block w-full rounded-md border border-gray-300 p-2 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="capacity"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Capacity
+                  </label>
+                  <input
+                    type="number"
+                    name="capacity"
+                    id="capacity"
+                    value={editFormData.capacity}
+                    onChange={(e) => handleFormChange(e, "edit")}
+                    className="mt-1 block w-full rounded-md border border-gray-300 p-2 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                    required
+                    min="0"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Place/Address
+                  </label>
+                  <input
+                    type="text"
+                    name="place"
+                    value={editFormData.place}
+                    onChange={(e) => handleFormChange(e, "edit")}
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    placeholder="e.g., Sportovní hala TJ JM Chodov"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Visibility
+                  </label>
+                  <select
+                    name="visible"
+                    value={editFormData.visible ? "true" : "false"}
+                    onChange={(e) => handleFormChange(e, "edit")}
+                    className="w-full rounded-md border border-gray-300 p-2"
+                  >
+                    <option value="true">Visible</option>
+                    <option value="false">Hidden</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Start Date & Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    name="from"
+                    value={editFormData.from}
+                    onChange={(e) => handleFormChange(e, "edit")}
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    End Date & Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    name="to"
+                    value={editFormData.to}
+                    onChange={(e) => handleFormChange(e, "edit")}
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col-reverse space-y-2 space-y-reverse sm:flex-row sm:justify-end sm:space-x-3 sm:space-y-0">
+              <Button
+                variant="outline"
+                onClick={() => setShowEditModal(false)}
+                className="w-full sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleEditSubmit} className="w-full sm:w-auto">
+                Save Changes
               </Button>
             </div>
           </div>

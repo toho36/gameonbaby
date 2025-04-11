@@ -72,16 +72,16 @@ export default async function EventPage({
   const isEventInPast = new Date(event.to) < new Date();
 
   return (
-    <main className="container mx-auto min-h-screen bg-[#1a0a3a] px-4 py-6 md:py-8">
+    <main className="min-h-screen bg-[#1a0a3a] px-4 py-6 md:py-8">
       <div className="mx-auto max-w-3xl">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <Link
             href="/"
-            className="inline-flex items-center rounded-full bg-purple-800/50 px-3 py-1 text-sm text-white transition hover:bg-purple-700/70 hover:text-white"
+            className="inline-flex items-center rounded-full bg-purple-800/50 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-purple-700/70 hover:text-white"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="mr-1 h-4 w-4"
+              className="mr-2 h-4 w-4"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -98,11 +98,11 @@ export default async function EventPage({
 
           <Link
             href="/"
-            className="inline-flex items-center rounded-full bg-purple-800/50 px-3 py-1 text-sm text-white transition hover:bg-purple-700/70 hover:text-white"
+            className="inline-flex items-center rounded-full bg-purple-800/50 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-purple-700/70 hover:text-white"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="mr-1 h-4 w-4"
+              className="mr-2 h-4 w-4"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -118,18 +118,18 @@ export default async function EventPage({
           </Link>
         </div>
 
-        <div className="overflow-hidden rounded-lg bg-[#2c1660] shadow-xl">
-          <div className="p-4 md:p-6">
-            <h1 className="mb-4 text-2xl font-bold text-white md:text-3xl">
+        <div className="overflow-hidden rounded-2xl bg-gradient-to-b from-[#2c1660] to-[#24134d] shadow-xl">
+          <div className="p-6 md:p-8">
+            <h1 className="mb-6 text-2xl font-bold text-white md:text-3xl lg:text-4xl">
               {event.title}
             </h1>
 
-            <div className="mb-5 grid gap-4 text-white sm:grid-cols-2">
-              <div className="flex items-start">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-500/40 text-purple-200">
+            <div className="mb-8 grid gap-6 text-white sm:grid-cols-2">
+              <div className="flex items-start space-x-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-500/40 text-purple-200">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
+                    className="h-6 w-6"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -142,17 +142,21 @@ export default async function EventPage({
                     />
                   </svg>
                 </div>
-                <div className="ml-3">
-                  <p className="font-medium text-white">Date</p>
-                  <p>{formatDate(event.from)}</p>
+                <div>
+                  <h2 className="text-base font-medium text-purple-200">
+                    Date
+                  </h2>
+                  <p className="mt-1 text-lg font-semibold text-white">
+                    {formatDate(event.from)}
+                  </p>
                 </div>
               </div>
 
-              <div className="flex items-start">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-500/40 text-purple-200">
+              <div className="flex items-start space-x-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-500/40 text-purple-200">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
+                    className="h-6 w-6"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -165,20 +169,22 @@ export default async function EventPage({
                     />
                   </svg>
                 </div>
-                <div className="ml-3">
-                  <p className="font-medium text-white">Time</p>
-                  <p>
+                <div>
+                  <h2 className="text-base font-medium text-purple-200">
+                    Time
+                  </h2>
+                  <p className="mt-1 text-lg font-semibold text-white">
                     {formatTime(event.from)} - {formatTime(event.to)}
                   </p>
                 </div>
               </div>
 
               {event.place && (
-                <div className="flex items-start sm:col-span-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-500/40 text-purple-200">
+                <div className="flex items-start space-x-4 sm:col-span-2">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-500/40 text-purple-200">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
+                      className="h-6 w-6"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -197,76 +203,105 @@ export default async function EventPage({
                       />
                     </svg>
                   </div>
-                  <div className="ml-3">
-                    <p className="font-medium text-white">Location</p>
-                    <p>{event.place}</p>
-                  </div>
-                </div>
-              )}
-
-              {event.price && (
-                <div className="flex items-start">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-500/40 text-purple-200">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <p className="font-medium text-white">Price</p>
-                    <div className="mt-4 flex items-center justify-between">
-                      <div className="text-2xl font-bold text-gray-900">
-                        {event.price} Kč
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        Capacity: {event._count.Registration} / {event.capacity}
-                      </div>
-                    </div>
+                  <div>
+                    <h2 className="text-base font-medium text-purple-200">
+                      Location
+                    </h2>
+                    <p className="mt-1 text-lg font-semibold text-white">
+                      {event.place}
+                    </p>
                   </div>
                 </div>
               )}
             </div>
 
-            {event.description && (
-              <div className="mb-5 rounded border border-purple-400/30 bg-purple-900/30 p-4 text-white">
-                <h2 className="mb-2 font-medium text-white">About Event</h2>
-                <div className="whitespace-pre-wrap text-sm">
-                  {event.description}
+            <div className="mb-8 grid gap-6 sm:grid-cols-2">
+              {event.price && (
+                <div className="overflow-hidden rounded-xl bg-white/10 p-5 shadow-md backdrop-blur-sm">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-bold text-white">Price</h2>
+                    <div className="text-3xl font-bold text-white">
+                      {event.price} Kč
+                    </div>
+                  </div>
                 </div>
+              )}
+
+              <div className="overflow-hidden rounded-xl bg-white/10 p-5 shadow-md backdrop-blur-sm">
+                <div className="mb-2 flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-white">Capacity</h2>
+                  <div className="text-2xl font-bold text-white">
+                    {event._count.Registration} / {event.capacity}
+                  </div>
+                </div>
+                <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/20">
+                  <div
+                    className="h-2.5 rounded-full bg-white"
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        (event._count.Registration / event.capacity) * 100,
+                      )}%`,
+                    }}
+                  ></div>
+                </div>
+                {event._count.Registration < event.capacity && (
+                  <div className="mt-2 text-right text-sm text-white/80">
+                    {event.capacity - event._count.Registration} spots left
+                  </div>
+                )}
               </div>
+            </div>
+
+            {event.description && (
+              <>
+                <h2 className="mb-5 text-xl font-bold text-white">
+                  About Event
+                </h2>
+                <div className="mb-8 rounded-xl border border-white/20 bg-white/5 p-5 text-white backdrop-blur-sm">
+                  <div className="prose prose-invert prose-p:text-white/90 prose-li:text-white/90 max-w-none whitespace-pre-wrap text-base">
+                    {event.description}
+                  </div>
+                </div>
+              </>
             )}
 
             {isEventInPast ? (
-              <div className="rounded border border-yellow-400/40 bg-yellow-900/30 p-4 text-center text-yellow-200">
-                <p>Registration for this event is now closed.</p>
+              <div className="rounded-xl border border-white/20 bg-white/5 p-5 text-center backdrop-blur-sm">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="mx-auto mb-2 h-10 w-10 text-white/70"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <h3 className="mb-1 text-xl font-bold text-white">
+                  Event Completed
+                </h3>
+                <p className="text-white/80">
+                  Registration for this event is now closed.
+                </p>
               </div>
             ) : (
-              <div className="rounded-lg border border-purple-400/50 bg-[#24176b] p-6 shadow-lg">
-                <h2 className="mb-4 text-center text-xl font-medium text-white">
-                  Registration
-                </h2>
-                <div className="mt-6">
-                  <RegistrationForm
-                    event={{
-                      ...event,
-                      from: event.from.toISOString(),
-                      to: event.to.toISOString(),
-                    }}
-                    eventId={event.id}
-                    eventDate={formatDate(event.from)}
-                  />
-                </div>
-              </div>
+              <>
+                <h2 className="mb-5 text-xl font-bold text-white">Register</h2>
+                <RegistrationForm
+                  event={{
+                    ...event,
+                    from: event.from.toISOString(),
+                    to: event.to.toISOString(),
+                  }}
+                  eventId={event.id}
+                  eventDate={formatDate(event.from)}
+                />
+              </>
             )}
           </div>
         </div>

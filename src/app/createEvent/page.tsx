@@ -18,6 +18,18 @@ const EventForm: React.FC = () => {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">
+            Capacity
+          </label>
+          <input
+            type="number"
+            className="w-full rounded border border-gray-300 p-2"
+            required
+            name="capacity"
+            min="0"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
             From
           </label>
           <input

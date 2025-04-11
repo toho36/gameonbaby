@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import { createRegistration } from "~/actions/actions";
 import { sendRegistrationEmail } from "~/server/service/emailService";
 
@@ -24,15 +25,133 @@ export default function RegistrationForm({
   eventPlace = "Sportovní hala TJ JM Chodov, Mírového hnutí 2137",
   eventPrice = 150,
 }: RegistrationFormProps) {
+  const { user, isAuthenticated, isLoading } = useKindeBrowserClient();
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isRegistered, setIsRegistered] = useState(false);
+  const [showFullForm, setShowFullForm] = useState(false);
+  const [paymentPreference, setPaymentPreference] = useState<string>("CARD");
   const [formData, setFormData] = useState({
     firstName: "",
     email: "",
     phoneNumber: "",
   });
+  const [userRegistration, setUserRegistration] = useState<any>(null);
+
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      // Check if user is already registered for this event
+      checkUserRegistration();
+      // Fetch user's payment preference
+      fetchPaymentPreference();
+    }
+  }, [isAuthenticated, user?.id]);
+
+  async function fetchPaymentPreference() {
+    try {
+      const response = await fetch("/api/user/payment-preference");
+      const data = await response.json();
+      if (data.success) {
+        setPaymentPreference(data.paymentPreference);
+      }
+    } catch (error) {
+      console.error("Error fetching payment preference:", error);
+    }
+  }
+
+  async function updatePaymentPreference(preference: string) {
+    try {
+      const response = await fetch("/api/user/payment-preference", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ paymentPreference: preference }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setPaymentPreference(data.paymentPreference);
+      }
+    } catch (error) {
+      console.error("Error updating payment preference:", error);
+    }
+  }
+
+  async function checkUserRegistration() {
+    try {
+      const response = await fetch(
+        `/api/events/${eventId}/registration-status`,
+      );
+      const data = await response.json();
+      if (data.success && data.registration) {
+        setUserRegistration(data.registration);
+        setIsRegistered(true);
+      }
+    } catch (error) {
+      console.error("Error checking registration status:", error);
+    }
+  }
+
+  async function handleQuickRegister() {
+    if (!user) return;
+
+    const formDataObj = new FormData();
+    formDataObj.append("event_id", eventId);
+    formDataObj.append(
+      "first_name",
+      user.given_name || user.email?.split("@")[0] || "",
+    );
+    formDataObj.append("email", user.email || "");
+    formDataObj.append("payment_type", paymentPreference);
+
+    const qrCode = generateQRCodeURL(
+      user.given_name || user.email?.split("@")[0] || "",
+      eventDate,
+    );
+    const response = await createRegistration(formDataObj);
+
+    if (response.success) {
+      setSuccess("Registration completed successfully!");
+      await sendRegistrationEmail(
+        user.email || "",
+        user.given_name || "",
+        qrCode,
+        eventDate,
+      );
+      setQrCodeUrl(qrCode);
+      setIsRegistered(true);
+      if (response.registration) {
+        setUserRegistration(response.registration);
+      } else {
+        await checkUserRegistration();
+      }
+    } else {
+      setError(response.message ?? "Registration failed. Please try again.");
+    }
+  }
+
+  async function handleUnregister() {
+    if (!userRegistration) return;
+
+    try {
+      const response = await fetch(`/api/events/${eventId}/unregister`, {
+        method: "POST",
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        setIsRegistered(false);
+        setUserRegistration(null);
+        setSuccess("Successfully unregistered from the event.");
+      } else {
+        setError(data.message || "Failed to unregister from the event.");
+      }
+    } catch (error) {
+      console.error("Error unregistering:", error);
+      setError("Failed to unregister from the event.");
+    }
+  }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -44,7 +163,6 @@ export default function RegistrationForm({
 
     setFormData({ firstName, email, phoneNumber });
 
-    // Add the event ID to the form data
     formDataObj.append("event_id", eventId);
 
     const qrCode = generateQRCodeURL(firstName, eventDate);
@@ -55,10 +173,19 @@ export default function RegistrationForm({
       await sendRegistrationEmail(email, firstName, qrCode, eventDate);
       setQrCodeUrl(qrCode);
       setIsRegistered(true);
+      if (response.registration) {
+        setUserRegistration(response.registration);
+      } else {
+        await checkUserRegistration(); // Fallback to fetching registration data
+      }
     } else {
       setError(response.message ?? "Registration failed. Please try again.");
     }
   };
+
+  if (isLoading) {
+    return <div className="text-center text-white">Loading...</div>;
+  }
 
   return (
     <div className="w-full">
@@ -68,80 +195,134 @@ export default function RegistrationForm({
             Game On - Registration
           </h2>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="mb-2 block text-sm font-medium text-white">
-                Name
-              </label>
-              <input
-                type="text"
-                name="first_name"
-                required
-                placeholder="Your name"
-                className="w-full rounded-md border border-purple-400 bg-[#1e114a] p-3 text-white placeholder:text-white/70 focus:border-purple-300 focus:outline-none focus:ring-1 focus:ring-purple-300"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-white">
-                Email
-              </label>
-              <input
-                type="email"
-                name="email"
-                required
-                placeholder="your@email.com"
-                className="w-full rounded-md border border-purple-400 bg-[#1e114a] p-3 text-white placeholder:text-white/70 focus:border-purple-300 focus:outline-none focus:ring-1 focus:ring-purple-300"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-white">
-                Phone Number
-              </label>
-              <input
-                type="tel"
-                name="phone_number"
-                placeholder="Your phone"
-                className="w-full rounded-md border border-purple-400 bg-[#1e114a] p-3 text-white placeholder:text-white/70 focus:border-purple-300 focus:outline-none focus:ring-1 focus:ring-purple-300"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-medium text-white">
-                Payment Method
-              </label>
-              <div className="flex flex-wrap gap-3">
-                <label className="flex flex-1 cursor-pointer items-center rounded-md border border-purple-400 bg-[#1e114a] px-4 py-3 hover:border-purple-300 hover:bg-[#2a1a63]">
-                  <input
-                    type="radio"
-                    name="payment_type"
-                    value="CARD"
-                    required
-                    className="mr-2 h-4 w-4 accent-purple-500"
-                  />
-                  <span className="text-sm text-white">QR Code</span>
-                </label>
-                <label className="flex flex-1 cursor-pointer items-center rounded-md border border-purple-400 bg-[#1e114a] px-4 py-3 hover:border-purple-300 hover:bg-[#2a1a63]">
-                  <input
-                    type="radio"
-                    name="payment_type"
-                    value="CASH"
-                    required
-                    className="mr-2 h-4 w-4 accent-purple-500"
-                  />
-                  <span className="text-sm text-white">Cash on Site</span>
-                </label>
+          {isAuthenticated && !showFullForm ? (
+            <div className="space-y-4">
+              <div className="rounded-md border border-purple-400/30 bg-[#1e114a] p-4">
+                <p className="mb-2 text-white">Logged in as: {user?.email}</p>
+                <div className="mb-4">
+                  <label className="mb-2 block text-sm font-medium text-white">
+                    Payment Method
+                  </label>
+                  <div className="flex flex-wrap gap-3">
+                    <label className="flex flex-1 cursor-pointer items-center rounded-md border border-purple-400 bg-[#1e114a] px-4 py-3 hover:border-purple-300 hover:bg-[#2a1a63]">
+                      <input
+                        type="radio"
+                        name="payment_type"
+                        value="CARD"
+                        checked={paymentPreference === "CARD"}
+                        onChange={() => updatePaymentPreference("CARD")}
+                        className="mr-2 h-4 w-4 accent-purple-500"
+                      />
+                      <span className="text-sm text-white">QR Code</span>
+                    </label>
+                    <label className="flex flex-1 cursor-pointer items-center rounded-md border border-purple-400 bg-[#1e114a] px-4 py-3 hover:border-purple-300 hover:bg-[#2a1a63]">
+                      <input
+                        type="radio"
+                        name="payment_type"
+                        value="CASH"
+                        checked={paymentPreference === "CASH"}
+                        onChange={() => updatePaymentPreference("CASH")}
+                        className="mr-2 h-4 w-4 accent-purple-500"
+                      />
+                      <span className="text-sm text-white">Cash on Site</span>
+                    </label>
+                  </div>
+                </div>
+                <button
+                  onClick={handleQuickRegister}
+                  className="w-full rounded-md bg-purple-600 p-3 font-medium text-white transition hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                >
+                  Quick Register
+                </button>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-white/70">
+                  Want to register with different details?{" "}
+                  <button
+                    onClick={() => setShowFullForm(true)}
+                    className="text-purple-400 hover:text-purple-300"
+                  >
+                    Use form instead
+                  </button>
+                </p>
               </div>
             </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  name="first_name"
+                  required
+                  placeholder="Your name"
+                  className="w-full rounded-md border border-purple-400 bg-[#1e114a] p-3 text-white placeholder:text-white/70 focus:border-purple-300 focus:outline-none focus:ring-1 focus:ring-purple-300"
+                />
+              </div>
 
-            <button
-              type="submit"
-              className="w-full rounded-md bg-purple-600 p-3 font-medium text-white transition hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-            >
-              Register
-            </button>
-          </form>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  required
+                  placeholder="your@email.com"
+                  className="w-full rounded-md border border-purple-400 bg-[#1e114a] p-3 text-white placeholder:text-white/70 focus:border-purple-300 focus:outline-none focus:ring-1 focus:ring-purple-300"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  name="phone_number"
+                  placeholder="Your phone"
+                  className="w-full rounded-md border border-purple-400 bg-[#1e114a] p-3 text-white placeholder:text-white/70 focus:border-purple-300 focus:outline-none focus:ring-1 focus:ring-purple-300"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-white">
+                  Payment Method
+                </label>
+                <div className="flex flex-wrap gap-3">
+                  <label className="flex flex-1 cursor-pointer items-center rounded-md border border-purple-400 bg-[#1e114a] px-4 py-3 hover:border-purple-300 hover:bg-[#2a1a63]">
+                    <input
+                      type="radio"
+                      name="payment_type"
+                      value="CARD"
+                      required
+                      className="mr-2 h-4 w-4 accent-purple-500"
+                    />
+                    <span className="text-sm text-white">QR Code</span>
+                  </label>
+                  <label className="flex flex-1 cursor-pointer items-center rounded-md border border-purple-400 bg-[#1e114a] px-4 py-3 hover:border-purple-300 hover:bg-[#2a1a63]">
+                    <input
+                      type="radio"
+                      name="payment_type"
+                      value="CASH"
+                      required
+                      className="mr-2 h-4 w-4 accent-purple-500"
+                    />
+                    <span className="text-sm text-white">Cash on Site</span>
+                  </label>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full rounded-md bg-purple-600 p-3 font-medium text-white transition hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+              >
+                Register
+              </button>
+            </form>
+          )}
 
           {error && (
             <div className="mt-4 rounded-md border border-red-400/40 bg-red-900/40 p-3 text-center text-red-200">
@@ -167,21 +348,40 @@ export default function RegistrationForm({
           </svg>
 
           <h2 className="mb-3 mt-2 text-xl font-bold text-white">
-            Registration Successful!
+            {isAuthenticated
+              ? "You're registered!"
+              : "Registration Successful!"}
           </h2>
 
           <div className="mb-4 rounded bg-[#0d2d22] p-3 text-left">
-            <p className="mb-1">
-              <span className="font-medium">Name:</span> {formData.firstName}
-            </p>
-            <p className="mb-1">
-              <span className="font-medium">Email:</span> {formData.email}
-            </p>
-            {formData.phoneNumber && (
-              <p>
-                <span className="font-medium">Phone:</span>{" "}
-                {formData.phoneNumber}
-              </p>
+            {isAuthenticated ? (
+              <>
+                <p className="mb-1">
+                  <span className="font-medium">Email:</span> {user?.email}
+                </p>
+                {userRegistration?.phoneNumber && (
+                  <p>
+                    <span className="font-medium">Phone:</span>{" "}
+                    {userRegistration.phoneNumber}
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="mb-1">
+                  <span className="font-medium">Name:</span>{" "}
+                  {formData.firstName}
+                </p>
+                <p className="mb-1">
+                  <span className="font-medium">Email:</span> {formData.email}
+                </p>
+                {formData.phoneNumber && (
+                  <p>
+                    <span className="font-medium">Phone:</span>{" "}
+                    {formData.phoneNumber}
+                  </p>
+                )}
+              </>
             )}
           </div>
 
@@ -198,38 +398,14 @@ export default function RegistrationForm({
             </p>
           </div>
 
-          {qrCodeUrl && (
-            <div className="mb-4">
-              <p className="mb-2 font-medium text-white">Payment QR Code:</p>
-              <div className="mx-auto inline-flex rounded bg-white p-3">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={qrCodeUrl}
-                  alt="QR Code for Payment"
-                  width={180}
-                  height={180}
-                />
-              </div>
-            </div>
+          {isAuthenticated && (
+            <button
+              onClick={handleUnregister}
+              className="mt-4 rounded-md border border-red-400/30 bg-red-900/30 px-4 py-2 text-red-200 hover:bg-red-900/50"
+            >
+              Unregister from Event
+            </button>
           )}
-
-          <div className="mt-4 text-sm text-white/80">
-            <p className="mb-1">
-              A confirmation has been sent to your email. Follow us on{" "}
-              <a
-                href="https://instagram.com/gameon.vb"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-purple-300 hover:text-purple-200 hover:underline"
-              >
-                instagram.com/gameon.vb
-              </a>
-            </p>
-            <p className="mt-2">
-              <span className="font-medium text-white">Contact:</span> 792 397
-              669
-            </p>
-          </div>
         </div>
       )}
     </div>

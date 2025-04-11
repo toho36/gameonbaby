@@ -60,6 +60,7 @@ model User {
   kindeId       String?   @unique
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  paymentPreference String @default("CARD") // CARD or CASH
 }
 
 model VerificationToken {

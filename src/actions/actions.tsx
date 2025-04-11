@@ -134,7 +134,7 @@ export async function editEvent(formData: FormData) {
 
 export async function createRegistration(
   formData: FormData,
-): Promise<{ success: boolean; message?: string }> {
+): Promise<{ success: boolean; message?: string; registration?: any }> {
   try {
     console.log(
       "Received form data:",
@@ -164,7 +164,7 @@ export async function createRegistration(
     }
 
     console.log("Creating new registration...");
-    await prisma.registration.create({
+    const registration = await prisma.registration.create({
       data: {
         first_name: formData.get("first_name") as string,
         email: formData.get("email") as string,
@@ -176,7 +176,7 @@ export async function createRegistration(
     });
 
     console.log("Registration created successfully.");
-    return { success: true };
+    return { success: true, registration };
   } catch (error) {
     console.error("Error creating registration:", error);
     return {

@@ -54,6 +54,16 @@ export default async function EventPage({
           Registration: true,
         },
       },
+      Registration: {
+        select: {
+          first_name: true,
+          last_name: true,
+          created_at: true,
+        },
+        orderBy: {
+          created_at: "desc",
+        },
+      },
     },
   });
 
@@ -61,8 +71,17 @@ export default async function EventPage({
     notFound();
   }
 
-  // Cast to our Event interface
-  const event = eventData as unknown as Event;
+  // Cast to our Event interface with registrations
+  const event = {
+    ...eventData,
+    registrations: eventData.Registration,
+  } as unknown as Event & {
+    registrations: {
+      first_name: string;
+      last_name: string | null;
+      created_at: Date;
+    }[];
+  };
 
   // Check visibility after casting
   if (!event.visible) {
@@ -301,6 +320,38 @@ export default async function EventPage({
                   eventId={event.id}
                   eventDate={formatDate(event.from)}
                 />
+              </>
+            )}
+
+            {/* Display registrations */}
+            {event.registrations.length > 0 && (
+              <>
+                <h2 className="mb-5 mt-8 text-xl font-bold text-white">
+                  Participants
+                </h2>
+                <div className="rounded-xl border border-white/20 bg-white/5 p-5 backdrop-blur-sm">
+                  <div className="grid gap-3">
+                    {event.registrations.map((reg, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between rounded-lg bg-white/10 p-3"
+                      >
+                        <div className="flex items-center">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-600 text-white">
+                            {reg.first_name.charAt(0)}
+                            {reg.last_name ? reg.last_name.charAt(0) : ""}
+                          </div>
+                          <span className="ml-3 text-white">
+                            {reg.first_name} {reg.last_name}
+                          </span>
+                        </div>
+                        <span className="text-sm text-white/70">
+                          {new Date(reg.created_at).toLocaleDateString("cs-CZ")}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </>
             )}
           </div>

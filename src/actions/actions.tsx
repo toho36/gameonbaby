@@ -12,6 +12,7 @@ export async function createEvent(formData: FormData) {
         description: formData.get("description") as string,
         price: Number(formData.get("price") || 0),
         place: (formData.get("place") as string) || null,
+        capacity: Number(formData.get("capacity") || 0),
         from: new Date(formData.get("from") as string),
         to: new Date(formData.get("to") as string),
         created_at: new Date(),
@@ -34,26 +35,48 @@ export async function createEvent(formData: FormData) {
 
 export async function updateEvent(id: string, formData: FormData) {
   try {
-    // Parse dates correctly to avoid timezone issues
-    const fromString = formData.get("from") as string;
-    const toString = formData.get("to") as string;
+    // Get the existing event to preserve dates if not provided
+    const existingEvent = await prisma.event.findUnique({
+      where: { id },
+    });
 
-    // Create dates in local timezone context
-    const fromDate = new Date(fromString);
-    const toDate = new Date(toString);
+    if (!existingEvent) {
+      return { error: "Event not found" };
+    }
+
+    // Prepare update data with basic fields
+    const updateData: any = {
+      title: formData.get("title") as string,
+      description: formData.get("description") as string,
+      price: Number(formData.get("price") || 0),
+      place: (formData.get("place") as string) || null,
+      visible: formData.get("visible") === "true",
+      capacity: Number(formData.get("capacity") || 0),
+    };
+
+    // Only update dates if they are provided in the form
+    const fromString = formData.get("from") as string | null;
+    const toString = formData.get("to") as string | null;
+
+    if (fromString) {
+      const fromDate = new Date(fromString);
+      if (!isNaN(fromDate.getTime())) {
+        updateData.from = fromDate;
+      }
+    }
+
+    if (toString) {
+      const toDate = new Date(toString);
+      if (!isNaN(toDate.getTime())) {
+        updateData.to = toDate;
+      }
+    }
 
     await prisma.event.update({
       where: { id },
-      data: {
-        title: formData.get("title") as string,
-        description: formData.get("description") as string,
-        price: Number(formData.get("price") || 0),
-        place: (formData.get("place") as string) || null,
-        from: fromDate,
-        to: toDate,
-        visible: formData.get("visible") === "true",
-      },
+      data: updateData,
     });
+
     revalidatePath("/events");
     revalidatePath("/admin/events");
     revalidatePath(`/admin/events/${id}`);
@@ -80,6 +103,7 @@ export async function duplicateEvent(id: string) {
         description: existingEvent.description,
         price: existingEvent.price,
         place: existingEvent.place,
+        capacity: existingEvent.capacity,
         from: existingEvent.from,
         to: existingEvent.to,
         created_at: new Date(),

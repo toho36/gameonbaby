@@ -12,17 +12,14 @@ interface EventData {
   description: string | null;
   price: number;
   place: string | null;
-  from: string;
-  to: string;
   visible: boolean;
+  capacity: number;
 }
 
-export default function EditEventPage({
-  params,
-}: {
-  params: { eventId: string };
-}) {
-  const [event, setEvent] = useState<EventData | null>(null);
+export default function EditEventPage({ params }: { params: { id: string } }) {
+  const [event, setEvent] = useState<Omit<EventData, "from" | "to"> | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -41,9 +38,7 @@ export default function EditEventPage({
         }
 
         // Load event data
-        const eventResponse = await fetch(
-          `/api/admin/events/${params.eventId}`,
-        );
+        const eventResponse = await fetch(`/api/admin/events/${params.id}`);
         if (!eventResponse.ok) {
           setError("Failed to load event data");
           setLoading(false);
@@ -57,16 +52,13 @@ export default function EditEventPage({
           return;
         }
 
-        // Format dates for input
-        const fromDate = new Date(eventData.event.from);
-        const toDate = new Date(eventData.event.to);
-
+        // Update the main event state (excluding dates)
+        const { from, to, ...restOfEventData } = eventData.event;
         setEvent({
-          ...eventData.event,
-          from: formatDateForInput(fromDate),
-          to: formatDateForInput(toDate),
+          ...restOfEventData,
           place: eventData.event.place || "",
           description: eventData.event.description || "",
+          capacity: eventData.event.capacity || 0,
         });
       } catch (error) {
         console.error("Error loading event:", error);
@@ -77,18 +69,7 @@ export default function EditEventPage({
     }
 
     checkPermissionAndLoadEvent();
-  }, [params.eventId, router]);
-
-  function formatDateForInput(date: Date) {
-    // Fix timezone issues by using local timezone format
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const hours = String(date.getHours()).padStart(2, "0");
-    const minutes = String(date.getMinutes()).padStart(2, "0");
-
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  }
+  }, [params.id, router]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -97,11 +78,7 @@ export default function EditEventPage({
     try {
       const formData = new FormData(e.currentTarget);
 
-      // Log the dates for debugging
-      console.log("Form from date:", formData.get("from"));
-      console.log("Form to date:", formData.get("to"));
-
-      const result = await updateEvent(params.eventId, formData);
+      const result = await updateEvent(params.id, formData);
 
       if (result.success) {
         router.push("/admin/events");
@@ -183,6 +160,41 @@ export default function EditEventPage({
             />
           </div>
 
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div>
+              <label htmlFor="price" className="mb-1 block text-sm font-medium">
+                Price (CZK)
+              </label>
+              <input
+                type="number"
+                id="price"
+                name="price"
+                defaultValue={event.price}
+                required
+                min="0"
+                className="w-full rounded-md border border-gray-300 px-4 py-2"
+                placeholder="Enter price in CZK"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="capacity"
+                className="mb-1 block text-sm font-medium"
+              >
+                Capacity
+              </label>
+              <input
+                type="number"
+                id="capacity"
+                name="capacity"
+                defaultValue={event.capacity}
+                min="0"
+                className="w-full rounded-md border border-gray-300 px-4 py-2"
+                placeholder="Enter maximum capacity (optional)"
+              />
+            </div>
+          </div>
+
           <div>
             <label htmlFor="place" className="mb-1 block text-sm font-medium">
               Place/Address
@@ -191,60 +203,10 @@ export default function EditEventPage({
               type="text"
               id="place"
               name="place"
-              value={event.place || ""}
-              onChange={(e) => {
-                const newEvent = { ...event, place: e.target.value };
-                setEvent(newEvent);
-              }}
+              defaultValue={event.place || ""}
               className="w-full rounded-md border border-gray-300 px-4 py-2"
               placeholder="e.g., Sportovní hala TJ JM Chodov, Mírového hnutí 2137"
             />
-          </div>
-
-          <div>
-            <label htmlFor="price" className="mb-1 block text-sm font-medium">
-              Price (CZK)
-            </label>
-            <input
-              type="number"
-              id="price"
-              name="price"
-              defaultValue={event.price}
-              required
-              min="0"
-              className="w-full rounded-md border border-gray-300 px-4 py-2"
-              placeholder="Enter price in CZK"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div>
-              <label htmlFor="from" className="mb-1 block text-sm font-medium">
-                Start Date & Time
-              </label>
-              <input
-                type="datetime-local"
-                id="from"
-                name="from"
-                defaultValue={event.from}
-                required
-                className="w-full rounded-md border border-gray-300 px-4 py-2"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="to" className="mb-1 block text-sm font-medium">
-                End Date & Time
-              </label>
-              <input
-                type="datetime-local"
-                id="to"
-                name="to"
-                defaultValue={event.to}
-                required
-                className="w-full rounded-md border border-gray-300 px-4 py-2"
-              />
-            </div>
           </div>
 
           <div className="flex items-center">

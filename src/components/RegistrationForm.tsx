@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import { createRegistration } from "~/actions/actions";
 import { sendRegistrationEmail } from "~/server/service/emailService";
+import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
 
 const eventLocation = "Sportovní hala TJ JM Chodov, Mírového hnutí 2137";
 
@@ -12,18 +14,81 @@ function generateQRCodeURL(name: string, eventDate: string) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodedPaymentString}`;
 }
 
+// Modal Component
+function DuplicateRegistrationModal({
+  isOpen,
+  onClose,
+  email,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  email: string;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-black bg-opacity-50">
+      <div className="relative mx-auto my-6 w-full max-w-md">
+        <div className="relative flex flex-col rounded-lg border-0 bg-white p-6 shadow-lg">
+          <div className="mb-4 flex items-start justify-between rounded-t">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Registration Already Exists
+            </h3>
+            <button
+              className="float-right ml-auto border-0 bg-transparent p-1 text-3xl font-semibold text-gray-400"
+              onClick={onClose}
+            >
+              ×
+            </button>
+          </div>
+          <div className="relative mb-4 flex-auto">
+            <p className="text-gray-600">
+              There's already a registration with this email and name
+              combination. If you'd like to register someone else using the
+              email <span className="font-semibold">{email}</span>, please use a
+              different name.
+            </p>
+          </div>
+          <div className="flex items-center justify-end rounded-b">
+            <button
+              className="rounded-md bg-purple-600 px-4 py-2 text-white hover:bg-purple-700"
+              type="button"
+              onClick={onClose}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface Event {
+  id: string;
+  title: string;
+  description: string | null;
+  price: number;
+  place: string | null;
+  capacity: number;
+  from: string;
+  to: string;
+  visible: boolean;
+  _count: {
+    Registration: number;
+  };
+}
+
 interface RegistrationFormProps {
+  event: Event;
   eventId: string;
-  eventDate?: string;
-  eventPlace?: string | null;
-  eventPrice?: number;
+  eventDate: string;
 }
 
 export default function RegistrationForm({
+  event,
   eventId,
-  eventDate = "26.10. 18:15-21:15",
-  eventPlace = "Sportovní hala TJ JM Chodov, Mírového hnutí 2137",
-  eventPrice = 150,
+  eventDate,
 }: RegistrationFormProps) {
   const { user, isAuthenticated, isLoading } = useKindeBrowserClient();
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
@@ -34,10 +99,15 @@ export default function RegistrationForm({
   const [paymentPreference, setPaymentPreference] = useState<string>("CARD");
   const [formData, setFormData] = useState({
     firstName: "",
+    lastName: "",
     email: "",
     phoneNumber: "",
   });
   const [userRegistration, setUserRegistration] = useState<any>(null);
+  const router = useRouter();
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [showGuestForm, setShowGuestForm] = useState(false);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated && user?.id) {
@@ -93,43 +163,245 @@ export default function RegistrationForm({
     }
   }
 
-  async function handleQuickRegister() {
-    if (!user) return;
-
-    const formDataObj = new FormData();
-    formDataObj.append("event_id", eventId);
-    formDataObj.append(
-      "first_name",
-      user.given_name || user.email?.split("@")[0] || "",
-    );
-    formDataObj.append("email", user.email || "");
-    formDataObj.append("payment_type", paymentPreference);
-
-    const qrCode = generateQRCodeURL(
-      user.given_name || user.email?.split("@")[0] || "",
-      eventDate,
-    );
-    const response = await createRegistration(formDataObj);
-
-    if (response.success) {
-      setSuccess("Registration completed successfully!");
-      await sendRegistrationEmail(
-        user.email || "",
-        user.given_name || "",
-        qrCode,
-        eventDate,
-      );
-      setQrCodeUrl(qrCode);
-      setIsRegistered(true);
-      if (response.registration) {
-        setUserRegistration(response.registration);
-      } else {
-        await checkUserRegistration();
-      }
-    } else {
-      setError(response.message ?? "Registration failed. Please try again.");
+  const handleQuickRegister = async () => {
+    if (!user) {
+      router.push("/api/auth/login");
+      return;
     }
-  }
+
+    if (event._count.Registration >= event.capacity) {
+      toast.error("Event is full");
+      return;
+    }
+
+    try {
+      setIsUpdating(true);
+      const response = await fetch("/api/registrations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          eventId: event.id,
+          paymentPreference,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setIsRegistered(true);
+        toast.success(
+          "Registration successful! Check your email for confirmation.",
+        );
+
+        // Send confirmation email if payment type is CARD
+        if (paymentPreference === "CARD" && user.email) {
+          try {
+            const name = user.given_name || user.family_name || "User";
+            const qrUrl = generateQRCodeURL(name, eventDate);
+
+            await sendRegistrationEmail(user.email, name, qrUrl, eventDate);
+          } catch (emailError) {
+            console.error("Failed to send registration email:", emailError);
+          }
+        }
+      } else {
+        console.log("Registration failed:", data);
+
+        // Check if the error is related to duplicate registration
+        if (data.message && data.message.includes("already registered")) {
+          // Show the duplicate registration modal
+          setShowDuplicateModal(true);
+        } else {
+          toast.error(data.error || data.message || "Registration failed");
+        }
+      }
+    } catch (error) {
+      console.error("Error registering:", error);
+      toast.error("Registration failed");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleGuestRegistration = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUpdating(true);
+
+    if (event._count.Registration >= event.capacity) {
+      toast.error("Event is full");
+      setIsUpdating(false);
+      return;
+    }
+
+    // Validate form data
+    if (!formData.firstName || !formData.email) {
+      toast.error("Please fill in required fields");
+      setIsUpdating(false);
+      return;
+    }
+
+    console.log("Attempting to register:", {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      eventId: event.id,
+      paymentType: paymentPreference,
+    });
+
+    try {
+      const response = await fetch("/api/registration", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName || "",
+          email: formData.email,
+          phoneNumber: formData.phoneNumber || "",
+          eventId: event.id,
+          paymentType: paymentPreference,
+        }),
+      });
+
+      const data = await response.json();
+      console.log("Registration response:", { status: response.status, data });
+
+      if (response.ok) {
+        setIsRegistered(true);
+        toast.success(
+          "Registration successful! Check your email for confirmation.",
+        );
+
+        // Check if we have QR code data in the response
+        let qrUrl = data.qrCodeData;
+
+        // Generate one if not provided but payment type is CARD
+        if (!qrUrl && paymentPreference === "CARD") {
+          const name = `${formData.firstName} ${formData.lastName}`.trim();
+          qrUrl = generateQRCodeURL(name, eventDate);
+          setQrCodeUrl(qrUrl);
+        } else if (qrUrl) {
+          setQrCodeUrl(qrUrl);
+        }
+
+        // Send confirmation email with QR code if payment type is CARD
+        if (paymentPreference === "CARD" && qrUrl) {
+          try {
+            await sendRegistrationEmail(
+              formData.email,
+              formData.firstName,
+              qrUrl,
+              eventDate,
+            );
+            console.log("Registration email sent successfully");
+          } catch (emailError) {
+            console.error("Failed to send registration email:", emailError);
+            // Don't show this error to the user since registration was successful
+          }
+        } else {
+          // Send a confirmation email without QR code for cash payments
+          try {
+            await fetch("/api/email/confirmation", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                email: formData.email,
+                firstName: formData.firstName,
+                eventDate: eventDate,
+                paymentType: "CASH",
+              }),
+            });
+            console.log("Confirmation email sent successfully");
+          } catch (emailError) {
+            console.error("Failed to send confirmation email:", emailError);
+          }
+        }
+      } else {
+        console.error("Registration error:", data);
+
+        // Check if the error is related to duplicate registration
+        if (
+          response.status === 409 ||
+          (data.message && data.message.includes("already exists"))
+        ) {
+          // Show the duplicate registration modal
+          setShowDuplicateModal(true);
+        } else {
+          // Display general error
+          const errorMessage = data.message || "Registration failed";
+          toast.error(errorMessage);
+        }
+      }
+    } catch (error) {
+      console.error("Error registering:", error);
+      toast.error("Registration failed. Please try again later.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) {
+      router.push("/api/auth/login");
+      return;
+    }
+
+    if (event._count.Registration >= event.capacity) {
+      toast.error("Event is full");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/registrations", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          eventId: event.id,
+          paymentPreference,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setIsRegistered(true);
+        toast.success(
+          "Registration successful! Check your email for confirmation.",
+        );
+
+        // Send confirmation email if payment type is CARD
+        if (paymentPreference === "CARD" && user.email) {
+          try {
+            const name = user.given_name || user.family_name || "User";
+            const qrUrl = generateQRCodeURL(name, eventDate);
+
+            await sendRegistrationEmail(user.email, name, qrUrl, eventDate);
+          } catch (emailError) {
+            console.error("Failed to send registration email:", emailError);
+          }
+        }
+      } else {
+        toast.error(data.error || data.message || "Registration failed");
+      }
+    } catch (error) {
+      console.error("Error registering:", error);
+      toast.error("Registration failed");
+    }
+  };
 
   async function handleUnregister() {
     if (!userRegistration) return;
@@ -153,261 +425,235 @@ export default function RegistrationForm({
     }
   }
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const formDataObj = new FormData(event.currentTarget);
-    const firstName = formDataObj.get("first_name") as string;
-    const email = formDataObj.get("email") as string;
-    const phoneNumber = formDataObj.get("phone_number") as string;
-
-    setFormData({ firstName, email, phoneNumber });
-
-    formDataObj.append("event_id", eventId);
-
-    const qrCode = generateQRCodeURL(firstName, eventDate);
-    const response = await createRegistration(formDataObj);
-
-    if (response.success) {
-      setSuccess("Registration completed successfully!");
-      await sendRegistrationEmail(email, firstName, qrCode, eventDate);
-      setQrCodeUrl(qrCode);
-      setIsRegistered(true);
-      if (response.registration) {
-        setUserRegistration(response.registration);
-      } else {
-        await checkUserRegistration(); // Fallback to fetching registration data
-      }
-    } else {
-      setError(response.message ?? "Registration failed. Please try again.");
-    }
-  };
-
   if (isLoading) {
     return <div className="text-center text-white">Loading...</div>;
   }
 
-  return (
-    <div className="w-full">
-      {!isRegistered ? (
-        <>
-          <h2 className="mb-6 text-center text-2xl font-bold text-white">
-            Game On - Registration
-          </h2>
+  if (isRegistered) {
+    return (
+      <div className="rounded-lg bg-white p-6 shadow-md">
+        <h3 className="mb-4 text-lg font-medium">Registration Successful!</h3>
+        <p className="mb-4 text-gray-600">
+          You have successfully registered for this event. A confirmation email
+          has been sent to your email address.
+        </p>
 
-          {isAuthenticated && !showFullForm ? (
-            <div className="space-y-4">
-              <div className="rounded-md border border-purple-400/30 bg-[#1e114a] p-4">
-                <p className="mb-2 text-white">Logged in as: {user?.email}</p>
-                <div className="mb-4">
-                  <label className="mb-2 block text-sm font-medium text-white">
-                    Payment Method
-                  </label>
-                  <div className="flex flex-wrap gap-3">
-                    <label className="flex flex-1 cursor-pointer items-center rounded-md border border-purple-400 bg-[#1e114a] px-4 py-3 hover:border-purple-300 hover:bg-[#2a1a63]">
-                      <input
-                        type="radio"
-                        name="payment_type"
-                        value="CARD"
-                        checked={paymentPreference === "CARD"}
-                        onChange={() => updatePaymentPreference("CARD")}
-                        className="mr-2 h-4 w-4 accent-purple-500"
-                      />
-                      <span className="text-sm text-white">QR Code</span>
-                    </label>
-                    <label className="flex flex-1 cursor-pointer items-center rounded-md border border-purple-400 bg-[#1e114a] px-4 py-3 hover:border-purple-300 hover:bg-[#2a1a63]">
-                      <input
-                        type="radio"
-                        name="payment_type"
-                        value="CASH"
-                        checked={paymentPreference === "CASH"}
-                        onChange={() => updatePaymentPreference("CASH")}
-                        className="mr-2 h-4 w-4 accent-purple-500"
-                      />
-                      <span className="text-sm text-white">Cash on Site</span>
-                    </label>
-                  </div>
-                </div>
-                <button
-                  onClick={handleQuickRegister}
-                  className="w-full rounded-md bg-purple-600 p-3 font-medium text-white transition hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-                >
-                  Quick Register
-                </button>
-              </div>
-              <div className="text-center">
-                <p className="text-sm text-white/70">
-                  Want to register with different details?{" "}
-                  <button
-                    onClick={() => setShowFullForm(true)}
-                    className="text-purple-400 hover:text-purple-300"
-                  >
-                    Use form instead
-                  </button>
-                </p>
+        {qrCodeUrl && (
+          <div className="mt-4">
+            <h4 className="mb-2 font-medium">Payment QR Code</h4>
+            <p className="mb-3 text-sm text-gray-600">
+              Scan this QR code to complete your payment. This QR code has also
+              been sent to your email.
+            </p>
+            <div className="flex justify-center">
+              <img
+                src={qrCodeUrl}
+                alt="Payment QR Code"
+                className="h-64 w-64 rounded-lg border border-gray-200"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Non-logged in user view
+  if (!isAuthenticated) {
+    return (
+      <div className="rounded-lg bg-white p-6 shadow-md">
+        <h3 className="mb-4 text-lg font-medium">Register for Event</h3>
+
+        {!showGuestForm ? (
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              To register for this event, you can either:
+            </p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => router.push("/api/auth/login")}
+                className="w-full rounded-md bg-indigo-600 px-4 py-2 font-medium text-white transition hover:bg-indigo-700"
+              >
+                Sign In to Register
+              </button>
+              <button
+                onClick={() => setShowGuestForm(true)}
+                className="w-full rounded-md border border-indigo-300 bg-white px-4 py-2 font-medium text-indigo-600 transition hover:bg-indigo-50"
+              >
+                Register as Guest
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleGuestRegistration} className="space-y-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                First Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleFormChange}
+                required
+                className="w-full rounded-md border border-gray-300 p-2.5 focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                placeholder="Your first name"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Last Name
+              </label>
+              <input
+                type="text"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleFormChange}
+                className="w-full rounded-md border border-gray-300 p-2.5 focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                placeholder="Your last name"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Email <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleFormChange}
+                required
+                className="w-full rounded-md border border-gray-300 p-2.5 focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                placeholder="your.email@example.com"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                name="phoneNumber"
+                value={formData.phoneNumber}
+                onChange={handleFormChange}
+                className="w-full rounded-md border border-gray-300 p-2.5 focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                placeholder="Your phone number"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Payment Method <span className="text-red-500">*</span>
+              </label>
+              <div className="space-y-2">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="payment_preference"
+                    value="CARD"
+                    checked={paymentPreference === "CARD"}
+                    onChange={() => setPaymentPreference("CARD")}
+                    className="mr-2"
+                  />
+                  <span>QR Code Payment</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="payment_preference"
+                    value="CASH"
+                    checked={paymentPreference === "CASH"}
+                    onChange={() => setPaymentPreference("CASH")}
+                    className="mr-2"
+                  />
+                  <span>Cash on Site</span>
+                </label>
               </div>
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-white">
-                  Name
-                </label>
-                <input
-                  type="text"
-                  name="first_name"
-                  required
-                  placeholder="Your name"
-                  className="w-full rounded-md border border-purple-400 bg-[#1e114a] p-3 text-white placeholder:text-white/70 focus:border-purple-300 focus:outline-none focus:ring-1 focus:ring-purple-300"
-                />
-              </div>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-white">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  required
-                  placeholder="your@email.com"
-                  className="w-full rounded-md border border-purple-400 bg-[#1e114a] p-3 text-white placeholder:text-white/70 focus:border-purple-300 focus:outline-none focus:ring-1 focus:ring-purple-300"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-white">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  name="phone_number"
-                  placeholder="Your phone"
-                  className="w-full rounded-md border border-purple-400 bg-[#1e114a] p-3 text-white placeholder:text-white/70 focus:border-purple-300 focus:outline-none focus:ring-1 focus:ring-purple-300"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-white">
-                  Payment Method
-                </label>
-                <div className="flex flex-wrap gap-3">
-                  <label className="flex flex-1 cursor-pointer items-center rounded-md border border-purple-400 bg-[#1e114a] px-4 py-3 hover:border-purple-300 hover:bg-[#2a1a63]">
-                    <input
-                      type="radio"
-                      name="payment_type"
-                      value="CARD"
-                      required
-                      className="mr-2 h-4 w-4 accent-purple-500"
-                    />
-                    <span className="text-sm text-white">QR Code</span>
-                  </label>
-                  <label className="flex flex-1 cursor-pointer items-center rounded-md border border-purple-400 bg-[#1e114a] px-4 py-3 hover:border-purple-300 hover:bg-[#2a1a63]">
-                    <input
-                      type="radio"
-                      name="payment_type"
-                      value="CASH"
-                      required
-                      className="mr-2 h-4 w-4 accent-purple-500"
-                    />
-                    <span className="text-sm text-white">Cash on Site</span>
-                  </label>
-                </div>
-              </div>
-
+            <div className="flex flex-col gap-2 pt-2">
               <button
                 type="submit"
-                className="w-full rounded-md bg-purple-600 p-3 font-medium text-white transition hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                disabled={isUpdating}
+                className="w-full rounded-md bg-indigo-600 p-2.5 font-medium text-white transition hover:bg-indigo-700 disabled:bg-indigo-400"
               >
-                Register
+                {isUpdating ? "Registering..." : "Register Now"}
               </button>
-            </form>
-          )}
 
-          {error && (
-            <div className="mt-4 rounded-md border border-red-400/40 bg-red-900/40 p-3 text-center text-red-200">
-              {error}
+              <button
+                type="button"
+                onClick={() => setShowGuestForm(false)}
+                className="w-full rounded-md border border-gray-300 bg-white p-2.5 text-gray-700 transition hover:bg-gray-50"
+              >
+                Back
+              </button>
             </div>
-          )}
-        </>
-      ) : (
-        <div className="rounded-md border border-green-400/30 bg-[#11372a] p-5 text-center text-white">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="mx-auto h-12 w-12 text-green-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
+          </form>
+        )}
 
-          <h2 className="mb-3 mt-2 text-xl font-bold text-white">
-            {isAuthenticated
-              ? "You're registered!"
-              : "Registration Successful!"}
-          </h2>
+        {/* Duplicate Registration Modal */}
+        <DuplicateRegistrationModal
+          isOpen={showDuplicateModal}
+          onClose={() => setShowDuplicateModal(false)}
+          email={formData.email}
+        />
+      </div>
+    );
+  }
 
-          <div className="mb-4 rounded bg-[#0d2d22] p-3 text-left">
-            {isAuthenticated ? (
-              <>
-                <p className="mb-1">
-                  <span className="font-medium">Email:</span> {user?.email}
-                </p>
-                {userRegistration?.phoneNumber && (
-                  <p>
-                    <span className="font-medium">Phone:</span>{" "}
-                    {userRegistration.phoneNumber}
-                  </p>
-                )}
-              </>
-            ) : (
-              <>
-                <p className="mb-1">
-                  <span className="font-medium">Name:</span>{" "}
-                  {formData.firstName}
-                </p>
-                <p className="mb-1">
-                  <span className="font-medium">Email:</span> {formData.email}
-                </p>
-                {formData.phoneNumber && (
-                  <p>
-                    <span className="font-medium">Phone:</span>{" "}
-                    {formData.phoneNumber}
-                  </p>
-                )}
-              </>
-            )}
+  // Logged in user view
+  return (
+    <div className="rounded-lg bg-white p-6 shadow-md">
+      <h3 className="mb-4 text-lg font-medium">Register for Event</h3>
+      <div className="space-y-4">
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-700">
+            Payment Method
+          </label>
+          <div className="space-y-2">
+            <label className="flex items-center">
+              <input
+                type="radio"
+                name="payment_preference"
+                value="CARD"
+                checked={paymentPreference === "CARD"}
+                onChange={() => setPaymentPreference("CARD")}
+                className="mr-2"
+              />
+              <span>QR Code Payment</span>
+            </label>
+            <label className="flex items-center">
+              <input
+                type="radio"
+                name="payment_preference"
+                value="CASH"
+                checked={paymentPreference === "CASH"}
+                onChange={() => setPaymentPreference("CASH")}
+                className="mr-2"
+              />
+              <span>Cash on Site</span>
+            </label>
           </div>
-
-          <div className="mb-4 text-white/90">
-            <p>
-              Thank you for registering for GameOn event on{" "}
-              <span className="font-medium text-white">{eventDate}</span>{" "}
-              {eventPlace && (
-                <>
-                  at location{" "}
-                  <span className="font-medium text-white">{eventPlace}</span>
-                </>
-              )}
-            </p>
-          </div>
-
-          {isAuthenticated && (
-            <button
-              onClick={handleUnregister}
-              className="mt-4 rounded-md border border-red-400/30 bg-red-900/30 px-4 py-2 text-red-200 hover:bg-red-900/50"
-            >
-              Unregister from Event
-            </button>
-          )}
         </div>
-      )}
+
+        <button
+          onClick={handleQuickRegister}
+          disabled={isUpdating}
+          className="w-full rounded-md bg-purple-600 px-4 py-2 text-white hover:bg-purple-700 disabled:opacity-50"
+        >
+          {isUpdating ? "Registering..." : "Register Now"}
+        </button>
+      </div>
+
+      {/* Duplicate Registration Modal */}
+      <DuplicateRegistrationModal
+        isOpen={showDuplicateModal}
+        onClose={() => setShowDuplicateModal(false)}
+        email={user?.email || ""}
+      />
     </div>
   );
 }

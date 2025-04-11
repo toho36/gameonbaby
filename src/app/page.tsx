@@ -14,24 +14,34 @@ export default async function HomePage() {
     orderBy: {
       from: "asc",
     },
+    include: {
+      _count: {
+        select: {
+          Registration: true,
+        },
+      },
+    },
   });
 
   return (
-    <main className="flex min-h-screen flex-col items-center bg-gradient-to-b from-[#2e026d] to-[#15162c] text-white">
-      <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16">
-        <h1 className="text-5xl font-extrabold tracking-tight text-white sm:text-[5rem]">
-          Game <span className="text-[hsl(280,100%,70%)]">On</span> Registration
-        </h1>
+    <main className="min-h-screen bg-gradient-to-b from-[#2e026d] to-[#15162c] text-white">
+      <div className="container mx-auto px-4 py-8">
+        <header className="mb-10 text-center">
+          <h1 className="mb-2 text-4xl font-bold sm:text-5xl">
+            Game <span className="text-[hsl(280,100%,70%)]">On</span>
+          </h1>
+          <p className="text-white/70">Event Registration System</p>
+        </header>
 
-        <section className="w-full max-w-4xl">
+        <section className="mx-auto max-w-5xl">
           <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-3xl font-bold">Upcoming Events</h2>
+            <h2 className="text-2xl font-bold">Upcoming Events</h2>
             <Link href="/events/archive">
               <Button
                 variant="outline"
-                className="text-white hover:bg-white/10"
+                className="px-3 py-1 text-sm text-white hover:bg-white/10"
               >
-                View Past Events
+                Past Events
               </Button>
             </Link>
           </div>

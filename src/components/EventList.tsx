@@ -11,6 +11,10 @@ interface Event {
   from: Date;
   to: Date;
   visible?: boolean;
+  capacity: number;
+  _count?: {
+    Registration: number;
+  };
 }
 
 interface EventListProps {
@@ -32,37 +36,44 @@ export default function EventList({ events }: EventListProps) {
 
   if (events.length === 0) {
     return (
-      <div className="rounded-lg border border-white/20 bg-white/5 p-8 text-center">
-        <p className="text-lg">No events are currently scheduled.</p>
-        <p className="mt-2 text-sm text-gray-300">
-          Please check back later for upcoming events.
+      <div className="rounded-lg border border-white/20 bg-white/10 p-8 text-center">
+        <p className="mb-2 text-xl text-white">No events scheduled</p>
+        <p className="text-sm text-white/70">
+          Check back later for upcoming events
         </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="space-y-6">
+      <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
         {events.map((event) => (
           <Link
             key={event.id}
             href={`/events/${event.id}`}
-            className="rounded-lg border border-white/10 bg-white/5 p-5 transition-all hover:border-purple-400 hover:bg-white/10"
+            className="flex flex-col rounded-lg border border-white/20 bg-white/10 p-5 transition-all hover:border-purple-400 hover:bg-white/15"
           >
-            <h3 className="mb-2 text-xl font-semibold">{event.title}</h3>
+            <h3 className="mb-3 text-xl font-semibold text-white">
+              {event.title}
+            </h3>
 
-            <div className="mb-3 flex justify-between text-sm">
-              <span>{formatDate(event.from)}</span>
-              <span>
+            <div className="mb-3 text-sm text-white/90">
+              <div className="mb-1">{formatDate(event.from)}</div>
+              <div>
                 {formatTime(event.from)} - {formatTime(event.to)}
-              </span>
+              </div>
             </div>
 
-            <div className="mt-4">
-              <span className="text-sm font-medium text-gray-300">
+            <div className="mt-auto flex items-center justify-between border-t border-white/10 pt-3">
+              <span className="text-sm text-white/80">
                 {event.place || "Location TBA"}
               </span>
+              {event.capacity > 0 && (
+                <span className="rounded-full bg-purple-800/50 px-2 py-1 text-xs text-white">
+                  {event._count?.Registration || 0}/{event.capacity}
+                </span>
+              )}
             </div>
           </Link>
         ))}

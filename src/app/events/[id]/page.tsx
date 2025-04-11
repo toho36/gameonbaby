@@ -7,13 +7,17 @@ import RegistrationForm from "~/components/RegistrationForm";
 interface Event {
   id: string;
   title: string;
-  description?: string | null;
+  description: string | null;
   price: number;
-  place?: string | null;
+  place: string | null;
   from: Date;
   to: Date;
   created_at: Date;
   visible: boolean;
+  capacity: number;
+  _count: {
+    Registration: number;
+  };
 }
 
 function formatDate(dateStr: string | Date) {
@@ -43,6 +47,13 @@ export default async function EventPage({
   const eventData = await prisma.event.findUnique({
     where: {
       id: params.id,
+    },
+    include: {
+      _count: {
+        select: {
+          Registration: true,
+        },
+      },
     },
   });
 
@@ -213,7 +224,14 @@ export default async function EventPage({
                   </div>
                   <div className="ml-3">
                     <p className="font-medium text-white">Price</p>
-                    <p>{event.price} CZK</p>
+                    <div className="mt-4 flex items-center justify-between">
+                      <div className="text-2xl font-bold text-gray-900">
+                        {event.price} Kč
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        Capacity: {event._count.Registration} / {event.capacity}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -237,12 +255,17 @@ export default async function EventPage({
                 <h2 className="mb-4 text-center text-xl font-medium text-white">
                   Registration
                 </h2>
-                <RegistrationForm
-                  eventId={event.id}
-                  eventDate={`${formatDate(event.from)} ${formatTime(event.from)}-${formatTime(event.to)}`}
-                  eventPlace={event.place}
-                  eventPrice={event.price}
-                />
+                <div className="mt-6">
+                  <RegistrationForm
+                    event={{
+                      ...event,
+                      from: event.from.toISOString(),
+                      to: event.to.toISOString(),
+                    }}
+                    eventId={event.id}
+                    eventDate={formatDate(event.from)}
+                  />
+                </div>
               </div>
             )}
           </div>

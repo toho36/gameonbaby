@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 
 const prisma = new PrismaClient();
@@ -13,6 +13,14 @@ interface DbUser {
   emailVerified: Date | null;
   image: string | null;
 }
+
+type EventWithCount = Prisma.EventGetPayload<{
+  include: {
+    _count: {
+      select: { Registration: true };
+    };
+  };
+}>;
 
 export async function GET(request: NextRequest) {
   try {
@@ -56,18 +64,18 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      events: events.map((event) => ({
-        id: event.id,
-        title: event.title,
-        description: event.description,
-        price: event.price,
-        place: event.place,
-        from: event.from.toISOString(),
-        to: event.to.toISOString(),
-        created_at: event.created_at.toISOString(),
-        visible: event.visible,
-        registrationCount: event._count.Registration,
-      })),
+      events: events.map((event) => {
+        const { _count, ...eventData } = event;
+        return {
+          ...eventData,
+          from: eventData.from.toISOString(),
+          to: eventData.to.toISOString(),
+          created_at: eventData.created_at.toISOString(),
+          _count: {
+            Registration: _count.Registration,
+          },
+        };
+      }),
     });
   } catch (error) {
     console.error("Error fetching events:", error);

@@ -12,11 +12,14 @@ interface Event {
   description: string | null;
   price: number;
   place: string | null;
+  capacity: number;
   from: string;
   to: string;
-  created_at: string;
   visible: boolean;
-  registrationCount: number;
+  created_at: string;
+  _count: {
+    Registration: number;
+  };
 }
 
 export default function EventManagement() {
@@ -35,7 +38,7 @@ export default function EventManagement() {
     from: "",
     to: "",
     visible: true,
-    manualDateInput: false,
+    capacity: 0,
   });
   const router = useRouter();
 
@@ -113,27 +116,6 @@ export default function EventManagement() {
     }
   }
 
-  function parseManualDateInput(value: string) {
-    try {
-      const [datePart, timePart] = value.split(" ");
-      if (datePart && timePart) {
-        const [day, month, year] = datePart.split(".");
-        const [hours, minutes] = timePart.split(":");
-
-        if (day && month && year && hours && minutes) {
-          let yearVal = year.length === 2 ? "20" + year : year;
-
-          // Create a date string in local format instead of UTC
-          return `${yearVal}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}`;
-        }
-      }
-      return "";
-    } catch (error) {
-      console.error("Error parsing manual date:", error);
-      return "";
-    }
-  }
-
   async function handleDuplicate(id: string) {
     const eventToClone = events.find((event) => event.id === id);
     if (!eventToClone) return;
@@ -144,10 +126,10 @@ export default function EventManagement() {
       description: eventToClone.description || "",
       price: eventToClone.price,
       place: eventToClone.place || "",
+      capacity: eventToClone.capacity || 0,
       from: toISODateTimeString(eventToClone.from),
       to: toISODateTimeString(eventToClone.to),
       visible: eventToClone.visible,
-      manualDateInput: false,
     });
     setShowDuplicateModal(true);
   }
@@ -167,6 +149,7 @@ export default function EventManagement() {
           description: duplicateFormData.description || null,
           price: duplicateFormData.price,
           place: duplicateFormData.place || null,
+          capacity: duplicateFormData.capacity || null,
           from: duplicateFormData.from,
           to: duplicateFormData.to,
           visible: duplicateFormData.visible,
@@ -406,18 +389,16 @@ export default function EventManagement() {
                     </td>
                     <td className="px-6 py-4">
                       <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-sm font-medium text-blue-800">
-                        {event.registrationCount}
+                        {event._count.Registration}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-2">
-                        <Link href={`/admin/events/${event.id}/registrations`}>
-                          <Button
-                            variant="outline"
-                            className="px-2 py-1 text-xs"
-                          >
-                            View Registrations
-                          </Button>
+                        <Link
+                          href={`/admin/events/${event.id}/${event.id}/registrations`}
+                          className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                        >
+                          Registrations
                         </Link>
                         <Link href={`/admin/events/${event.id}/edit`}>
                           <Button
@@ -486,17 +467,20 @@ export default function EventManagement() {
                   <div>
                     <span className="text-gray-500">Registrations:</span>
                     <div className="font-medium text-blue-800">
-                      {event.registrationCount}
+                      {event._count.Registration}
                     </div>
                   </div>
                 </div>
 
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <Link
-                    href={`/admin/events/${event.id}/registrations`}
+                    href={`/admin/events/${event.id}/${event.id}/registrations`}
                     className="col-span-2"
                   >
-                    <Button variant="outline" className="w-full py-1 text-xs">
+                    <Button
+                      variant="outline"
+                      className="w-full text-blue-600 hover:bg-blue-50"
+                    >
                       View Registrations
                     </Button>
                   </Link>
@@ -558,21 +542,45 @@ export default function EventManagement() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    Price (Kč)
+                  <label
+                    htmlFor="price"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Price (CZK)
                   </label>
                   <input
                     type="number"
                     name="price"
+                    id="price"
                     value={duplicateFormData.price}
                     onChange={handleFormChange}
-                    className="w-full rounded-md border border-gray-300 p-2"
+                    className="mt-1 block w-full rounded-md border border-gray-300 p-2 shadow-sm focus:border-purple-500 focus:ring-purple-500"
                     required
                   />
                 </div>
+                <div>
+                  <label
+                    htmlFor="capacity"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Capacity
+                  </label>
+                  <input
+                    type="number"
+                    name="capacity"
+                    id="capacity"
+                    value={duplicateFormData.capacity}
+                    onChange={handleFormChange}
+                    className="mt-1 block w-full rounded-md border border-gray-300 p-2 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                    required
+                    min="0"
+                  />
+                </div>
+              </div>
 
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">
                     Place/Address
@@ -603,112 +611,36 @@ export default function EventManagement() {
                     <option value="false">Hidden</option>
                   </select>
                 </div>
-
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="manualDateInput"
-                    name="manualDateInput"
-                    checked={duplicateFormData.manualDateInput}
-                    onChange={(e) =>
-                      setDuplicateFormData({
-                        ...duplicateFormData,
-                        manualDateInput: e.target.checked,
-                      })
-                    }
-                    className="mr-2"
-                  />
-                  <label htmlFor="manualDateInput" className="text-sm">
-                    Manually enter date and time
-                  </label>
-                </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {duplicateFormData.manualDateInput ? (
-                  <>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-gray-700">
-                        Start Date & Time (DD.MM.YYYY HH:MM)
-                      </label>
-                      <input
-                        type="text"
-                        name="fromManual"
-                        placeholder="e.g., 15.06.2023 14:30"
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          try {
-                            const parsedDate = parseManualDateInput(value);
-                            if (parsedDate) {
-                              setDuplicateFormData({
-                                ...duplicateFormData,
-                                from: parsedDate,
-                              });
-                            }
-                          } catch (error) {
-                            console.error("Error parsing manual date:", error);
-                          }
-                        }}
-                        className="w-full rounded-md border border-gray-300 p-2"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-gray-700">
-                        End Date & Time (DD.MM.YYYY HH:MM)
-                      </label>
-                      <input
-                        type="text"
-                        name="toManual"
-                        placeholder="e.g., 15.06.2023 16:30"
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          try {
-                            const parsedDate = parseManualDateInput(value);
-                            if (parsedDate) {
-                              setDuplicateFormData({
-                                ...duplicateFormData,
-                                to: parsedDate,
-                              });
-                            }
-                          } catch (error) {
-                            console.error("Error parsing manual date:", error);
-                          }
-                        }}
-                        className="w-full rounded-md border border-gray-300 p-2"
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-gray-700">
-                        Start Date & Time
-                      </label>
-                      <input
-                        type="datetime-local"
-                        name="from"
-                        value={duplicateFormData.from}
-                        onChange={handleFormChange}
-                        className="w-full rounded-md border border-gray-300 p-2"
-                        required
-                      />
-                    </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Start Date & Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    name="from"
+                    value={duplicateFormData.from}
+                    onChange={handleFormChange}
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    required
+                  />
+                </div>
 
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-gray-700">
-                        End Date & Time
-                      </label>
-                      <input
-                        type="datetime-local"
-                        name="to"
-                        value={duplicateFormData.to}
-                        onChange={handleFormChange}
-                        className="w-full rounded-md border border-gray-300 p-2"
-                        required
-                      />
-                    </div>
-                  </>
-                )}
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    End Date & Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    name="to"
+                    value={duplicateFormData.to}
+                    onChange={handleFormChange}
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    required
+                  />
+                </div>
               </div>
             </div>
 

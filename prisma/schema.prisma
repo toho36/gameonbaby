@@ -75,8 +75,9 @@ model Event {
   id           String         @id @default(cuid())
   title        String
   description  String?
-  price        Int
+  price        Float
   place        String?
+  capacity     Int            @default(0)
   from         DateTime
   to           DateTime
   created_at   DateTime
@@ -97,7 +98,7 @@ model Registration {
   payment      Payment?
   attended     Boolean  @default(false)
 
-  @@unique([event_id, email])
+  @@unique([event_id, email, first_name, last_name])
 }
 
 model Payment {

@@ -5,6 +5,7 @@ import { createRegistration } from "~/actions/actions";
 import { sendRegistrationEmail } from "~/server/service/emailService";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
+import Link from "next/link";
 
 const eventLocation = "Sportovní hala TJ JM Chodov, Mírového hnutí 2137";
 
@@ -27,35 +28,42 @@ function DuplicateRegistrationModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-black bg-opacity-50">
-      <div className="relative mx-auto my-6 w-full max-w-md">
-        <div className="relative flex flex-col rounded-lg border-0 bg-white p-6 shadow-lg">
-          <div className="mb-4 flex items-start justify-between rounded-t">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Registration Already Exists
-            </h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-black/70 backdrop-blur-sm transition-opacity">
+      <div className="relative mx-auto my-6 w-full max-w-md p-4">
+        <div className="relative flex flex-col rounded-xl border border-white/20 bg-[#2c1660] p-6 text-white shadow-xl">
+          <div className="mb-4 flex items-start justify-between">
+            <h3 className="text-xl font-bold text-white">Already Registered</h3>
             <button
-              className="float-right ml-auto border-0 bg-transparent p-1 text-3xl font-semibold text-gray-400"
+              className="ml-auto rounded-full p-1 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
               onClick={onClose}
+              aria-label="Close"
             >
-              ×
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
             </button>
           </div>
-          <div className="relative mb-4 flex-auto">
-            <p className="text-gray-600">
-              There's already a registration with this email and name
-              combination. If you'd like to register someone else using the
-              email <span className="font-semibold">{email}</span>, please use a
-              different name.
-            </p>
-          </div>
-          <div className="flex items-center justify-end rounded-b">
+          <p className="mb-6 text-white/80">
+            This email is already registered for this event.
+          </p>
+          <div className="flex justify-end">
             <button
-              className="rounded-md bg-purple-600 px-4 py-2 text-white hover:bg-purple-700"
+              className="rounded-lg bg-white/20 px-5 py-2.5 font-medium text-white transition hover:bg-white/30 focus:outline-none"
               type="button"
               onClick={onClose}
             >
-              Got it
+              Close
             </button>
           </div>
         </div>
@@ -430,30 +438,102 @@ export default function RegistrationForm({
   }
 
   if (isRegistered) {
-    return (
-      <div className="rounded-lg bg-white p-6 shadow-md">
-        <h3 className="mb-4 text-lg font-medium">Registration Successful!</h3>
-        <p className="mb-4 text-gray-600">
-          You have successfully registered for this event. A confirmation email
-          has been sent to your email address.
-        </p>
+    const downloadQRCode = () => {
+      const link = document.createElement("a");
+      link.href = qrCodeUrl || "";
+      link.download = `gameon-payment-${new Date().getTime()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
 
-        {qrCodeUrl && (
-          <div className="mt-4">
-            <h4 className="mb-2 font-medium">Payment QR Code</h4>
-            <p className="mb-3 text-sm text-gray-600">
-              Scan this QR code to complete your payment. This QR code has also
-              been sent to your email.
-            </p>
-            <div className="flex justify-center">
-              <img
-                src={qrCodeUrl}
-                alt="Payment QR Code"
-                className="h-64 w-64 rounded-lg border border-gray-200"
+    return (
+      <div className="rounded-xl border border-white/20 bg-white/10 p-6 text-white shadow-lg backdrop-blur-sm">
+        <div className="flex flex-col items-center text-center">
+          <div className="mb-4 rounded-full bg-white/20 p-3">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-8 w-8 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
               />
-            </div>
+            </svg>
           </div>
-        )}
+          <h3 className="mb-2 text-xl font-bold text-white">
+            Registration Successful!
+          </h3>
+          <p className="mb-6 text-white/90">
+            A confirmation email has been sent to your email address.
+          </p>
+
+          {qrCodeUrl && (
+            <div className="mt-2 w-full rounded-xl border border-white/20 bg-white/10 p-6">
+              <div className="flex flex-col items-center">
+                <h4 className="mb-3 text-lg font-bold text-white">
+                  Payment Code
+                </h4>
+                <div className="mb-4 flex justify-center rounded-lg bg-white p-1">
+                  <img
+                    src={qrCodeUrl}
+                    alt="Payment QR Code"
+                    className="h-auto w-full max-w-[180px] rounded-md"
+                  />
+                </div>
+                <div className="mb-3 text-xl font-bold">{event.price} Kč</div>
+                <button
+                  onClick={downloadQRCode}
+                  className="flex w-full items-center justify-center rounded-lg bg-white/20 px-4 py-2.5 text-center font-medium text-white transition-colors hover:bg-white/30"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="mr-2 h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                    />
+                  </svg>
+                  Save QR Code
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-6 w-full">
+            <Link
+              href="/"
+              className="flex items-center justify-center rounded-lg bg-white/20 px-4 py-3 text-center font-medium text-white transition-colors hover:bg-white/30"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="mr-2 h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              Back to Events
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
@@ -461,137 +541,148 @@ export default function RegistrationForm({
   // Non-logged in user view
   if (!isAuthenticated) {
     return (
-      <div className="rounded-lg bg-white p-6 shadow-md">
-        <h3 className="mb-4 text-lg font-medium">Register for Event</h3>
-
+      <div className="rounded-xl border border-white/20 bg-white/10 p-6 text-white shadow-lg backdrop-blur-sm">
         {!showGuestForm ? (
-          <div className="space-y-4">
-            <p className="text-gray-600">
-              To register for this event, you can either:
-            </p>
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={() => router.push("/api/auth/login")}
-                className="w-full rounded-md bg-indigo-600 px-4 py-2 font-medium text-white transition hover:bg-indigo-700"
-              >
-                Sign In to Register
-              </button>
-              <button
-                onClick={() => setShowGuestForm(true)}
-                className="w-full rounded-md border border-indigo-300 bg-white px-4 py-2 font-medium text-indigo-600 transition hover:bg-indigo-50"
-              >
-                Register as Guest
-              </button>
-            </div>
+          <div className="grid grid-cols-1 gap-3">
+            <button
+              onClick={() => router.push("/api/auth/login")}
+              className="w-full rounded-lg bg-white/20 px-5 py-3 font-medium text-white transition hover:bg-white/30 focus:ring-2 focus:ring-white/40"
+            >
+              Sign In to Register
+            </button>
+            <button
+              onClick={() => setShowGuestForm(true)}
+              className="w-full rounded-lg border border-white/20 bg-transparent px-5 py-3 font-medium text-white transition hover:bg-white/10"
+            >
+              Register as Guest
+            </button>
           </div>
         ) : (
-          <form onSubmit={handleGuestRegistration} className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                First Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleFormChange}
-                required
-                className="w-full rounded-md border border-gray-300 p-2.5 focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                placeholder="Your first name"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Last Name
-              </label>
-              <input
-                type="text"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleFormChange}
-                className="w-full rounded-md border border-gray-300 p-2.5 focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                placeholder="Your last name"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Email <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleFormChange}
-                required
-                className="w-full rounded-md border border-gray-300 p-2.5 focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                placeholder="your.email@example.com"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Phone Number
-              </label>
-              <input
-                type="tel"
-                name="phoneNumber"
-                value={formData.phoneNumber}
-                onChange={handleFormChange}
-                className="w-full rounded-md border border-gray-300 p-2.5 focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                placeholder="Your phone number"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Payment Method <span className="text-red-500">*</span>
-              </label>
-              <div className="space-y-2">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="payment_preference"
-                    value="CARD"
-                    checked={paymentPreference === "CARD"}
-                    onChange={() => setPaymentPreference("CARD")}
-                    className="mr-2"
-                  />
-                  <span>QR Code Payment</span>
+          <div>
+            <form onSubmit={handleGuestRegistration} className="space-y-5">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium">
+                  First Name <span className="text-red-300">*</span>
                 </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="payment_preference"
-                    value="CASH"
-                    checked={paymentPreference === "CASH"}
-                    onChange={() => setPaymentPreference("CASH")}
-                    className="mr-2"
-                  />
-                  <span>Cash on Site</span>
-                </label>
+                <input
+                  type="text"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleFormChange}
+                  required
+                  className="w-full rounded-lg border border-white/20 bg-white/10 p-3 text-white placeholder-white/50 focus:border-white/40 focus:ring focus:ring-white/20"
+                  placeholder="Your first name"
+                />
               </div>
-            </div>
 
-            <div className="flex flex-col gap-2 pt-2">
-              <button
-                type="submit"
-                disabled={isUpdating}
-                className="w-full rounded-md bg-indigo-600 p-2.5 font-medium text-white transition hover:bg-indigo-700 disabled:bg-indigo-400"
-              >
-                {isUpdating ? "Registering..." : "Register Now"}
-              </button>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium">
+                  Last Name
+                </label>
+                <input
+                  type="text"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleFormChange}
+                  className="w-full rounded-lg border border-white/20 bg-white/10 p-3 text-white placeholder-white/50 focus:border-white/40 focus:ring focus:ring-white/20"
+                  placeholder="Your last name"
+                />
+              </div>
 
-              <button
-                type="button"
-                onClick={() => setShowGuestForm(false)}
-                className="w-full rounded-md border border-gray-300 bg-white p-2.5 text-gray-700 transition hover:bg-gray-50"
-              >
-                Back
-              </button>
-            </div>
-          </form>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium">
+                  Email <span className="text-red-300">*</span>
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleFormChange}
+                  required
+                  className="w-full rounded-lg border border-white/20 bg-white/10 p-3 text-white placeholder-white/50 focus:border-white/40 focus:ring focus:ring-white/20"
+                  placeholder="your.email@example.com"
+                />
+              </div>
+
+              <div>
+                <label className="mb-3 block text-sm font-medium">
+                  Payment Method <span className="text-red-300">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="flex cursor-pointer items-center rounded-lg border border-white/20 bg-white/10 p-3 hover:bg-white/20">
+                    <input
+                      type="radio"
+                      name="payment_preference"
+                      value="CARD"
+                      checked={paymentPreference === "CARD"}
+                      onChange={() => setPaymentPreference("CARD")}
+                      className="h-4 w-4 border-white/40 text-white focus:ring-white/20"
+                    />
+                    <div className="ml-3">
+                      <span className="block font-medium">QR Code Payment</span>
+                    </div>
+                  </label>
+                  <label className="flex cursor-pointer items-center rounded-lg border border-white/20 bg-white/10 p-3 hover:bg-white/20">
+                    <input
+                      type="radio"
+                      name="payment_preference"
+                      value="CASH"
+                      checked={paymentPreference === "CASH"}
+                      onChange={() => setPaymentPreference("CASH")}
+                      className="h-4 w-4 border-white/40 text-white focus:ring-white/20"
+                    />
+                    <div className="ml-3">
+                      <span className="block font-medium">Cash on Site</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="submit"
+                  disabled={isUpdating}
+                  className="w-full rounded-lg bg-white/20 p-3 font-medium text-white transition hover:bg-white/30 disabled:opacity-50"
+                >
+                  {isUpdating ? (
+                    <span className="flex items-center justify-center">
+                      <svg
+                        className="mr-2 h-5 w-5 animate-spin"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Registering...
+                    </span>
+                  ) : (
+                    "Register Now"
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowGuestForm(false)}
+                  className="w-auto rounded-lg border border-white/20 p-3 font-medium text-white transition hover:bg-white/10"
+                >
+                  Back
+                </button>
+              </div>
+            </form>
+          </div>
         )}
 
         {/* Duplicate Registration Modal */}
@@ -606,35 +697,38 @@ export default function RegistrationForm({
 
   // Logged in user view
   return (
-    <div className="rounded-lg bg-white p-6 shadow-md">
-      <h3 className="mb-4 text-lg font-medium">Register for Event</h3>
-      <div className="space-y-4">
+    <div className="rounded-xl border border-white/20 bg-white/10 p-6 text-white shadow-lg backdrop-blur-sm">
+      <div className="space-y-5">
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            Payment Method
+          <label className="mb-3 block text-sm font-medium">
+            Payment Method <span className="text-red-300">*</span>
           </label>
-          <div className="space-y-2">
-            <label className="flex items-center">
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex cursor-pointer items-center rounded-lg border border-white/20 bg-white/10 p-3 hover:bg-white/20">
               <input
                 type="radio"
                 name="payment_preference"
                 value="CARD"
                 checked={paymentPreference === "CARD"}
                 onChange={() => setPaymentPreference("CARD")}
-                className="mr-2"
+                className="h-4 w-4 border-white/40 text-white focus:ring-white/20"
               />
-              <span>QR Code Payment</span>
+              <div className="ml-3">
+                <span className="block font-medium">QR Code Payment</span>
+              </div>
             </label>
-            <label className="flex items-center">
+            <label className="flex cursor-pointer items-center rounded-lg border border-white/20 bg-white/10 p-3 hover:bg-white/20">
               <input
                 type="radio"
                 name="payment_preference"
                 value="CASH"
                 checked={paymentPreference === "CASH"}
                 onChange={() => setPaymentPreference("CASH")}
-                className="mr-2"
+                className="h-4 w-4 border-white/40 text-white focus:ring-white/20"
               />
-              <span>Cash on Site</span>
+              <div className="ml-3">
+                <span className="block font-medium">Cash on Site</span>
+              </div>
             </label>
           </div>
         </div>
@@ -642,10 +736,60 @@ export default function RegistrationForm({
         <button
           onClick={handleQuickRegister}
           disabled={isUpdating}
-          className="w-full rounded-md bg-purple-600 px-4 py-2 text-white hover:bg-purple-700 disabled:opacity-50"
+          className="w-full rounded-lg bg-white/20 p-3 font-medium text-white transition hover:bg-white/30 disabled:opacity-50"
         >
-          {isUpdating ? "Registering..." : "Register Now"}
+          {isUpdating ? (
+            <span className="flex items-center justify-center">
+              <svg
+                className="mr-2 h-5 w-5 animate-spin"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              Registering...
+            </span>
+          ) : (
+            "Register Now"
+          )}
         </button>
+
+        {event._count.Registration >= event.capacity - 5 &&
+          event._count.Registration < event.capacity && (
+            <div className="rounded-lg border border-white/30 bg-white/10 p-3 text-sm">
+              <div className="flex">
+                <svg
+                  className="mr-2 h-5 w-5 flex-shrink-0"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                    clipRule="evenodd"
+                  ></path>
+                </svg>
+                <div>
+                  <span className="font-medium">Almost full!</span> Only{" "}
+                  {event.capacity - event._count.Registration} spots remaining.
+                </div>
+              </div>
+            </div>
+          )}
       </div>
 
       {/* Duplicate Registration Modal */}

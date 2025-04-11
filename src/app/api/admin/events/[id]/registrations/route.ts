@@ -66,6 +66,7 @@ export async function GET(
       where: { event_id: params.id },
       include: {
         event: true,
+        payment: true,
       },
     });
 

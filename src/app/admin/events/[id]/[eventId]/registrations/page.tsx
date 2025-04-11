@@ -79,6 +79,9 @@ export default function EventRegistrationsPage({
       }
       const data = await response.json();
       setRegistrations(data.registrations);
+      if (data.event) {
+        setEvent(data.event);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -88,6 +91,18 @@ export default function EventRegistrationsPage({
 
   useEffect(() => {
     fetchRegistrations();
+  }, [fetchRegistrations]);
+
+  // Refresh data when user returns to the page
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchRegistrations();
+    };
+
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+    };
   }, [fetchRegistrations]);
 
   // Clear the lastArrivedId after 60 seconds
@@ -153,11 +168,15 @@ export default function EventRegistrationsPage({
       const data = await response.json();
 
       if (data.success) {
+        // Update the local state first for immediate UI feedback
         setRegistrations(
           registrations.map((reg) =>
             reg.id === registrationId ? { ...reg, paid: newPaidStatus } : reg,
           ),
         );
+
+        // Then refresh data from the server to ensure consistency
+        await fetchRegistrations();
       } else {
         alert(`Error: ${data.message}`);
       }
@@ -200,6 +219,7 @@ export default function EventRegistrationsPage({
           setLastArrivedId(null);
         }
 
+        // Update the local state first for immediate UI feedback
         setRegistrations(
           registrations.map((reg) =>
             reg.id === registrationId
@@ -207,6 +227,9 @@ export default function EventRegistrationsPage({
               : reg,
           ),
         );
+
+        // Then refresh data from the server to ensure consistency
+        await fetchRegistrations();
       } else {
         alert(`Error: ${data.message}`);
       }
@@ -478,7 +501,9 @@ export default function EventRegistrationsPage({
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6 flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
         <div>
-          <h1 className="text-2xl font-bold">Event Registrations</h1>
+          <h1 className="text-2xl font-bold">
+            Event Registrations {event && `- ${event.title}`}
+          </h1>
           {event && (
             <p className="mt-2 text-gray-600">
               <span className="font-semibold">{event.title}</span> |

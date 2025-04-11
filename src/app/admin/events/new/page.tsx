@@ -122,6 +122,21 @@ export default function CreateEventPage() {
             />
           </div>
 
+          <div>
+            <label htmlFor="price" className="mb-1 block text-sm font-medium">
+              Price (CZK)
+            </label>
+            <input
+              type="number"
+              id="price"
+              name="price"
+              required
+              min="0"
+              className="w-full rounded-md border border-gray-300 px-4 py-2"
+              placeholder="Enter price in CZK"
+            />
+          </div>
+
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
               <label htmlFor="from" className="mb-1 block text-sm font-medium">

@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
         title: event.title,
         description: event.description,
         price: event.price,
+        place: event.place,
         from: event.from.toISOString(),
         to: event.to.toISOString(),
         created_at: event.created_at.toISOString(),

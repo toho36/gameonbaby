@@ -163,7 +163,13 @@ export default function EventManagement() {
         },
         body: JSON.stringify({
           sourceEventId: eventToDuplicate.id,
-          ...duplicateFormData,
+          title: duplicateFormData.title,
+          description: duplicateFormData.description || null,
+          price: duplicateFormData.price,
+          place: duplicateFormData.place || null,
+          from: duplicateFormData.from,
+          to: duplicateFormData.to,
+          visible: duplicateFormData.visible,
         }),
       });
 
@@ -602,6 +608,7 @@ export default function EventManagement() {
                   <input
                     type="checkbox"
                     id="manualDateInput"
+                    name="manualDateInput"
                     checked={duplicateFormData.manualDateInput}
                     onChange={(e) =>
                       setDuplicateFormData({
@@ -615,24 +622,6 @@ export default function EventManagement() {
                     Manually enter date and time
                   </label>
                 </div>
-              </div>
-
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="manualDateInput"
-                  checked={duplicateFormData.manualDateInput}
-                  onChange={(e) =>
-                    setDuplicateFormData({
-                      ...duplicateFormData,
-                      manualDateInput: e.target.checked,
-                    })
-                  }
-                  className="mr-2"
-                />
-                <label htmlFor="manualDateInput" className="text-sm">
-                  Manually enter date and time
-                </label>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

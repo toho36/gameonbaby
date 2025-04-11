@@ -65,6 +65,8 @@ export default function EditEventPage({
           ...eventData.event,
           from: formatDateForInput(fromDate),
           to: formatDateForInput(toDate),
+          place: eventData.event.place || "",
+          description: eventData.event.description || "",
         });
       } catch (error) {
         console.error("Error loading event:", error);
@@ -189,9 +191,29 @@ export default function EditEventPage({
               type="text"
               id="place"
               name="place"
-              defaultValue={event.place || ""}
+              value={event.place || ""}
+              onChange={(e) => {
+                const newEvent = { ...event, place: e.target.value };
+                setEvent(newEvent);
+              }}
               className="w-full rounded-md border border-gray-300 px-4 py-2"
               placeholder="e.g., Sportovní hala TJ JM Chodov, Mírového hnutí 2137"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="price" className="mb-1 block text-sm font-medium">
+              Price (CZK)
+            </label>
+            <input
+              type="number"
+              id="price"
+              name="price"
+              defaultValue={event.price}
+              required
+              min="0"
+              className="w-full rounded-md border border-gray-300 px-4 py-2"
+              placeholder="Enter price in CZK"
             />
           </div>
 

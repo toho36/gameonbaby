@@ -66,6 +66,7 @@ export async function GET(
         title: event.title,
         description: event.description,
         price: event.price,
+        place: event.place,
         from: event.from.toISOString(),
         to: event.to.toISOString(),
         visible: event.visible,

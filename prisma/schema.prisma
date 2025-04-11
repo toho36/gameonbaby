@@ -98,7 +98,7 @@ model Registration {
   payment      Payment?
   attended     Boolean  @default(false)
 
-  @@unique([event_id, email])
+  @@unique([event_id, email, first_name, last_name])
 }
 
 model Payment {

@@ -394,13 +394,11 @@ export default function EventManagement() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-2">
-                        <Link href={`/admin/events/${event.id}/registrations`}>
-                          <Button
-                            variant="outline"
-                            className="px-2 py-1 text-xs"
-                          >
-                            View Registrations
-                          </Button>
+                        <Link
+                          href={`/admin/events/${event.id}/${event.id}/registrations`}
+                          className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                        >
+                          Registrations
                         </Link>
                         <Link href={`/admin/events/${event.id}/edit`}>
                           <Button
@@ -476,10 +474,13 @@ export default function EventManagement() {
 
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <Link
-                    href={`/admin/events/${event.id}/registrations`}
+                    href={`/admin/events/${event.id}/${event.id}/registrations`}
                     className="col-span-2"
                   >
-                    <Button variant="outline" className="w-full py-1 text-xs">
+                    <Button
+                      variant="outline"
+                      className="w-full text-blue-600 hover:bg-blue-50"
+                    >
                       View Registrations
                     </Button>
                   </Link>

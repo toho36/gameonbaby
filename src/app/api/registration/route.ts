@@ -27,28 +27,41 @@ interface CreateRegistrationResponse {
 
 export const POST = withErrorHandling(
   async (req: Request): Promise<NextResponse> => {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const request: CreateRegistrationRequest = await req.json();
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const request: CreateRegistrationRequest = await req.json();
 
-    // Validate payment type
-    if (!Object.values(PaymentType).includes(request.paymentType)) {
-      throw new ApiError(
-        `The payment type ${request.paymentType} cannot be processed.`,
-        400,
-        getCode(Modules.REGISTRATION, ErrorCodes.BAD_PAYMENT_TYPE),
+      console.log("Registration attempt:", {
+        firstName: request.firstName,
+        lastName: request.lastName,
+        email: request.email,
+        eventId: request.eventId,
+        paymentType: request.paymentType,
+      });
+
+      // Validate payment type
+      if (!Object.values(PaymentType).includes(request.paymentType)) {
+        throw new ApiError(
+          `The payment type ${request.paymentType} cannot be processed.`,
+          400,
+          getCode(Modules.REGISTRATION, ErrorCodes.BAD_PAYMENT_TYPE),
+        );
+      }
+
+      // Proceed with registration creation
+      const registrationDto = await registrationService.createRegistration({
+        ...request,
+      });
+
+      return NextResponse.json<CreateRegistrationResponse>(
+        {
+          ...registrationDto,
+        },
+        { status: 201 },
       );
+    } catch (error) {
+      console.error("Registration error with details:", error);
+      throw error; // Re-throw to let the error handler handle it
     }
-
-    // Proceed with registration creation
-    const registrationDto = await registrationService.createRegistration({
-      ...request,
-    });
-
-    return NextResponse.json<CreateRegistrationResponse>(
-      {
-        ...registrationDto,
-      },
-      { status: 201 },
-    );
   },
 );

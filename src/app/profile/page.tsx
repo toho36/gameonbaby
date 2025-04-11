@@ -11,12 +11,15 @@ interface UserProfile {
   email: string | null;
   role: string;
   createdAt: string;
+  paymentPreference: string;
 }
 
 export default function ProfilePage() {
   const { user } = useKindeBrowserClient();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [paymentPreference, setPaymentPreference] = useState<string>("CARD");
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -26,6 +29,7 @@ export default function ProfilePage() {
 
         if (data.success) {
           setProfile(data.user);
+          setPaymentPreference(data.user.paymentPreference || "CARD");
         }
       } catch (error) {
         console.error("Error fetching profile:", error);
@@ -39,6 +43,30 @@ export default function ProfilePage() {
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString();
+  };
+
+  const handlePaymentPreferenceChange = async (preference: string) => {
+    setIsUpdating(true);
+    try {
+      const response = await fetch("/api/user/payment-preference", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ paymentPreference: preference }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setPaymentPreference(data.paymentPreference);
+        if (profile) {
+          setProfile({ ...profile, paymentPreference: data.paymentPreference });
+        }
+      }
+    } catch (error) {
+      console.error("Error updating payment preference:", error);
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   if (loading) {
@@ -104,6 +132,43 @@ export default function ProfilePage() {
                     </p>
                   </div>
                 </>
+              )}
+            </div>
+          </div>
+
+          <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
+            <h3 className="text-sm font-medium text-gray-500">
+              Payment Preferences
+            </h3>
+            <div className="mt-4 space-y-4">
+              <div className="flex flex-wrap gap-3">
+                <label className="flex flex-1 cursor-pointer items-center rounded-md border border-gray-300 bg-white px-4 py-3 hover:border-gray-400">
+                  <input
+                    type="radio"
+                    name="payment_preference"
+                    value="CARD"
+                    checked={paymentPreference === "CARD"}
+                    onChange={() => handlePaymentPreferenceChange("CARD")}
+                    disabled={isUpdating}
+                    className="mr-2 h-4 w-4 accent-purple-500"
+                  />
+                  <span className="text-sm text-gray-700">QR Code Payment</span>
+                </label>
+                <label className="flex flex-1 cursor-pointer items-center rounded-md border border-gray-300 bg-white px-4 py-3 hover:border-gray-400">
+                  <input
+                    type="radio"
+                    name="payment_preference"
+                    value="CASH"
+                    checked={paymentPreference === "CASH"}
+                    onChange={() => handlePaymentPreferenceChange("CASH")}
+                    disabled={isUpdating}
+                    className="mr-2 h-4 w-4 accent-purple-500"
+                  />
+                  <span className="text-sm text-gray-700">Cash on Site</span>
+                </label>
+              </div>
+              {isUpdating && (
+                <p className="text-sm text-gray-500">Updating preference...</p>
               )}
             </div>
           </div>

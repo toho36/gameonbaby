@@ -12,43 +12,18 @@ interface EventData {
   description: string | null;
   price: number;
   place: string | null;
-  from: string;
-  to: string;
   visible: boolean;
   capacity: number;
 }
 
 export default function EditEventPage({ params }: { params: { id: string } }) {
-  const [event, setEvent] = useState<EventData | null>(null);
+  const [event, setEvent] = useState<Omit<EventData, "from" | "to"> | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
-
-  function toISODateTimeString(dateStr: string) {
-    try {
-      // First strip any milliseconds and timezone info
-      const cleanDateStr = dateStr.replace(/\.\d{3}Z$/, "");
-
-      // Parse the date string
-      const date = new Date(cleanDateStr);
-      if (isNaN(date.getTime())) {
-        return "";
-      }
-
-      // Format in local timezone
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      const hours = String(date.getHours()).padStart(2, "0");
-      const minutes = String(date.getMinutes()).padStart(2, "0");
-
-      return `${year}-${month}-${day}T${hours}:${minutes}`;
-    } catch (error) {
-      console.error("Error converting to ISO date:", error);
-      return "";
-    }
-  }
 
   useEffect(() => {
     async function checkPermissionAndLoadEvent() {
@@ -77,37 +52,14 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
           return;
         }
 
-        // Convert UTC dates to local format for datetime-local input
-        const fromDate = new Date(eventData.event.from);
-        const toDate = new Date(eventData.event.to);
-
-        // Format dates as yyyy-MM-ddThh:mm
-        const fromFormatted =
-          fromDate.toLocaleDateString("en-CA") +
-          "T" +
-          fromDate.toLocaleTimeString("en-GB", {
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-        const toFormatted =
-          toDate.toLocaleDateString("en-CA") +
-          "T" +
-          toDate.toLocaleTimeString("en-GB", {
-            hour: "2-digit",
-            minute: "2-digit",
-          });
-
-        // Create a new event object with formatted dates
-        const formattedEvent = {
-          ...eventData.event,
-          from: fromFormatted,
-          to: toFormatted,
+        // Update the main event state (excluding dates)
+        const { from, to, ...restOfEventData } = eventData.event;
+        setEvent({
+          ...restOfEventData,
           place: eventData.event.place || "",
           description: eventData.event.description || "",
           capacity: eventData.event.capacity || 0,
-        };
-
-        setEvent(formattedEvent);
+        });
       } catch (error) {
         console.error("Error loading event:", error);
         setError("An error occurred while loading event data");
@@ -125,27 +77,6 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
 
     try {
       const formData = new FormData(e.currentTarget);
-      const fromInput = formData.get("from") as string;
-      const toInput = formData.get("to") as string;
-
-      // Validate date inputs
-      if (!fromInput || !toInput) {
-        setError("Please select both start and end dates");
-        return;
-      }
-
-      // Create dates in local timezone
-      const fromDate = new Date(fromInput);
-      const toDate = new Date(toInput);
-
-      // Validate dates are valid
-      if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
-        setError("Invalid date format");
-        return;
-      }
-
-      formData.set("from", fromDate.toISOString());
-      formData.set("to", toDate.toISOString());
 
       const result = await updateEvent(params.id, formData);
 
@@ -276,58 +207,6 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
               className="w-full rounded-md border border-gray-300 px-4 py-2"
               placeholder="e.g., Sportovní hala TJ JM Chodov, Mírového hnutí 2137"
             />
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div>
-              <label htmlFor="from" className="mb-1 block text-sm font-medium">
-                Start Date & Time
-              </label>
-              <input
-                type="datetime-local"
-                id="from"
-                name="from"
-                defaultValue={
-                  event.from && !event.from.includes(".000Z")
-                    ? event.from
-                    : event.from
-                      ? new Date(event.from).toLocaleDateString("en-CA") +
-                        "T" +
-                        new Date(event.from).toLocaleTimeString("en-GB", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : ""
-                }
-                required
-                className="w-full rounded-md border border-gray-300 px-4 py-2"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="to" className="mb-1 block text-sm font-medium">
-                End Date & Time
-              </label>
-              <input
-                type="datetime-local"
-                id="to"
-                name="to"
-                defaultValue={
-                  event.to && !event.to.includes(".000Z")
-                    ? event.to
-                    : event.to
-                      ? new Date(event.to).toLocaleDateString("en-CA") +
-                        "T" +
-                        new Date(event.to).toLocaleTimeString("en-GB", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : ""
-                }
-                required
-                className="w-full rounded-md border border-gray-300 px-4 py-2"
-              />
-            </div>
           </div>
 
           <div className="flex items-center">

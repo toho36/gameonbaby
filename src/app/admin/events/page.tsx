@@ -35,11 +35,10 @@ export default function EventManagement() {
     description: "",
     price: 0,
     place: "",
-    capacity: 0,
     from: "",
     to: "",
     visible: true,
-    manualDateInput: false,
+    capacity: 0,
   });
   const router = useRouter();
 
@@ -117,27 +116,6 @@ export default function EventManagement() {
     }
   }
 
-  function parseManualDateInput(value: string) {
-    try {
-      const [datePart, timePart] = value.split(" ");
-      if (datePart && timePart) {
-        const [day, month, year] = datePart.split(".");
-        const [hours, minutes] = timePart.split(":");
-
-        if (day && month && year && hours && minutes) {
-          let yearVal = year.length === 2 ? "20" + year : year;
-
-          // Create a date string in local format instead of UTC
-          return `${yearVal}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}`;
-        }
-      }
-      return "";
-    } catch (error) {
-      console.error("Error parsing manual date:", error);
-      return "";
-    }
-  }
-
   async function handleDuplicate(id: string) {
     const eventToClone = events.find((event) => event.id === id);
     if (!eventToClone) return;
@@ -152,7 +130,6 @@ export default function EventManagement() {
       from: toISODateTimeString(eventToClone.from),
       to: toISODateTimeString(eventToClone.to),
       visible: eventToClone.visible,
-      manualDateInput: false,
     });
     setShowDuplicateModal(true);
   }
@@ -633,112 +610,36 @@ export default function EventManagement() {
                     <option value="false">Hidden</option>
                   </select>
                 </div>
-
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="manualDateInput"
-                    name="manualDateInput"
-                    checked={duplicateFormData.manualDateInput}
-                    onChange={(e) =>
-                      setDuplicateFormData({
-                        ...duplicateFormData,
-                        manualDateInput: e.target.checked,
-                      })
-                    }
-                    className="mr-2"
-                  />
-                  <label htmlFor="manualDateInput" className="text-sm">
-                    Manually enter date and time
-                  </label>
-                </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {duplicateFormData.manualDateInput ? (
-                  <>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-gray-700">
-                        Start Date & Time (DD.MM.YYYY HH:MM)
-                      </label>
-                      <input
-                        type="text"
-                        name="fromManual"
-                        placeholder="e.g., 15.06.2023 14:30"
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          try {
-                            const parsedDate = parseManualDateInput(value);
-                            if (parsedDate) {
-                              setDuplicateFormData({
-                                ...duplicateFormData,
-                                from: parsedDate,
-                              });
-                            }
-                          } catch (error) {
-                            console.error("Error parsing manual date:", error);
-                          }
-                        }}
-                        className="w-full rounded-md border border-gray-300 p-2"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-gray-700">
-                        End Date & Time (DD.MM.YYYY HH:MM)
-                      </label>
-                      <input
-                        type="text"
-                        name="toManual"
-                        placeholder="e.g., 15.06.2023 16:30"
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          try {
-                            const parsedDate = parseManualDateInput(value);
-                            if (parsedDate) {
-                              setDuplicateFormData({
-                                ...duplicateFormData,
-                                to: parsedDate,
-                              });
-                            }
-                          } catch (error) {
-                            console.error("Error parsing manual date:", error);
-                          }
-                        }}
-                        className="w-full rounded-md border border-gray-300 p-2"
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-gray-700">
-                        Start Date & Time
-                      </label>
-                      <input
-                        type="datetime-local"
-                        name="from"
-                        value={duplicateFormData.from}
-                        onChange={handleFormChange}
-                        className="w-full rounded-md border border-gray-300 p-2"
-                        required
-                      />
-                    </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Start Date & Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    name="from"
+                    value={duplicateFormData.from}
+                    onChange={handleFormChange}
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    required
+                  />
+                </div>
 
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-gray-700">
-                        End Date & Time
-                      </label>
-                      <input
-                        type="datetime-local"
-                        name="to"
-                        value={duplicateFormData.to}
-                        onChange={handleFormChange}
-                        className="w-full rounded-md border border-gray-300 p-2"
-                        required
-                      />
-                    </div>
-                  </>
-                )}
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    End Date & Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    name="to"
+                    value={duplicateFormData.to}
+                    onChange={handleFormChange}
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    required
+                  />
+                </div>
               </div>
             </div>
 

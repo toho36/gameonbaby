@@ -34,32 +34,48 @@ export async function createEvent(formData: FormData) {
 
 export async function updateEvent(id: string, formData: FormData) {
   try {
-    // Parse dates correctly to avoid timezone issues
-    const fromString = formData.get("from") as string;
-    const toString = formData.get("to") as string;
+    // Get the existing event to preserve dates if not provided
+    const existingEvent = await prisma.event.findUnique({
+      where: { id },
+    });
 
-    // Create dates from ISO strings
-    const fromDate = new Date(fromString);
-    const toDate = new Date(toString);
+    if (!existingEvent) {
+      return { error: "Event not found" };
+    }
 
-    // Validate dates
-    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
-      return { error: "Invalid date format" };
+    // Prepare update data with basic fields
+    const updateData: any = {
+      title: formData.get("title") as string,
+      description: formData.get("description") as string,
+      price: Number(formData.get("price") || 0),
+      place: (formData.get("place") as string) || null,
+      visible: formData.get("visible") === "true",
+      capacity: Number(formData.get("capacity") || 0),
+    };
+
+    // Only update dates if they are provided in the form
+    const fromString = formData.get("from") as string | null;
+    const toString = formData.get("to") as string | null;
+
+    if (fromString) {
+      const fromDate = new Date(fromString);
+      if (!isNaN(fromDate.getTime())) {
+        updateData.from = fromDate;
+      }
+    }
+
+    if (toString) {
+      const toDate = new Date(toString);
+      if (!isNaN(toDate.getTime())) {
+        updateData.to = toDate;
+      }
     }
 
     await prisma.event.update({
       where: { id },
-      data: {
-        title: formData.get("title") as string,
-        description: formData.get("description") as string,
-        price: Number(formData.get("price") || 0),
-        place: (formData.get("place") as string) || null,
-        from: fromDate,
-        to: toDate,
-        visible: formData.get("visible") === "true",
-        capacity: Number(formData.get("capacity") || 0),
-      },
+      data: updateData,
     });
+
     revalidatePath("/events");
     revalidatePath("/admin/events");
     revalidatePath(`/admin/events/${id}`);

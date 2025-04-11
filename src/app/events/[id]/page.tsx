@@ -22,6 +22,7 @@ function formatDate(dateStr: string | Date) {
     day: "numeric",
     month: "numeric",
     year: "numeric",
+    timeZone: "Europe/Prague",
   });
 }
 
@@ -30,6 +31,7 @@ function formatTime(dateStr: string | Date) {
   return date.toLocaleTimeString("cs-CZ", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Europe/Prague",
   });
 }
 

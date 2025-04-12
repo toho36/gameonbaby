@@ -1,35 +1,27 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  // NOTE: When using mysql or sqlserver, uncomment the @db.Text annotations in model Account below
-  // Further reading:
-  // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
-  // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
   url      = env("DATABASE_URL")
 }
 
-// Necessary for Next auth
 model Account {
   id                       String  @id @default(cuid())
   userId                   String
   type                     String
   provider                 String
   providerAccountId        String
-  refresh_token            String? // @db.Text
-  access_token             String? // @db.Text
+  refresh_token            String?
+  access_token             String?
   expires_at               Int?
   token_type               String?
   scope                    String?
-  id_token                 String? // @db.Text
+  id_token                 String?
   session_state            String?
-  user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   refresh_token_expires_in Int?
+  user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -42,25 +34,19 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-enum UserRole {
-  USER
-  MODERATOR
-  ADMIN
-}
-
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  role          UserRole  @default(USER)
-  accounts      Account[]
-  sessions      Session[]
-  kindeId       String?   @unique
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  paymentPreference String @default("CARD") // CARD or CASH
+  id                String    @id @default(cuid())
+  name              String?
+  email             String?   @unique
+  emailVerified     DateTime?
+  image             String?
+  createdAt         DateTime  @default(now())
+  kindeId           String?   @unique
+  role              UserRole  @default(USER)
+  updatedAt         DateTime  @updatedAt
+  paymentPreference String    @default("CARD")
+  accounts          Account[]
+  sessions          Session[]
 }
 
 model VerificationToken {
@@ -73,22 +59,21 @@ model VerificationToken {
 
 model Event {
   id           String         @id @default(cuid())
-  title        String
-  description  String?
   price        Float
-  place        String?
-  capacity     Int            @default(0)
   from         DateTime
   to           DateTime
   created_at   DateTime
+  description  String?
+  title        String
   visible      Boolean        @default(true)
+  place        String?
+  capacity     Int            @default(0)
   Registration Registration[]
-  WaitingList  WaitingList[]
 }
 
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model Registration {
   id           String   @id @default(cuid())
-  event        Event    @relation(fields: [event_id], references: [id])
   event_id     String
   first_name   String
   last_name    String?
@@ -96,15 +81,13 @@ model Registration {
   phone_number String?
   payment_type String
   created_at   DateTime
-  payment      Payment?
   attended     Boolean  @default(false)
-
-  @@unique([event_id, email, first_name, last_name])
+  payment      Payment?
+  event        Event    @relation(fields: [event_id], references: [id])
 }
 
 model WaitingList {
   id           String   @id @default(cuid())
-  event        Event    @relation(fields: [event_id], references: [id])
   event_id     String
   first_name   String
   last_name    String?
@@ -116,10 +99,18 @@ model WaitingList {
 
 model Payment {
   id              String       @id @default(cuid())
-  registration    Registration @relation(fields: [registration_id], references: [id])
   registration_id String       @unique
   variable_symbol String
   qr_data         String
   paid            Boolean
   created_at      DateTime
+  registration    Registration @relation(fields: [registration_id], references: [id])
 }
+
+enum UserRole {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+

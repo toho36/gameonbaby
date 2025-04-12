@@ -454,25 +454,24 @@ export default function EventRegistrationsPage({
     });
   }
 
+  // Format date and time together
   function formatDateTime(dateStr: string) {
-    try {
-      const date = new Date(dateStr);
-      if (isNaN(date.getTime())) {
-        return "Invalid date";
-      }
+    return `${formatDate(dateStr)} at ${formatTime(dateStr)}`;
+  }
 
-      // Use local time instead of UTC
-      const day = date.getDate().toString().padStart(2, "0");
-      const month = (date.getMonth() + 1).toString().padStart(2, "0");
-      const year = date.getFullYear().toString().slice(2);
-      const hours = date.getHours().toString().padStart(2, "0");
-      const minutes = date.getMinutes().toString().padStart(2, "0");
+  // Format a date
+  function formatDate(dateStr: string) {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("cs-CZ");
+  }
 
-      return `${day}.${month}.${year}, ${hours}:${minutes}`;
-    } catch (error) {
-      console.error("Error formatting date:", error);
-      return "Invalid date";
-    }
+  // Format a time
+  function formatTime(dateStr: string) {
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString("cs-CZ", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   }
 
   // Sort registrations: non-arrived first, then last arrived, then the rest
@@ -528,10 +527,43 @@ export default function EventRegistrationsPage({
           >
             {compactView ? "Show Details" : "Compact View"}
           </Button>
-          <Link href="/admin/events" className="w-full sm:w-auto">
-            <Button variant="outline" className="w-full">
-              Back to Events
-            </Button>
+          <Link
+            href={`/admin/events`}
+            className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          >
+            <svg
+              className="-ml-1 mr-2 h-5 w-5 text-gray-500"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                fillRule="evenodd"
+                d="M7.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l2.293 2.293a1 1 0 010 1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+            Back to Events
+          </Link>
+          <Link
+            href={`/admin/events/${params.id}/waitinglist`}
+            className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          >
+            <svg
+              className="-ml-1 mr-2 h-5 w-5 text-gray-500"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 11a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                clipRule="evenodd"
+              />
+            </svg>
+            View Waiting List
           </Link>
         </div>
       </div>

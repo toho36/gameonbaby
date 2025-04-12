@@ -2,9 +2,13 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import prisma from "~/lib/db";
 import RegistrationForm from "~/components/RegistrationForm";
+import { PrismaClient } from "@prisma/client";
+
+// Create a separate client for raw queries
+const prismaRaw = new PrismaClient();
 
 // Define Event interface to match the database schema
-interface Event {
+interface EventData {
   id: string;
   title: string;
   description: string | null;
@@ -15,6 +19,59 @@ interface Event {
   created_at: Date;
   visible: boolean;
   capacity: number;
+  Registration: Array<{
+    first_name: string;
+    last_name: string | null;
+    created_at: Date;
+  }>;
+  _count: {
+    Registration: number;
+    WaitingList: number;
+  };
+}
+
+// Interface for WaitingList entries from raw query
+interface WaitingListEntry {
+  first_name: string;
+  last_name: string | null;
+  created_at: Date;
+}
+
+// Interface for combined event data
+interface EventWithLists {
+  id: string;
+  title: string;
+  description: string | null;
+  price: number;
+  place: string | null;
+  from: Date;
+  to: Date;
+  created_at: Date;
+  visible: boolean;
+  capacity: number;
+  _count: {
+    Registration: number;
+    WaitingList: number;
+  };
+  registrations: Array<{
+    first_name: string;
+    last_name: string | null;
+    created_at: Date;
+  }>;
+  waitingList: WaitingListEntry[];
+}
+
+// Interface for RegistrationForm component
+interface RegistrationFormEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  price: number;
+  place: string | null;
+  capacity: number;
+  from: string;
+  to: string;
+  visible: boolean;
   _count: {
     Registration: number;
   };
@@ -44,25 +101,71 @@ export default async function EventPage({
 }: {
   params: { id: string };
 }) {
-  const eventData = await prisma.event.findUnique({
+  const eventData = (await prisma.event.findUnique({
     where: {
       id: params.id,
     },
     include: {
+      Registration: {
+        orderBy: {
+          created_at: "asc",
+        },
+        select: {
+          first_name: true,
+          last_name: true,
+          created_at: true,
+        },
+      },
       _count: {
         select: {
           Registration: true,
         },
       },
     },
-  });
+  })) as unknown as
+    | (Omit<EventData, "_count"> & {
+        _count: { Registration: number };
+      })
+    | null;
 
   if (!eventData) {
     notFound();
   }
 
-  // Cast to our Event interface
-  const event = eventData as unknown as Event;
+  // Fetch waiting list entries with raw query
+  let waitingListEntries: WaitingListEntry[] = [];
+
+  try {
+    console.log(`Attempting to fetch waiting list for event ID: ${params.id}`);
+
+    // Simply use raw query with PascalCase table name as it should work after db reset
+    waitingListEntries = await prismaRaw.$queryRaw<WaitingListEntry[]>`
+      SELECT first_name, last_name, created_at 
+      FROM "WaitingList"
+      WHERE event_id = ${params.id}
+      ORDER BY created_at ASC
+    `;
+    console.log(
+      `Successfully fetched waiting list: ${waitingListEntries.length} entries`,
+    );
+  } catch (error) {
+    console.error("Error fetching waiting list:", error);
+    waitingListEntries = [];
+  }
+
+  // Count waiting list entries
+  const waitingListCount = waitingListEntries.length;
+
+  // Cast to our Event interface with registrations and waiting list
+  const event: EventWithLists = {
+    ...eventData,
+    registrations: eventData.Registration || [],
+    waitingList: waitingListEntries || [],
+    _count: {
+      ...eventData._count,
+      WaitingList: waitingListCount,
+    },
+  };
 
   // Check visibility after casting
   if (!event.visible) {
@@ -250,6 +353,12 @@ export default async function EventPage({
                     {event.capacity - event._count.Registration} spots left
                   </div>
                 )}
+                {event._count.Registration >= event.capacity &&
+                  event._count.WaitingList > 0 && (
+                    <div className="mt-2 text-right text-sm text-orange-200">
+                      {event._count.WaitingList} on waiting list
+                    </div>
+                  )}
               </div>
             </div>
 
@@ -293,16 +402,93 @@ export default async function EventPage({
               <>
                 <h2 className="mb-5 text-xl font-bold text-white">Register</h2>
                 <RegistrationForm
-                  event={{
-                    ...event,
-                    from: event.from.toISOString(),
-                    to: event.to.toISOString(),
-                  }}
+                  event={
+                    {
+                      id: event.id,
+                      title: event.title,
+                      description: event.description,
+                      price: event.price,
+                      place: event.place,
+                      capacity: event.capacity,
+                      from: event.from.toISOString(),
+                      to: event.to.toISOString(),
+                      visible: event.visible,
+                      _count: {
+                        Registration: event._count.Registration,
+                      },
+                    } as RegistrationFormEvent
+                  }
                   eventId={event.id}
                   eventDate={formatDate(event.from)}
                 />
               </>
             )}
+
+            {/* Display registrations */}
+            {event.registrations.length > 0 && (
+              <>
+                <h2 className="mb-5 mt-8 text-xl font-bold text-white">
+                  Registered ({event._count.Registration}/{event.capacity})
+                </h2>
+                <div className="rounded-xl border border-white/20 bg-white/5 p-5 backdrop-blur-sm">
+                  <div className="grid gap-3">
+                    {event.registrations.map((reg, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between rounded-lg bg-white/10 p-3"
+                      >
+                        <div className="flex items-center">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-600 text-white">
+                            {reg.first_name.charAt(0)}
+                            {reg.last_name ? reg.last_name.charAt(0) : ""}
+                          </div>
+                          <span className="ml-3 text-white">
+                            {reg.first_name} {reg.last_name}
+                          </span>
+                        </div>
+                        <span className="text-sm text-white/70">
+                          {new Date(reg.created_at).toLocaleDateString("cs-CZ")}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Display waiting list */}
+            <h2 className="mb-5 mt-8 text-xl font-bold text-white">
+              Waiting List ({event._count.WaitingList})
+            </h2>
+            <div className="rounded-xl border border-white/20 bg-white/5 p-5 backdrop-blur-sm">
+              {event.waitingList.length > 0 ? (
+                <div className="grid gap-3">
+                  {event.waitingList.map((entry, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between rounded-lg bg-white/10 p-3"
+                    >
+                      <div className="flex items-center">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-500 text-white">
+                          {entry.first_name.charAt(0)}
+                          {entry.last_name ? entry.last_name.charAt(0) : ""}
+                        </div>
+                        <span className="ml-3 text-white">
+                          {entry.first_name} {entry.last_name}
+                        </span>
+                      </div>
+                      <span className="text-sm text-white/70">
+                        {new Date(entry.created_at).toLocaleDateString("cs-CZ")}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-4 text-center text-white/70">
+                  No one on the waiting list yet (Event ID: {params.id})
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

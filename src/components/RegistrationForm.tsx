@@ -103,6 +103,7 @@ export default function RegistrationForm({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isRegistered, setIsRegistered] = useState(false);
+  const [isOnWaitingList, setIsOnWaitingList] = useState(false);
   const [showFullForm, setShowFullForm] = useState(false);
   const [paymentPreference, setPaymentPreference] = useState<string>("CARD");
   const [formData, setFormData] = useState({
@@ -112,6 +113,7 @@ export default function RegistrationForm({
     phoneNumber: "",
   });
   const [userRegistration, setUserRegistration] = useState<any>(null);
+  const [userWaitingList, setUserWaitingList] = useState<any>(null);
   const router = useRouter();
   const [isUpdating, setIsUpdating] = useState(false);
   const [showGuestForm, setShowGuestForm] = useState(false);
@@ -121,6 +123,8 @@ export default function RegistrationForm({
     if (isAuthenticated && user?.id) {
       // Check if user is already registered for this event
       checkUserRegistration();
+      // Check if user is on waiting list
+      checkUserWaitingList();
       // Fetch user's payment preference
       fetchPaymentPreference();
     }
@@ -168,6 +172,19 @@ export default function RegistrationForm({
       }
     } catch (error) {
       console.error("Error checking registration status:", error);
+    }
+  }
+
+  async function checkUserWaitingList() {
+    try {
+      const response = await fetch(`/api/events/${eventId}/waitinglist-status`);
+      const data = await response.json();
+      if (data.success && data.waitingList) {
+        setUserWaitingList(data.waitingList);
+        setIsOnWaitingList(true);
+      }
+    } catch (error) {
+      console.error("Error checking waiting list status:", error);
     }
   }
 
@@ -227,6 +244,43 @@ export default function RegistrationForm({
     } catch (error) {
       console.error("Error registering:", error);
       toast.error("Registration failed");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleJoinWaitingList = async () => {
+    if (!user) {
+      router.push("/api/auth/login");
+      return;
+    }
+
+    try {
+      setIsUpdating(true);
+      const response = await fetch("/api/waitinglist", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          eventId: event.id,
+          paymentPreference,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setIsOnWaitingList(true);
+        toast.success("You've been added to the waiting list!");
+      } else {
+        console.log("Waiting list registration failed:", data);
+        toast.error(
+          data.error || data.message || "Failed to join waiting list",
+        );
+      }
+    } catch (error) {
+      console.error("Error joining waiting list:", error);
+      toast.error("Failed to join waiting list");
     } finally {
       setIsUpdating(false);
     }
@@ -347,6 +401,59 @@ export default function RegistrationForm({
     } catch (error) {
       console.error("Error registering:", error);
       toast.error("Registration failed. Please try again later.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleGuestWaitingList = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUpdating(true);
+
+    // Validate form data
+    if (!formData.firstName || !formData.email) {
+      toast.error("Please fill in required fields");
+      setIsUpdating(false);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/waitinglist/guest", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName || "",
+          email: formData.email,
+          phoneNumber: formData.phoneNumber || "",
+          eventId: event.id,
+          paymentType: paymentPreference,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setIsOnWaitingList(true);
+        toast.success("You've been added to the waiting list!");
+      } else {
+        console.error("Waiting list error:", data);
+
+        // Check if error is related to already being on waiting list
+        if (
+          data.message &&
+          data.message.includes("already on the waiting list")
+        ) {
+          setShowDuplicateModal(true);
+        } else {
+          const errorMessage = data.message || "Failed to join waiting list";
+          toast.error(errorMessage);
+        }
+      }
+    } catch (error) {
+      console.error("Error joining waiting list:", error);
+      toast.error("Failed to join waiting list. Please try again later.");
     } finally {
       setIsUpdating(false);
     }
@@ -538,7 +645,62 @@ export default function RegistrationForm({
     );
   }
 
-  // Non-logged in user view
+  // Show waiting list success if user is on waiting list
+  if (isOnWaitingList) {
+    return (
+      <div className="rounded-xl border border-white/20 bg-white/10 p-6 text-white shadow-lg backdrop-blur-sm">
+        <div className="flex flex-col items-center text-center">
+          <div className="mb-4 rounded-full bg-white/20 p-3">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-8 w-8 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          </div>
+          <h3 className="mb-2 text-xl font-bold text-white">
+            You're on the Waiting List!
+          </h3>
+          <p className="mb-6 text-white/90">
+            We'll notify you if a spot becomes available.
+          </p>
+
+          <div className="mt-6 w-full">
+            <Link
+              href="/"
+              className="flex items-center justify-center rounded-lg bg-white/20 px-4 py-3 text-center font-medium text-white transition-colors hover:bg-white/30"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="mr-2 h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              Back to Events
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Non-logged in user view with waiting list option if event is full
   if (!isAuthenticated) {
     return (
       <div className="rounded-xl border border-white/20 bg-white/10 p-6 text-white shadow-lg backdrop-blur-sm">
@@ -548,18 +710,29 @@ export default function RegistrationForm({
               onClick={() => router.push("/api/auth/login")}
               className="w-full rounded-lg bg-white/20 px-5 py-3 font-medium text-white transition hover:bg-white/30 focus:ring-2 focus:ring-white/40"
             >
-              Sign In to Register
+              {event._count.Registration >= event.capacity
+                ? "Sign In to Join Waiting List"
+                : "Sign In to Register"}
             </button>
             <button
               onClick={() => setShowGuestForm(true)}
               className="w-full rounded-lg border border-white/20 bg-transparent px-5 py-3 font-medium text-white transition hover:bg-white/10"
             >
-              Register as Guest
+              {event._count.Registration >= event.capacity
+                ? "Join Waiting List as Guest"
+                : "Register as Guest"}
             </button>
           </div>
         ) : (
           <div>
-            <form onSubmit={handleGuestRegistration} className="space-y-5">
+            <form
+              onSubmit={
+                event._count.Registration >= event.capacity
+                  ? handleGuestWaitingList
+                  : handleGuestRegistration
+              }
+              className="space-y-5"
+            >
               <div>
                 <label className="mb-1.5 block text-sm font-medium">
                   First Name <span className="text-red-300">*</span>
@@ -666,8 +839,12 @@ export default function RegistrationForm({
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         ></path>
                       </svg>
-                      Registering...
+                      {event._count.Registration >= event.capacity
+                        ? "Joining..."
+                        : "Registering..."}
                     </span>
+                  ) : event._count.Registration >= event.capacity ? (
+                    "Join Waiting List"
                   ) : (
                     "Register Now"
                   )}
@@ -695,7 +872,7 @@ export default function RegistrationForm({
     );
   }
 
-  // Logged in user view
+  // Logged in user view with waiting list option if event is full
   return (
     <div className="rounded-xl border border-white/20 bg-white/10 p-6 text-white shadow-lg backdrop-blur-sm">
       <div className="space-y-5">
@@ -734,7 +911,11 @@ export default function RegistrationForm({
         </div>
 
         <button
-          onClick={handleQuickRegister}
+          onClick={
+            event._count.Registration >= event.capacity
+              ? handleJoinWaitingList
+              : handleQuickRegister
+          }
           disabled={isUpdating}
           className="w-full rounded-lg bg-white/20 p-3 font-medium text-white transition hover:bg-white/30 disabled:opacity-50"
         >
@@ -760,12 +941,39 @@ export default function RegistrationForm({
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 ></path>
               </svg>
-              Registering...
+              {event._count.Registration >= event.capacity
+                ? "Joining..."
+                : "Registering..."}
             </span>
+          ) : event._count.Registration >= event.capacity ? (
+            "Join Waiting List"
           ) : (
             "Register Now"
           )}
         </button>
+
+        {event._count.Registration >= event.capacity && (
+          <div className="rounded-lg border border-orange-300/30 bg-orange-400/10 p-3 text-sm">
+            <div className="flex">
+              <svg
+                className="mr-2 h-5 w-5 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                  clipRule="evenodd"
+                ></path>
+              </svg>
+              <div>
+                <span className="font-medium">Event full!</span> You can join
+                the waiting list to be notified if spots become available.
+              </div>
+            </div>
+          </div>
+        )}
 
         {event._count.Registration >= event.capacity - 5 &&
           event._count.Registration < event.capacity && (

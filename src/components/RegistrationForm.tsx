@@ -118,6 +118,7 @@ export default function RegistrationForm({
   const [isUpdating, setIsUpdating] = useState(false);
   const [showGuestForm, setShowGuestForm] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (isAuthenticated && user?.id) {
@@ -127,8 +128,22 @@ export default function RegistrationForm({
       checkUserWaitingList();
       // Fetch user's payment preference
       fetchPaymentPreference();
+      // Fetch user's profile
+      fetchUserProfile();
     }
   }, [isAuthenticated, user?.id]);
+
+  async function fetchUserProfile() {
+    try {
+      const response = await fetch("/api/user/profile");
+      const data = await response.json();
+      if (data.success) {
+        setProfileImage(data.user.image);
+      }
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+    }
+  }
 
   async function fetchPaymentPreference() {
     try {
@@ -557,25 +572,37 @@ export default function RegistrationForm({
     return (
       <div className="rounded-xl border border-white/20 bg-white/10 p-6 text-white shadow-lg backdrop-blur-sm">
         <div className="flex flex-col items-center text-center">
-          <div className="mb-4 rounded-full bg-white/20 p-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-8 w-8 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
+          <div className="mb-4 flex items-center gap-3">
+            {profileImage ? (
+              <div className="h-12 w-12 overflow-hidden rounded-full border-2 border-white/30">
+                <img
+                  src={profileImage}
+                  alt="Profile"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="rounded-full bg-white/20 p-3">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+            )}
+            <h3 className="text-xl font-bold text-white">
+              Registration Successful!
+            </h3>
           </div>
-          <h3 className="mb-2 text-xl font-bold text-white">
-            Registration Successful!
-          </h3>
           <p className="mb-6 text-white/90">
             A confirmation email has been sent to your email address.
           </p>
@@ -650,25 +677,37 @@ export default function RegistrationForm({
     return (
       <div className="rounded-xl border border-white/20 bg-white/10 p-6 text-white shadow-lg backdrop-blur-sm">
         <div className="flex flex-col items-center text-center">
-          <div className="mb-4 rounded-full bg-white/20 p-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-8 w-8 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
+          <div className="mb-4 flex items-center gap-3">
+            {profileImage ? (
+              <div className="h-12 w-12 overflow-hidden rounded-full border-2 border-white/30">
+                <img
+                  src={profileImage}
+                  alt="Profile"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="rounded-full bg-white/20 p-3">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+            )}
+            <h3 className="text-xl font-bold text-white">
+              You're on the Waiting List!
+            </h3>
           </div>
-          <h3 className="mb-2 text-xl font-bold text-white">
-            You're on the Waiting List!
-          </h3>
           <p className="mb-6 text-white/90">
             We'll notify you if a spot becomes available.
           </p>

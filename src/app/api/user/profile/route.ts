@@ -13,6 +13,7 @@ interface DbUser {
   createdAt: Date;
   emailVerified: Date | null;
   image: string | null;
+  phoneNumber: string | null;
 }
 
 export async function GET() {
@@ -50,6 +51,8 @@ export async function GET() {
         email: user.email,
         role: user.role,
         createdAt: user.createdAt.toISOString(),
+        image: user.image,
+        phoneNumber: user.phoneNumber,
       },
     });
   } catch (error) {
@@ -58,6 +61,59 @@ export async function GET() {
       {
         success: false,
         message: "Failed to fetch user profile",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    // Get the authenticated user
+    const { getUser } = getKindeServerSession();
+    const kindeUser = await getUser();
+
+    if (!kindeUser || !kindeUser.id) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 },
+      );
+    }
+
+    // Get request body
+    const data = await request.json();
+    const { name, phoneNumber, image } = data;
+
+    // Update user profile
+    const updatedUser = await prisma.user.update({
+      where: {
+        email: kindeUser.email as string,
+      },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(phoneNumber !== undefined && { phoneNumber }),
+        ...(image !== undefined && { image }),
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        createdAt: updatedUser.createdAt.toISOString(),
+        image: updatedUser.image,
+        phoneNumber: updatedUser.phoneNumber,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating user profile:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to update user profile",
       },
       { status: 500 },
     );

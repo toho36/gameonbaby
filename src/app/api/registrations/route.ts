@@ -80,13 +80,23 @@ export async function POST(request: NextRequest) {
     const paymentType =
       paymentPreference === "CARD" ? PaymentType.CARD : PaymentType.CASH;
 
+    // Get user's phone number from profile if available using direct database access
+    type UserRecord = { phoneNumber: string | null };
+    const userRecords = await prisma.$queryRaw<UserRecord[]>`
+      SELECT "phoneNumber" FROM "User" WHERE "email" = ${userEmail}
+    `;
+    const userPhoneNumber =
+      userRecords && userRecords.length > 0
+        ? userRecords[0]?.phoneNumber
+        : null;
+
     // Create the registration
     const newRegistration = await prisma.registration.create({
       data: {
         first_name: firstName,
         last_name: lastName,
         email: userEmail,
-        phone_number: null,
+        phone_number: userPhoneNumber,
         payment_type: paymentType,
         created_at: new Date(),
         event: { connect: { id: eventId } },

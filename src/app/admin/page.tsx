@@ -1,24 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
-
-interface User {
-  id: string;
-  name: string | null;
-  email: string | null;
-  role: "USER" | "REGULAR" | "MODERATOR" | "ADMIN";
-  createdAt: string;
-}
+import useUserStore from "~/stores/userStore";
+import { useUsers, useUpdateUserRole } from "~/api/users";
 
 export default function AdminDashboard() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const users = useUserStore((state) => state.users);
+  const loading = useUserStore((state) => state.loading);
+  const search = useUserStore((state) => state.search);
+  const setSearch = useUserStore((state) => state.setSearch);
   const router = useRouter();
   const { user } = useKindeBrowserClient();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Use React Query for data fetching
+  const { refetch } = useUsers(search);
+  const { mutate: updateRole } = useUpdateUserRole();
 
   useEffect(() => {
     async function checkAdminStatus() {
@@ -31,61 +30,21 @@ export default function AdminDashboard() {
       }
 
       setIsAdmin(true);
-      loadUsers();
     }
 
     checkAdminStatus();
   }, [router]);
 
-  async function loadUsers(searchQuery = "") {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/admin/users?search=${searchQuery}`);
-      const data = await response.json();
-
-      if (data.success) {
-        setUsers(data.users);
-      }
-    } catch (error) {
-      console.error("Error loading users:", error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    loadUsers(search);
+    refetch();
   }
 
   async function updateUserRole(userId: string, newRole: string) {
-    try {
-      const response = await fetch("/api/admin/users/update-role", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ userId, role: newRole }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Update the user in the local state
-        setUsers(
-          users.map((user) =>
-            user.id === userId
-              ? {
-                  ...user,
-                  role: newRole as "USER" | "REGULAR" | "MODERATOR" | "ADMIN",
-                }
-              : user,
-          ),
-        );
-      }
-    } catch (error) {
-      console.error("Error updating user role:", error);
-    }
+    updateRole({
+      userId,
+      role: newRole as "USER" | "REGULAR" | "MODERATOR" | "ADMIN",
+    });
   }
 
   if (!isAdmin) {

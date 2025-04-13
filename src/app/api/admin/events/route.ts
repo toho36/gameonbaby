@@ -88,3 +88,74 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    // Get authenticated user
+    const { getUser } = getKindeServerSession();
+    const kindeUser = await getUser();
+
+    if (!kindeUser || !kindeUser.id) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 },
+      );
+    }
+
+    // Find the user in our database
+    const currentUser = (await prisma.user.findFirst({
+      where: {
+        OR: [{ email: kindeUser.email }],
+      },
+    })) as unknown as DbUser;
+
+    if (
+      !currentUser ||
+      (currentUser.role !== "ADMIN" && currentUser.role !== "MODERATOR")
+    ) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 403 },
+      );
+    }
+
+    // Parse the FormData
+    const formData = await request.formData();
+
+    // Create the event
+    const newEvent = await prisma.event.create({
+      data: {
+        title: formData.get("title") as string,
+        description: (formData.get("description") as string) || null,
+        price: Number(formData.get("price") || 0),
+        place: (formData.get("place") as string) || null,
+        capacity: Number(formData.get("capacity") || 0),
+        from: new Date(formData.get("from") as string),
+        to: new Date(formData.get("to") as string),
+        created_at: new Date(),
+        visible: formData.get("visible") === "true",
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Event created successfully",
+      event: {
+        ...newEvent,
+        from: newEvent.from.toISOString(),
+        to: newEvent.to.toISOString(),
+        created_at: newEvent.created_at.toISOString(),
+        _count: { Registration: 0 },
+      },
+    });
+  } catch (error) {
+    console.error("Error creating event:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to create event",
+      },
+      { status: 500 },
+    );
+  }
+}

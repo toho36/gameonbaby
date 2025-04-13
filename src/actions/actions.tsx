@@ -6,7 +6,7 @@ import prisma from "~/lib/db";
 
 export async function createEvent(formData: FormData) {
   try {
-    await prisma.event.create({
+    const newEvent = await prisma.event.create({
       data: {
         title: formData.get("title") as string,
         description: formData.get("description") as string,
@@ -21,7 +21,16 @@ export async function createEvent(formData: FormData) {
     });
     revalidatePath("/events");
     revalidatePath("/admin/events");
-    return { success: true };
+    return {
+      success: true,
+      event: {
+        ...newEvent,
+        from: newEvent.from.toISOString(),
+        to: newEvent.to.toISOString(),
+        created_at: newEvent.created_at.toISOString(),
+        _count: { Registration: 0 },
+      },
+    };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === "P2002") {

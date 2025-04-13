@@ -6,6 +6,9 @@ import { sendRegistrationEmail } from "~/server/service/emailService";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
+import CheckRegistrationStatus from "./CheckRegistrationStatus";
+import UnregisterButton from "./UnregisterButton";
+import { useEventRegistrationStore } from "~/stores/eventRegistrationStore";
 
 const eventLocation = "Sportovní hala TJ JM Chodov, Mírového hnutí 2137";
 
@@ -120,6 +123,23 @@ export default function RegistrationForm({
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
 
+  // Get methods from the registration store
+  const { incrementRegistrationCount, initialize } =
+    useEventRegistrationStore();
+
+  // Initialize the store with the event registration count and capacity
+  useEffect(() => {
+    initialize(event._count.Registration, event.capacity);
+  }, [initialize, event._count.Registration, event.capacity]);
+
+  // Reset the form state after unregistering
+  const resetFormState = () => {
+    setIsRegistered(false);
+    setIsOnWaitingList(false);
+    setUserRegistration(null);
+    setUserWaitingList(null);
+  };
+
   useEffect(() => {
     if (isAuthenticated && user?.id) {
       // Check if user is already registered for this event
@@ -229,6 +249,9 @@ export default function RegistrationForm({
 
       const data = await response.json();
       if (data.success) {
+        // Update the registration count in the store
+        incrementRegistrationCount();
+
         setIsRegistered(true);
         toast.success(
           "Registration successful! Check your email for confirmation.",
@@ -346,6 +369,9 @@ export default function RegistrationForm({
       console.log("Registration response:", { status: response.status, data });
 
       if (response.ok) {
+        // Update the registration count in the store
+        incrementRegistrationCount();
+
         setIsRegistered(true);
         toast.success(
           "Registration successful! Check your email for confirmation.",
@@ -646,26 +672,12 @@ export default function RegistrationForm({
           )}
 
           <div className="mt-6 w-full">
-            <Link
-              href="/"
-              className="flex items-center justify-center rounded-lg bg-white/20 px-4 py-3 text-center font-medium text-white transition-colors hover:bg-white/30"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="mr-2 h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              Back to Events
-            </Link>
+            <div className="flex items-center justify-center">
+              <UnregisterButton
+                eventId={eventId}
+                refreshForm={resetFormState}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -713,26 +725,12 @@ export default function RegistrationForm({
           </p>
 
           <div className="mt-6 w-full">
-            <Link
-              href="/"
-              className="flex items-center justify-center rounded-lg bg-white/20 px-4 py-3 text-center font-medium text-white transition-colors hover:bg-white/30"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="mr-2 h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              Back to Events
-            </Link>
+            <div className="flex items-center justify-center">
+              <UnregisterButton
+                eventId={eventId}
+                refreshForm={resetFormState}
+              />
+            </div>
           </div>
         </div>
       </div>

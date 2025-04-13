@@ -147,31 +147,77 @@ export default function WaitingListPage({
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen flex-col bg-gray-100 p-4 sm:p-6 lg:p-8">
-        <div className="flex animate-pulse items-center justify-center py-20">
-          <svg
-            className="h-10 w-10 animate-spin text-indigo-500"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            ></circle>
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            ></path>
-          </svg>
-          <span className="ml-3 text-lg font-medium text-gray-500">
-            Loading waiting list...
-          </span>
+      <div className="min-h-screen bg-gray-100">
+        <div className="bg-white p-4 shadow-sm sm:p-6">
+          <div className="mx-auto max-w-7xl">
+            <div className="mb-6 flex flex-col justify-between sm:flex-row sm:items-center">
+              <div>
+                <div className="h-8 w-64 animate-pulse rounded bg-gray-200"></div>
+                <div className="mt-1 h-5 w-80 animate-pulse rounded bg-gray-200"></div>
+              </div>
+              <div className="mt-4 flex space-x-3 sm:mt-0">
+                <div className="h-10 w-32 animate-pulse rounded bg-gray-200"></div>
+                <div className="h-10 w-40 animate-pulse rounded bg-gray-200"></div>
+              </div>
+            </div>
+
+            <div className="mt-4 overflow-hidden rounded-lg border border-gray-200 bg-white shadow">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                        Name
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                        Email
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                        Payment Method
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                        Added On
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {[...Array(5)].map((_, i) => (
+                      <tr key={i}>
+                        <td className="whitespace-nowrap px-6 py-4">
+                          <div className="flex items-center">
+                            <div className="h-10 w-10 flex-shrink-0">
+                              <div className="h-10 w-10 animate-pulse rounded-full bg-indigo-100"></div>
+                            </div>
+                            <div className="ml-4">
+                              <div className="h-5 w-32 animate-pulse rounded bg-gray-200"></div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="whitespace-nowrap px-6 py-4">
+                          <div className="h-5 w-48 animate-pulse rounded bg-gray-200"></div>
+                        </td>
+                        <td className="whitespace-nowrap px-6 py-4">
+                          <div className="h-5 w-24 animate-pulse rounded-full bg-gray-200"></div>
+                        </td>
+                        <td className="whitespace-nowrap px-6 py-4">
+                          <div className="h-5 w-32 animate-pulse rounded bg-gray-200"></div>
+                        </td>
+                        <td className="whitespace-nowrap px-6 py-4 text-right">
+                          <div className="flex space-x-2">
+                            <div className="h-5 w-36 animate-pulse rounded bg-gray-200"></div>
+                            <div className="h-5 w-20 animate-pulse rounded bg-gray-200"></div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );

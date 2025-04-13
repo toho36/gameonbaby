@@ -22,6 +22,7 @@
     "@kinde-oss/kinde-auth-nextjs": "^2.6.0",
     "@prisma/client": "^5.20.0",
     "@t3-oss/env-nextjs": "^0.10.1",
+    "@tanstack/react-query": "^5.74.0",
     "@vercel/postgres": "^0.10.0",
     "axios": "^1.7.7",
     "clsx": "^2.1.1",
@@ -36,7 +37,8 @@
     "react-hot-toast": "^2.5.2",
     "resend": "^4.0.1-alpha.0",
     "tailwind-merge": "^3.2.0",
-    "zod": "^3.23.3"
+    "zod": "^3.23.3",
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@types/eslint": "^8.56.10",

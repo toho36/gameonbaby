@@ -9,6 +9,12 @@ import Link from "next/link";
 import CheckRegistrationStatus from "./CheckRegistrationStatus";
 import UnregisterButton from "./UnregisterButton";
 import { useEventRegistrationStore } from "~/stores/eventRegistrationStore";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  RegistrationFormSchema,
+  RegistrationFormValues,
+} from "~/components/validations";
 
 const eventLocation = "Sportovní hala TJ JM Chodov, Mírového hnutí 2137";
 
@@ -132,12 +138,6 @@ export default function RegistrationForm({
   const [isOnWaitingList, setIsOnWaitingList] = useState(false);
   const [showFullForm, setShowFullForm] = useState(false);
   const [paymentPreference, setPaymentPreference] = useState<string>("CARD");
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phoneNumber: "",
-  });
   const [userRegistration, setUserRegistration] = useState<any>(null);
   const [userWaitingList, setUserWaitingList] = useState<any>(null);
   const router = useRouter();
@@ -149,6 +149,36 @@ export default function RegistrationForm({
   // Get methods from the registration store
   const { incrementRegistrationCount, initialize } =
     useEventRegistrationStore();
+
+  // Debug state for troubleshooting rendering issues
+  useEffect(() => {
+    console.log("Registration state updated:", {
+      isRegistered,
+      isAuthenticated,
+      userRegistration,
+      showGuestForm,
+    });
+  }, [isRegistered, isAuthenticated, userRegistration, showGuestForm]);
+
+  // Initialize react-hook-form with Zod validation
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+    getValues,
+    reset,
+  } = useForm<RegistrationFormValues>({
+    resolver: zodResolver(RegistrationFormSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      phoneNumber: "",
+      paymentType: "CARD",
+      eventId,
+    },
+  });
 
   // Initialize the store with the event registration count and capacity
   useEffect(() => {
@@ -182,6 +212,24 @@ export default function RegistrationForm({
       const data = await response.json();
       if (data.success) {
         setProfileImage(data.user.image);
+
+        // Update form values
+        if (data.user.name) {
+          const nameParts = data.user.name.split(" ");
+          setValue("firstName", nameParts[0] || "");
+          setValue("lastName", nameParts.slice(1).join(" ") || "");
+        } else if (user?.given_name) {
+          setValue("firstName", user.given_name);
+          setValue("lastName", user?.family_name || "");
+        }
+
+        if (data.user.email || user?.email) {
+          setValue("email", data.user.email || user?.email || "");
+        }
+
+        if (data.user.phoneNumber) {
+          setValue("phoneNumber", data.user.phoneNumber);
+        }
       }
     } catch (error) {
       console.error("Error fetching user profile:", error);
@@ -245,6 +293,91 @@ export default function RegistrationForm({
       console.error("Error checking waiting list status:", error);
     }
   }
+
+  const handleGuestRegistration = async (data: RegistrationFormValues) => {
+    setIsUpdating(true);
+    console.log("Starting guest registration process");
+
+    if (event._count.Registration >= event.capacity) {
+      toast.error("Event is full");
+      setIsUpdating(false);
+      return;
+    }
+
+    try {
+      console.log("Submitting registration data:", data);
+      const response = await fetch("/api/registration", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          firstName: data.firstName,
+          lastName: data.lastName || "",
+          email: data.email,
+          phoneNumber: data.phoneNumber,
+          eventId: event.id,
+          paymentType: data.paymentType,
+        }),
+      });
+
+      const responseData = await response.json();
+      console.log("Registration response:", response.status, responseData);
+
+      // For successful registration (201 Created)
+      if (response.status === 201) {
+        // Generate QR code if payment type is CARD
+        if (data.paymentType === "CARD") {
+          const qrCode = generateQRCodeURL(
+            `${data.firstName} ${data.lastName}`.trim(),
+            eventDate,
+          );
+          setQrCodeUrl(qrCode);
+          console.log("QR code generated");
+        }
+
+        // Important - clear form data and update success states
+        reset();
+        incrementRegistrationCount();
+        toast.success("Registration successful!");
+
+        // Set required state variables
+        setUserRegistration({
+          firstName: data.firstName,
+          lastName: data.lastName || "",
+          email: data.email,
+          eventId: event.id,
+          ...responseData,
+        });
+
+        // Clear form display
+        setShowGuestForm(false);
+
+        // Clear any previous errors
+        setError(null);
+        setSuccess("Registration successful!");
+
+        // MOST IMPORTANT - force the component to re-render with success message
+        setIsRegistered(true);
+
+        // Log final state
+        console.log("Registration successful, isRegistered set to true");
+      } else if (response.status === 409) {
+        setShowDuplicateModal(true);
+      } else {
+        setError(
+          responseData.message || "Registration failed. Please try again.",
+        );
+        toast.error(responseData.message || "Registration failed");
+      }
+    } catch (err) {
+      console.error("Registration error:", err);
+      setError("An error occurred during registration. Please try again.");
+      toast.error("Registration failed");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const handleQuickRegister = async () => {
     if (!user) {
@@ -347,135 +480,12 @@ export default function RegistrationForm({
     }
   };
 
-  const handleGuestRegistration = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsUpdating(true);
-
-    if (event._count.Registration >= event.capacity) {
-      toast.error("Event is full");
-      setIsUpdating(false);
-      return;
-    }
-
-    // Validate form data
-    if (!formData.firstName || !formData.email) {
-      toast.error("Please fill in required fields");
-      setIsUpdating(false);
-      return;
-    }
-
-    console.log("Attempting to register:", {
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      eventId: event.id,
-      paymentType: paymentPreference,
-    });
-
-    try {
-      const response = await fetch("/api/registration", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          firstName: formData.firstName,
-          lastName: formData.lastName || "",
-          email: formData.email,
-          phoneNumber: formData.phoneNumber || "",
-          eventId: event.id,
-          paymentType: paymentPreference,
-        }),
-      });
-
-      const data = await response.json();
-      console.log("Registration response:", { status: response.status, data });
-
-      if (response.ok) {
-        // Update the registration count in the store
-        incrementRegistrationCount();
-
-        setIsRegistered(true);
-        toast.success(
-          "Registration successful! Check your email for confirmation.",
-        );
-
-        // Check if we have QR code data in the response
-        let qrUrl = data.qrCodeData;
-
-        // Generate one if not provided but payment type is CARD
-        if (!qrUrl && paymentPreference === "CARD") {
-          const name = `${formData.firstName} ${formData.lastName}`.trim();
-          qrUrl = generateQRCodeURL(name, eventDate);
-          setQrCodeUrl(qrUrl);
-        } else if (qrUrl) {
-          setQrCodeUrl(qrUrl);
-        }
-
-        // Send confirmation email with QR code if payment type is CARD
-        if (paymentPreference === "CARD" && qrUrl) {
-          try {
-            await sendRegistrationEmail(
-              formData.email,
-              formData.firstName,
-              qrUrl,
-              eventDate,
-            );
-            console.log("Registration email sent successfully");
-          } catch (emailError) {
-            console.error("Failed to send registration email:", emailError);
-            // Don't show this error to the user since registration was successful
-          }
-        } else {
-          // Send a confirmation email without QR code for cash payments
-          try {
-            await fetch("/api/email/confirmation", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                email: formData.email,
-                firstName: formData.firstName,
-                eventDate: eventDate,
-                paymentType: "CASH",
-              }),
-            });
-            console.log("Confirmation email sent successfully");
-          } catch (emailError) {
-            console.error("Failed to send confirmation email:", emailError);
-          }
-        }
-      } else {
-        console.error("Registration error:", data);
-
-        // Check if the error is related to duplicate registration
-        if (
-          response.status === 409 ||
-          (data.message && data.message.includes("already exists"))
-        ) {
-          // Show the duplicate registration modal
-          setShowDuplicateModal(true);
-        } else {
-          // Display general error
-          const errorMessage = data.message || "Registration failed";
-          toast.error(errorMessage);
-        }
-      }
-    } catch (error) {
-      console.error("Error registering:", error);
-      toast.error("Registration failed. Please try again later.");
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
   const handleGuestWaitingList = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsUpdating(true);
 
     // Validate form data
-    if (!formData.firstName || !formData.email) {
+    if (!getValues("firstName") || !getValues("email")) {
       toast.error("Please fill in required fields");
       setIsUpdating(false);
       return;
@@ -488,10 +498,10 @@ export default function RegistrationForm({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          firstName: formData.firstName,
-          lastName: formData.lastName || "",
-          email: formData.email,
-          phoneNumber: formData.phoneNumber || "",
+          firstName: getValues("firstName"),
+          lastName: getValues("lastName") || "",
+          email: getValues("email"),
+          phoneNumber: getValues("phoneNumber") || "",
           eventId: event.id,
           paymentType: paymentPreference,
         }),
@@ -523,70 +533,86 @@ export default function RegistrationForm({
     }
   };
 
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) {
-      router.push("/api/auth/login");
-      return;
-    }
-
-    if (event._count.Registration >= event.capacity) {
-      toast.error("Event is full");
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/registrations", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          eventId: event.id,
-          paymentPreference,
-        }),
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        setIsRegistered(true);
-        toast.success(
-          "Registration successful! Check your email for confirmation.",
-        );
-
-        // Send confirmation email if payment type is CARD
-        if (paymentPreference === "CARD" && user.email) {
-          try {
-            const name = user.given_name || user.family_name || "User";
-            const qrUrl = generateQRCodeURL(name, eventDate);
-
-            await sendRegistrationEmail(user.email, name, qrUrl, eventDate);
-          } catch (emailError) {
-            console.error("Failed to send registration email:", emailError);
-          }
-        }
-      } else {
-        toast.error(data.error || data.message || "Registration failed");
-      }
-    } catch (error) {
-      console.error("Error registering:", error);
-      toast.error("Registration failed");
-    }
-  };
-
   if (isLoading) {
     return <div className="text-center text-white">Loading...</div>;
   }
 
-  if (isRegistered) {
+  // Show guest registration success message
+  if (isRegistered && !isAuthenticated) {
+    console.log("Rendering guest registration success message");
+    return (
+      <div className="rounded-xl border border-white/10 bg-gradient-to-br from-purple-900/40 to-indigo-900/40 p-6 shadow-xl backdrop-blur-lg">
+        <div className="mb-6 text-center">
+          <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-green-500/20">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-8 w-8 text-green-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          </div>
+          <h3 className="text-xl font-bold text-white">
+            Registration Successful!
+          </h3>
+          <p className="mt-2 text-white/80">
+            Thank you for registering for the event. Your spot has been secured.
+          </p>
+          <div className="mt-4 rounded-lg bg-white/10 p-3 text-left">
+            <p className="mb-1 text-sm text-white/70">Event Details:</p>
+            <p className="font-medium text-white">{event.title}</p>
+            <p className="text-sm text-white/90">{eventDate}</p>
+            {event.place && (
+              <p className="text-sm text-white/90">{event.place}</p>
+            )}
+          </div>
+        </div>
+
+        {qrCodeUrl && (
+          <div className="mb-6 flex flex-col items-center">
+            <h4 className="mb-3 text-lg font-semibold text-white">
+              Your Payment QR Code
+            </h4>
+            <div className="rounded-lg bg-white p-4">
+              <img
+                src={qrCodeUrl}
+                alt="Payment QR Code"
+                className="h-48 w-48"
+              />
+            </div>
+            <p className="mt-2 text-center text-sm text-white/80">
+              Please make your payment of {event.price} Kč by scanning this QR
+              code.
+            </p>
+          </div>
+        )}
+
+        <div className="text-center">
+          <button
+            onClick={() => {
+              resetFormState();
+              setQrCodeUrl(null);
+              setSuccess(null);
+              setShowGuestForm(true);
+            }}
+            className="rounded-lg bg-white/20 px-4 py-2 font-medium text-white transition hover:bg-white/30"
+          >
+            Register Another Person
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show authenticated user success message
+  if (isRegistered && isAuthenticated) {
     const downloadQRCode = () => {
       const link = document.createElement("a");
       link.href = qrCodeUrl || "";
@@ -860,7 +886,7 @@ export default function RegistrationForm({
               onSubmit={
                 event._count.Registration >= event.capacity
                   ? handleGuestWaitingList
-                  : handleGuestRegistration
+                  : handleSubmit(handleGuestRegistration)
               }
               className="space-y-5"
             >
@@ -870,13 +896,17 @@ export default function RegistrationForm({
                 </label>
                 <input
                   type="text"
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={handleFormChange}
-                  required
-                  className="w-full rounded-lg border border-white/20 bg-white/10 p-3 text-white placeholder-white/50 focus:border-white/40 focus:ring focus:ring-white/20"
+                  {...register("firstName")}
+                  className={`w-full rounded-lg border ${
+                    errors.firstName ? "border-red-300" : "border-white/20"
+                  } bg-white/10 p-3 text-white placeholder-white/50 focus:border-white/40 focus:ring focus:ring-white/20`}
                   placeholder="Your first name"
                 />
+                {errors.firstName && (
+                  <p className="mt-1 text-sm text-red-300">
+                    {errors.firstName.message}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -885,9 +915,7 @@ export default function RegistrationForm({
                 </label>
                 <input
                   type="text"
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={handleFormChange}
+                  {...register("lastName")}
                   className="w-full rounded-lg border border-white/20 bg-white/10 p-3 text-white placeholder-white/50 focus:border-white/40 focus:ring focus:ring-white/20"
                   placeholder="Your last name"
                 />
@@ -899,27 +927,36 @@ export default function RegistrationForm({
                 </label>
                 <input
                   type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleFormChange}
-                  required
-                  className="w-full rounded-lg border border-white/20 bg-white/10 p-3 text-white placeholder-white/50 focus:border-white/40 focus:ring focus:ring-white/20"
+                  {...register("email")}
+                  className={`w-full rounded-lg border ${
+                    errors.email ? "border-red-300" : "border-white/20"
+                  } bg-white/10 p-3 text-white placeholder-white/50 focus:border-white/40 focus:ring focus:ring-white/20`}
                   placeholder="your.email@example.com"
                 />
+                {errors.email && (
+                  <p className="mt-1 text-sm text-red-300">
+                    {errors.email.message}
+                  </p>
+                )}
               </div>
 
               <div>
                 <label className="mb-1.5 block text-sm font-medium">
-                  Phone Number
+                  Phone Number <span className="text-red-300">*</span>
                 </label>
                 <input
                   type="tel"
-                  name="phoneNumber"
-                  value={formData.phoneNumber}
-                  onChange={handleFormChange}
-                  className="w-full rounded-lg border border-white/20 bg-white/10 p-3 text-white placeholder-white/50 focus:border-white/40 focus:ring focus:ring-white/20"
-                  placeholder="Your phone number (optional)"
+                  {...register("phoneNumber")}
+                  className={`w-full rounded-lg border ${
+                    errors.phoneNumber ? "border-red-300" : "border-white/20"
+                  } bg-white/10 p-3 text-white placeholder-white/50 focus:border-white/40 focus:ring focus:ring-white/20`}
+                  placeholder="Your phone number"
                 />
+                {errors.phoneNumber && (
+                  <p className="mt-1 text-sm text-red-300">
+                    {errors.phoneNumber.message}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -930,37 +967,40 @@ export default function RegistrationForm({
                   <label className="flex cursor-pointer items-center rounded-lg border border-white/20 bg-white/10 p-3 transition-all hover:border-white/40 hover:bg-white/20">
                     <input
                       type="radio"
-                      name="payment_preference"
+                      {...register("paymentType")}
                       value="CARD"
-                      checked={paymentPreference === "CARD"}
-                      onChange={() => setPaymentPreference("CARD")}
+                      defaultChecked
                       className="h-4 w-4 border-white/40 text-white focus:ring-white/20"
                     />
                     <div className="ml-3">
                       <span className="block font-medium">QR Code Payment</span>
+                      <span className="text-xs text-white/70">
+                        Pay via bank transfer
+                      </span>
                     </div>
                   </label>
                   <label className="flex cursor-pointer items-center rounded-lg border border-white/20 bg-white/10 p-3 transition-all hover:border-white/40 hover:bg-white/20">
                     <input
                       type="radio"
-                      name="payment_preference"
+                      {...register("paymentType")}
                       value="CASH"
-                      checked={paymentPreference === "CASH"}
-                      onChange={() => setPaymentPreference("CASH")}
                       className="h-4 w-4 border-white/40 text-white focus:ring-white/20"
                     />
                     <div className="ml-3">
                       <span className="block font-medium">Cash on Site</span>
+                      <span className="text-xs text-white/70">
+                        Pay when you arrive
+                      </span>
                     </div>
                   </label>
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-4">
+              <div className="mt-6">
                 <button
                   type="submit"
                   disabled={isUpdating}
-                  className="w-full rounded-lg bg-white/20 p-3.5 font-medium text-white transition-all hover:bg-white/30 focus:outline-none focus:ring-2 focus:ring-white/30 disabled:opacity-50"
+                  className="w-full rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 px-5 py-3 text-center font-medium text-white transition-all hover:from-purple-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-70"
                 >
                   {isUpdating ? (
                     <span className="flex items-center justify-center">
@@ -984,23 +1024,11 @@ export default function RegistrationForm({
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         ></path>
                       </svg>
-                      {event._count.Registration >= event.capacity
-                        ? "Joining..."
-                        : "Registering..."}
+                      Processing...
                     </span>
-                  ) : event._count.Registration >= event.capacity ? (
-                    "Join Waiting List"
                   ) : (
-                    "Register Now"
+                    "Register for Event"
                   )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowGuestForm(false)}
-                  className="rounded-lg border border-white/20 px-4 font-medium text-white transition-all hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/20"
-                >
-                  Back
                 </button>
               </div>
             </form>
@@ -1011,7 +1039,7 @@ export default function RegistrationForm({
         <DuplicateRegistrationModal
           isOpen={showDuplicateModal}
           onClose={() => setShowDuplicateModal(false)}
-          email={formData.email}
+          email={getValues("email")}
         />
       </div>
     );
@@ -1204,7 +1232,7 @@ export default function RegistrationForm({
       <DuplicateRegistrationModal
         isOpen={showDuplicateModal}
         onClose={() => setShowDuplicateModal(false)}
-        email={user?.email || ""}
+        email={getValues("email")}
       />
     </div>
   );

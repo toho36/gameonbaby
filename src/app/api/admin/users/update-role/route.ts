@@ -5,7 +5,7 @@ import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 const prisma = new PrismaClient();
 
 // Role types to match the database enum
-type UserRole = "USER" | "MODERATOR" | "ADMIN";
+type UserRole = "USER" | "REGULAR" | "MODERATOR" | "ADMIN";
 
 interface DbUser {
   id: string;
@@ -47,7 +47,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { userId, role } = body;
 
-    if (!userId || !role || !["USER", "MODERATOR", "ADMIN"].includes(role)) {
+    if (
+      !userId ||
+      !role ||
+      !["USER", "REGULAR", "MODERATOR", "ADMIN"].includes(role)
+    ) {
       return NextResponse.json(
         { success: false, message: "Invalid request data" },
         { status: 400 },

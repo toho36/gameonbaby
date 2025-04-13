@@ -44,6 +44,7 @@ model Session {
 
 enum UserRole {
   USER
+  REGULAR
   MODERATOR
   ADMIN
 }

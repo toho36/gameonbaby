@@ -54,9 +54,16 @@ export default function EventList({ events }: EventListProps) {
             href={`/events/${event.id}`}
             className="flex flex-col rounded-lg border border-white/20 bg-white/10 p-5 transition-all hover:border-purple-400 hover:bg-white/15"
           >
-            <h3 className="mb-3 text-xl font-semibold text-white">
-              {event.title}
-            </h3>
+            <div className="mb-3 flex items-start justify-between">
+              <h3 className="text-xl font-semibold text-white">
+                {event.title}
+              </h3>
+              {event.visible === false && (
+                <span className="ml-2 rounded-full bg-yellow-500/30 px-2 py-0.5 text-xs font-medium text-yellow-200">
+                  Hidden
+                </span>
+              )}
+            </div>
 
             <div className="mb-3 text-sm text-white/90">
               <div className="mb-1">{formatDate(event.from)}</div>

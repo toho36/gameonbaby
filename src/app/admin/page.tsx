@@ -8,7 +8,7 @@ interface User {
   id: string;
   name: string | null;
   email: string | null;
-  role: "USER" | "MODERATOR" | "ADMIN";
+  role: "USER" | "REGULAR" | "MODERATOR" | "ADMIN";
   createdAt: string;
 }
 
@@ -75,7 +75,10 @@ export default function AdminDashboard() {
         setUsers(
           users.map((user) =>
             user.id === userId
-              ? { ...user, role: newRole as "USER" | "MODERATOR" | "ADMIN" }
+              ? {
+                  ...user,
+                  role: newRole as "USER" | "REGULAR" | "MODERATOR" | "ADMIN",
+                }
               : user,
           ),
         );
@@ -143,7 +146,9 @@ export default function AdminDashboard() {
                             ? "bg-red-100 text-red-800"
                             : user.role === "MODERATOR"
                               ? "bg-blue-100 text-blue-800"
-                              : "bg-gray-100 text-gray-800"
+                              : user.role === "REGULAR"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-gray-100 text-gray-800"
                         }`}
                       >
                         {user.role}
@@ -159,6 +164,7 @@ export default function AdminDashboard() {
                         className="rounded border p-1"
                       >
                         <option value="USER">User</option>
+                        <option value="REGULAR">Regular</option>
                         <option value="MODERATOR">Moderator</option>
                         <option value="ADMIN">Admin</option>
                       </select>

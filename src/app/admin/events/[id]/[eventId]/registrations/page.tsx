@@ -4,18 +4,14 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "~/components/ui/button";
-
-interface Registration {
-  id: string;
-  firstName: string;
-  lastName: string | null;
-  email: string;
-  phoneNumber: string | null;
-  paymentType: string;
-  createdAt: string;
-  paid: boolean;
-  attended: boolean;
-}
+import useRegistrationStore, { Registration } from "~/stores/registrationStore";
+import {
+  useRegistrations,
+  useUpdateRegistration,
+  useDeleteRegistration,
+} from "~/api/registrations";
+import { toast } from "react-hot-toast";
+import { duplicateRegistration } from "./duplicateHelper";
 
 interface Event {
   id: string;
@@ -35,14 +31,17 @@ interface RegistrationSummary {
 export default function EventRegistrationsPage({
   params,
 }: {
-  params: { id: string };
+  params: { id: string; eventId: string };
 }) {
-  const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const registrations = useRegistrationStore((state) => state.registrations);
+  const loading = useRegistrationStore((state) => state.loading);
+  const error = useRegistrationStore((state) => state.error);
+  const compactView = useRegistrationStore((state) => state.compactView);
+  const setCompactView = useRegistrationStore((state) => state.setCompactView);
+
   const [event, setEvent] = useState<Event | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [eventLoading, setEventLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
-  const [compactView, setCompactView] = useState(true);
   const [lastArrivedId, setLastArrivedId] = useState<string | null>(null);
   const router = useRouter();
 
@@ -69,41 +68,42 @@ export default function EventRegistrationsPage({
     string | null
   >(null);
 
-  const fetchRegistrations = useCallback(async () => {
-    try {
-      const response = await fetch(
-        `/api/admin/events/${params.id}/registrations`,
-      );
-      if (!response.ok) {
-        throw new Error("Failed to fetch registrations");
-      }
-      const data = await response.json();
-      setRegistrations(data.registrations);
-      if (data.event) {
-        setEvent(data.event);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setLoading(false);
+  // React Query hooks - ensure it uses proper event ID
+  const { refetch, isLoading: registrationsLoading } = useRegistrations(
+    params.eventId,
+  );
+  const { mutate: updateRegistration } = useUpdateRegistration();
+  const { mutate: deleteRegistration } = useDeleteRegistration();
+
+  // Force update registrations when the page loads
+  useEffect(() => {
+    if (params.eventId) {
+      refetch();
     }
-  }, [params.id]);
+  }, [params.eventId, refetch]);
 
+  // Update summary whenever registrations change
   useEffect(() => {
-    fetchRegistrations();
-  }, [fetchRegistrations]);
+    setSummary({
+      total: registrations.length,
+      paid: registrations.filter((reg) => reg.status === "PAID").length,
+      attended: registrations.filter((reg) => reg.attended).length,
+    });
+  }, [registrations]);
 
-  // Refresh data when user returns to the page
-  useEffect(() => {
-    const handleFocus = () => {
-      fetchRegistrations();
-    };
+  // Handle successful registration updates
+  const handleStatusUpdate = useCallback(
+    (registrationId: string, updates: Partial<Registration>) => {
+      setProcessing(null);
 
-    window.addEventListener("focus", handleFocus);
-    return () => {
-      window.removeEventListener("focus", handleFocus);
-    };
-  }, [fetchRegistrations]);
+      // Optimistic UI update can be removed as React Query will handle refetching
+      // However, we might want to keep lastArrivedId for highlighting
+      if (updates.attended && updates.attended === true) {
+        setLastArrivedId(registrationId);
+      }
+    },
+    [],
+  );
 
   // Clear the lastArrivedId after 60 seconds
   useEffect(() => {
@@ -126,25 +126,37 @@ export default function EventRegistrationsPage({
           router.push("/dashboard");
           return;
         }
-
-        fetchRegistrations();
       } catch (error) {
         console.error("Error checking permissions:", error);
-        setError("Failed to verify permissions");
-        setLoading(false);
       }
     }
 
     checkPermission();
-  }, [router, params.id]);
+  }, [router]);
 
+  // Load event data separately from registrations
   useEffect(() => {
-    setSummary({
-      total: registrations.length,
-      paid: registrations.filter((reg) => reg.paid).length,
-      attended: registrations.filter((reg) => reg.attended).length,
-    });
-  }, [registrations]);
+    async function loadEventData() {
+      setEventLoading(true);
+      try {
+        const response = await fetch(`/api/admin/events/${params.eventId}`);
+        const data = await response.json();
+        if (data.success) {
+          setEvent(data.event);
+        } else {
+          console.error("Error loading event:", data.message);
+        }
+      } catch (error) {
+        console.error("Error loading event:", error);
+      } finally {
+        setEventLoading(false);
+      }
+    }
+
+    if (params.eventId) {
+      loadEventData();
+    }
+  }, [params.eventId]);
 
   async function togglePaymentStatus(registrationId: string) {
     try {
@@ -152,38 +164,32 @@ export default function EventRegistrationsPage({
       const registration = registrations.find((r) => r.id === registrationId);
       if (!registration) return;
 
-      const newPaidStatus = !registration.paid;
+      const newStatus = registration.status === "PAID" ? "UNPAID" : "PAID";
 
-      const response = await fetch("/api/admin/registrations/toggle-payment", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      updateRegistration(
+        {
           registrationId,
-          paid: newPaidStatus,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Update the local state first for immediate UI feedback
-        setRegistrations(
-          registrations.map((reg) =>
-            reg.id === registrationId ? { ...reg, paid: newPaidStatus } : reg,
-          ),
-        );
-
-        // Then refresh data from the server to ensure consistency
-        await fetchRegistrations();
-      } else {
-        alert(`Error: ${data.message}`);
-      }
+          updates: {
+            status: newStatus,
+          },
+        },
+        {
+          onSuccess: () =>
+            handleStatusUpdate(registrationId, { status: newStatus }),
+          onError: (error) => {
+            console.error("Error toggling payment status:", error);
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : "Failed to update payment status",
+            );
+            setProcessing(null);
+          },
+        },
+      );
     } catch (error) {
       console.error("Error toggling payment status:", error);
-      alert("Failed to update payment status");
-    } finally {
+      toast.error("Failed to update payment status");
       setProcessing(null);
     }
   }
@@ -196,47 +202,30 @@ export default function EventRegistrationsPage({
 
       const newAttendedStatus = !registration.attended;
 
-      const response = await fetch(
-        "/api/admin/registrations/toggle-attendance",
+      updateRegistration(
         {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            registrationId,
+          registrationId,
+          updates: {
             attended: newAttendedStatus,
-          }),
+          },
+        },
+        {
+          onSuccess: () =>
+            handleStatusUpdate(registrationId, { attended: newAttendedStatus }),
+          onError: (error) => {
+            console.error("Error toggling attendance:", error);
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : "Failed to update attendance",
+            );
+            setProcessing(null);
+          },
         },
       );
-
-      const data = await response.json();
-
-      if (data.success) {
-        if (newAttendedStatus) {
-          setLastArrivedId(registrationId);
-        } else if (lastArrivedId === registrationId) {
-          setLastArrivedId(null);
-        }
-
-        // Update the local state first for immediate UI feedback
-        setRegistrations(
-          registrations.map((reg) =>
-            reg.id === registrationId
-              ? { ...reg, attended: newAttendedStatus }
-              : reg,
-          ),
-        );
-
-        // Then refresh data from the server to ensure consistency
-        await fetchRegistrations();
-      } else {
-        alert(`Error: ${data.message}`);
-      }
     } catch (error) {
-      console.error("Error toggling attendance status:", error);
-      alert("Failed to update attendance");
-    } finally {
+      console.error("Error toggling attendance:", error);
+      toast.error("Failed to update attendance");
       setProcessing(null);
     }
   }
@@ -247,249 +236,270 @@ export default function EventRegistrationsPage({
   }
 
   async function confirmDelete() {
-    if (!registrationToDelete) return;
+    if (registrationToDelete) {
+      const id = registrationToDelete;
+      setProcessing("delete" + id);
 
-    try {
-      setProcessing("delete" + registrationToDelete);
-      const response = await fetch(
-        `/api/admin/registrations/${registrationToDelete}`,
-        {
-          method: "DELETE",
+      deleteRegistration(id, {
+        onSuccess: () => {
+          setShowDeleteModal(false);
+          setRegistrationToDelete(null);
+          setProcessing(null);
+          toast.success("Registration deleted successfully");
         },
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
-        setRegistrations(
-          registrations.filter((reg) => reg.id !== registrationToDelete),
-        );
-        setShowDeleteModal(false);
-        setRegistrationToDelete(null);
-      } else {
-        alert(`Error: ${data.message}`);
-      }
-    } catch (error) {
-      console.error("Error deleting registration:", error);
-      alert("Failed to delete registration");
-    } finally {
-      setProcessing(null);
-      setShowDeleteModal(false);
-    }
-  }
-
-  async function duplicateRegistration(registration: Registration) {
-    try {
-      setProcessing("duplicate" + registration.id);
-
-      // Generate a unique email if none exists
-      let email = registration.email;
-      if (!email) {
-        // Create an email like firstname.lastname.timestamp@noemail.com
-        const timestamp = new Date().getTime();
-        const baseName = registration.firstName
-          .toLowerCase()
-          .replace(/[^a-z0-9]/g, "");
-        email = `${baseName}.${timestamp}@noemail.com`;
-      } else {
-        // If email exists, append "_copy" before the @ symbol
-        const parts = registration.email.split("@");
-        email = `${parts[0]}_copy@${parts[1]}`;
-      }
-
-      const response = await fetch("/api/admin/registrations/duplicate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+        onError: (error) => {
+          console.error("Error deleting registration:", error);
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Failed to delete registration",
+          );
+          setProcessing(null);
         },
-        body: JSON.stringify({
-          eventId: params.id,
-          firstName: registration.firstName,
-          lastName: registration.lastName,
-          email: email,
-          phoneNumber: registration.phoneNumber,
-          paymentType: registration.paymentType,
-        }),
       });
-
-      const data = await response.json();
-
-      if (data.success) {
-        fetchRegistrations();
-      } else {
-        alert(`Error: ${data.message}`);
-      }
-    } catch (error) {
-      console.error("Error duplicating registration:", error);
-      alert("Failed to duplicate registration");
-    } finally {
-      setProcessing(null);
     }
   }
 
-  async function addRegistration(e: React.FormEvent) {
-    e.preventDefault();
-    try {
-      setProcessing("form");
-
-      // Generate a unique email if none provided
-      let email = formData.email;
-      if (!email) {
-        // Create an email like firstname.timestamp@noemail.com
-        const timestamp = new Date().getTime();
-        const baseName = formData.firstName
-          .toLowerCase()
-          .replace(/[^a-z0-9]/g, "");
-        email = `${baseName}.${timestamp}@noemail.com`;
-      }
-
-      const response = await fetch("/api/admin/registrations/add", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          eventId: params.id,
-          firstName: formData.firstName,
-          lastName: formData.lastName || null,
-          email: email,
-          phoneNumber: formData.phoneNumber || null,
-          paymentType: formData.paymentType,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        fetchRegistrations();
-        setShowForm(false);
-        resetForm();
-      } else {
-        alert(`Error: ${data.message}`);
-      }
-    } catch (error) {
-      console.error("Error adding registration:", error);
-      alert("Failed to add registration");
-    } finally {
-      setProcessing(null);
-    }
+  function formatDateTime(dateStr: string) {
+    const date = new Date(dateStr);
+    return new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
   }
 
-  async function editRegistration(e: React.FormEvent) {
+  function formatDate(dateStr: string) {
+    const date = new Date(dateStr);
+    return new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+    }).format(date);
+  }
+
+  function formatTime(dateStr: string) {
+    const date = new Date(dateStr);
+    return new Intl.DateTimeFormat("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  }
+
+  // Add a function to handle editing a registration
+  function handleEditClick(registration: Registration) {
+    setCurrentRegistration(registration);
+    setFormData({
+      firstName: registration.user?.name?.split(" ")[0] || "",
+      lastName: registration.user?.name?.split(" ").slice(1).join(" ") || "",
+      email: registration.user?.email || "",
+      phoneNumber: registration.user?.phone || "",
+      paymentType: registration.paymentMethod || "CASH",
+    });
+    setFormType("edit");
+    setShowForm(true);
+  }
+
+  // Add a function to duplicate a registration
+  async function handleDuplicateRegistration(registration: Registration) {
+    await duplicateRegistration(
+      registration,
+      params.eventId,
+      setProcessing,
+      refetch,
+    );
+  }
+
+  // Add a sorted version of registrations
+  const sortedRegistrations = [...registrations].sort((a, b) => {
+    // Sort by attended status (not attended first)
+    if (a.attended !== b.attended) {
+      return a.attended ? 1 : -1;
+    }
+    // Then sort by payment status (unpaid first)
+    if (a.status !== b.status) {
+      return a.status === "PAID" ? 1 : -1;
+    }
+    // Finally sort by creation date (newest first)
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+
+  // Handle form submission
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentRegistration) return;
+    setProcessing("form");
 
     try {
-      setProcessing("form");
-      const response = await fetch(
-        `/api/admin/registrations/${currentRegistration.id}`,
-        {
-          method: "PUT",
+      const fullName = `${formData.firstName} ${formData.lastName}`.trim();
+
+      if (formType === "add") {
+        // Call API to add new participant
+        const response = await fetch(`/api/admin/registrations/add`, {
+          method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
+            eventId: params.eventId,
             firstName: formData.firstName,
-            lastName: formData.lastName || null,
+            lastName: formData.lastName,
             email: formData.email,
-            phoneNumber: formData.phoneNumber || null,
+            phoneNumber: formData.phoneNumber,
             paymentType: formData.paymentType,
           }),
-        },
-      );
+        });
 
-      const data = await response.json();
+        const data = await response.json();
 
-      if (data.success) {
-        fetchRegistrations();
-        setShowForm(false);
-        resetForm();
-      } else {
-        alert(`Error: ${data.message}`);
+        if (data.success) {
+          // Refresh the registration list
+          refetch();
+          setShowForm(false);
+          setFormData({
+            firstName: "",
+            lastName: "",
+            email: "",
+            phoneNumber: "",
+            paymentType: "CASH",
+          });
+          toast.success("Participant added successfully");
+        } else {
+          toast.error(data.message || "Failed to add participant");
+        }
+      } else if (formType === "edit" && currentRegistration) {
+        // Call API to update participant
+        // First update the user information
+        const response = await fetch(`/api/admin/users/update-user`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId: currentRegistration.userId,
+            name: fullName,
+            email: formData.email,
+            phoneNumber: formData.phoneNumber,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to update user information");
+        }
+
+        // Then update the registration payment method
+        updateRegistration(
+          {
+            registrationId: currentRegistration.id,
+            updates: {
+              paymentMethod: formData.paymentType,
+            },
+          },
+          {
+            onSuccess: () => {
+              refetch();
+              setShowForm(false);
+              setCurrentRegistration(null);
+            },
+            onError: (error) => {
+              console.error("Error updating participant:", error);
+              toast.error("Failed to update participant");
+            },
+          },
+        );
       }
     } catch (error) {
-      console.error("Error updating registration:", error);
-      alert("Failed to update registration");
+      console.error("Form submission error:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "An error occurred. Please try again.",
+      );
     } finally {
       setProcessing(null);
     }
-  }
+  };
 
-  function handleAddClick() {
-    setFormType("add");
-    resetForm();
-    setShowForm(true);
-  }
+  if (loading || registrationsLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-6 flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+          <div>
+            <div className="h-8 w-64 animate-pulse rounded bg-gray-200"></div>
+            <div className="mt-2 h-5 w-80 animate-pulse rounded bg-gray-200"></div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <div className="h-10 w-40 animate-pulse rounded bg-gray-200"></div>
+            <div className="h-10 w-40 animate-pulse rounded bg-gray-200"></div>
+            <div className="h-10 w-40 animate-pulse rounded bg-gray-200"></div>
+          </div>
+        </div>
 
-  function handleEditClick(registration: Registration) {
-    setFormType("edit");
-    setCurrentRegistration(registration);
-    setFormData({
-      firstName: registration.firstName,
-      lastName: registration.lastName || "",
-      email: registration.email,
-      phoneNumber: registration.phoneNumber || "",
-      paymentType: registration.paymentType,
-    });
-    setShowForm(true);
-  }
+        <div className="mb-6 grid grid-cols-3 gap-3 rounded-lg border border-gray-200 bg-white p-4">
+          <div className="rounded-lg bg-gray-100 p-3 text-center">
+            <div className="mx-auto h-8 w-8 animate-pulse rounded-full bg-gray-300"></div>
+            <div className="mx-auto mt-2 h-4 w-24 animate-pulse rounded bg-gray-300"></div>
+          </div>
+          <div className="rounded-lg bg-gray-100 p-3 text-center">
+            <div className="mx-auto h-8 w-8 animate-pulse rounded-full bg-gray-300"></div>
+            <div className="mx-auto mt-2 h-4 w-16 animate-pulse rounded bg-gray-300"></div>
+          </div>
+          <div className="rounded-lg bg-gray-100 p-3 text-center">
+            <div className="mx-auto h-8 w-8 animate-pulse rounded-full bg-gray-300"></div>
+            <div className="mx-auto mt-2 h-4 w-20 animate-pulse rounded bg-gray-300"></div>
+          </div>
+        </div>
 
-  function resetForm() {
-    setFormData({
-      firstName: "",
-      lastName: "",
-      email: "",
-      phoneNumber: "",
-      paymentType: "CASH",
-    });
-    setCurrentRegistration(null);
-  }
+        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+          <table className="hidden w-full table-auto sm:table">
+            <thead>
+              <tr className="border-b bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                <th className="px-6 py-3">Participant</th>
+                <th className="px-6 py-3">Status</th>
+                <th className="px-6 py-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {[...Array(5)].map((_, i) => (
+                <tr key={i}>
+                  <td className="px-6 py-4">
+                    <div className="h-5 w-32 animate-pulse rounded bg-gray-200"></div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="h-6 w-20 animate-pulse rounded bg-gray-200"></div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex gap-2">
+                      <div className="h-8 w-16 animate-pulse rounded bg-gray-200"></div>
+                      <div className="h-8 w-16 animate-pulse rounded bg-gray-200"></div>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
 
-  function handleFormChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-  ) {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  }
-
-  // Format date and time together
-  function formatDateTime(dateStr: string) {
-    return `${formatDate(dateStr)} at ${formatTime(dateStr)}`;
-  }
-
-  // Format a date
-  function formatDate(dateStr: string) {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("cs-CZ");
-  }
-
-  // Format a time
-  function formatTime(dateStr: string) {
-    const date = new Date(dateStr);
-    return date.toLocaleTimeString("cs-CZ", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
-
-  // Sort registrations: non-arrived first, then last arrived, then the rest
-  const sortedRegistrations = [...registrations].sort((a, b) => {
-    // Non-arrived people come first
-    if (!a.attended && b.attended) return -1;
-    if (a.attended && !b.attended) return 1;
-
-    // Then the most recently marked as arrived
-    if (a.attended && a.id === lastArrivedId) return -1;
-    if (b.attended && b.id === lastArrivedId) return 1;
-
-    // Then sort by creation date (newest first)
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  });
-
-  if (loading) {
-    return <div className="p-8 text-center">Loading registrations...</div>;
+          <div className="divide-y divide-gray-200 sm:hidden">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="h-5 w-32 animate-pulse rounded bg-gray-200"></div>
+                  <div className="flex gap-1">
+                    <div className="h-7 w-7 animate-pulse rounded-full bg-gray-200"></div>
+                    <div className="h-7 w-7 animate-pulse rounded-full bg-gray-200"></div>
+                  </div>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  <div className="h-5 w-16 animate-pulse rounded-full bg-gray-200"></div>
+                  <div className="h-5 w-16 animate-pulse rounded-full bg-gray-200"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
@@ -501,21 +511,33 @@ export default function EventRegistrationsPage({
       <div className="mb-6 flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
         <div>
           <h1 className="text-2xl font-bold">
-            Event Registrations {event && `- ${event.title}`}
+            Event Registrations{" "}
+            {!eventLoading && event ? `- ${event.title}` : null}
+            {eventLoading && (
+              <span className="ml-2 inline-block h-5 w-32 animate-pulse rounded bg-gray-200 align-middle"></span>
+            )}
           </h1>
-          {event && (
+          {event && !eventLoading ? (
             <p className="mt-2 text-gray-600">
               <span className="font-semibold">{event.title}</span> |
               {formatDateTime(event.from).split(",")[0]} |
               {formatDateTime(event.from).split(",")[1]} -
               {formatDateTime(event.to).split(",")[1]} |{event.price} Kč
             </p>
-          )}
+          ) : eventLoading ? (
+            <p className="mt-2 text-gray-600">
+              <span className="inline-block h-4 w-40 animate-pulse rounded bg-gray-200 align-middle"></span>{" "}
+              |
+              <span className="ml-1 mr-1 inline-block h-4 w-24 animate-pulse rounded bg-gray-200 align-middle"></span>{" "}
+              |
+              <span className="inline-block h-4 w-32 animate-pulse rounded bg-gray-200 align-middle"></span>
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
             variant="default"
-            onClick={handleAddClick}
+            onClick={() => setShowForm(true)}
             className="w-full sm:w-auto"
           >
             Add Participant
@@ -573,19 +595,21 @@ export default function EventRegistrationsPage({
           <span className="block text-2xl font-bold text-blue-700">
             {summary.total}
           </span>
-          <span className="text-sm text-blue-600">Total Registrations</span>
+          <span className="text-xs text-blue-600 sm:text-sm">
+            <span className="hidden sm:inline">Total </span>Registrations
+          </span>
         </div>
         <div className="rounded-lg bg-green-50 p-3 text-center">
           <span className="block text-2xl font-bold text-green-700">
             {summary.paid}
           </span>
-          <span className="text-sm text-green-600">Paid</span>
+          <span className="text-xs text-green-600 sm:text-sm">Paid</span>
         </div>
         <div className="rounded-lg bg-purple-50 p-3 text-center">
           <span className="block text-2xl font-bold text-purple-700">
             {summary.attended}
           </span>
-          <span className="text-sm text-purple-600">Attended</span>
+          <span className="text-xs text-purple-600 sm:text-sm">Attended</span>
         </div>
       </div>
 
@@ -594,10 +618,7 @@ export default function EventRegistrationsPage({
           <h2 className="mb-4 text-xl font-semibold">
             {formType === "add" ? "Add New Participant" : "Edit Participant"}
           </h2>
-          <form
-            onSubmit={formType === "add" ? addRegistration : editRegistration}
-            className="space-y-4"
-          >
+          <form onSubmit={handleFormSubmit} className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">
@@ -607,9 +628,11 @@ export default function EventRegistrationsPage({
                   type="text"
                   name="firstName"
                   value={formData.firstName}
-                  onChange={handleFormChange}
+                  onChange={(e) =>
+                    setFormData({ ...formData, firstName: e.target.value })
+                  }
                   required
-                  className="w-full rounded-md border border-gray-300 p-2"
+                  className="w-full rounded-md border border-gray-300 p-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -620,22 +643,27 @@ export default function EventRegistrationsPage({
                   type="text"
                   name="lastName"
                   value={formData.lastName}
-                  onChange={handleFormChange}
-                  className="w-full rounded-md border border-gray-300 p-2"
+                  onChange={(e) =>
+                    setFormData({ ...formData, lastName: e.target.value })
+                  }
+                  className="w-full rounded-md border border-gray-300 p-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Email
+                  Email*
                 </label>
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
-                  onChange={handleFormChange}
-                  className="w-full rounded-md border border-gray-300 p-2"
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                  required
+                  className="w-full rounded-md border border-gray-300 p-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -646,8 +674,10 @@ export default function EventRegistrationsPage({
                   type="tel"
                   name="phoneNumber"
                   value={formData.phoneNumber}
-                  onChange={handleFormChange}
-                  className="w-full rounded-md border border-gray-300 p-2"
+                  onChange={(e) =>
+                    setFormData({ ...formData, phoneNumber: e.target.value })
+                  }
+                  className="w-full rounded-md border border-gray-300 p-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -658,9 +688,11 @@ export default function EventRegistrationsPage({
               <select
                 name="paymentType"
                 value={formData.paymentType}
-                onChange={handleFormChange}
+                onChange={(e) =>
+                  setFormData({ ...formData, paymentType: e.target.value })
+                }
                 required
-                className="w-full rounded-md border border-gray-300 p-2"
+                className="w-full rounded-md border border-gray-300 p-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
                 <option value="CASH">Cash</option>
                 <option value="CARD">Card (QR)</option>
@@ -672,7 +704,7 @@ export default function EventRegistrationsPage({
                 variant="outline"
                 onClick={() => {
                   setShowForm(false);
-                  resetForm();
+                  setCurrentRegistration(null);
                 }}
                 className="w-full sm:w-auto"
               >
@@ -732,9 +764,23 @@ export default function EventRegistrationsPage({
         </div>
       )}
 
-      {registrations.length === 0 ? (
+      {error ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-center text-red-700">
+          <p>{error}</p>
+          <Button onClick={() => refetch()} className="mt-2" variant="outline">
+            Try Again
+          </Button>
+        </div>
+      ) : registrations.length === 0 ? (
         <div className="rounded-lg border border-gray-200 bg-white p-8 text-center">
           <p className="text-gray-600">No registrations found for this event</p>
+          <Button
+            variant="default"
+            onClick={() => setShowForm(true)}
+            className="mt-4"
+          >
+            Add First Participant
+          </Button>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
@@ -751,14 +797,17 @@ export default function EventRegistrationsPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {sortedRegistrations.map((registration) => (
+              {sortedRegistrations.map((registration: Registration) => (
                 <tr
                   key={registration.id}
                   className={`hover:bg-gray-50 ${registration.id === lastArrivedId ? "bg-purple-50" : ""}`}
                 >
-                  <td className="px-6 py-4">
-                    <div className="font-medium">
-                      {registration.firstName} {registration.lastName}
+                  <td className="max-w-[200px] px-6 py-4">
+                    <div
+                      className="truncate font-medium"
+                      title={registration.user?.name || "No name"}
+                    >
+                      {registration.user?.name || "No name"}
                       {registration.id === lastArrivedId && (
                         <span className="ml-2 text-xs text-purple-600">
                           (recently marked)
@@ -768,11 +817,25 @@ export default function EventRegistrationsPage({
                   </td>
 
                   {!compactView && (
-                    <td className="px-6 py-4">{registration.email}</td>
+                    <td className="max-w-[200px] px-6 py-4">
+                      <div
+                        className="truncate"
+                        title={registration.user?.email || "No email"}
+                      >
+                        {registration.user?.email || "No email"}
+                      </div>
+                    </td>
                   )}
 
                   {!compactView && (
-                    <td className="px-6 py-4">{registration.phoneNumber}</td>
+                    <td className="max-w-[150px] px-6 py-4">
+                      <div
+                        className="truncate"
+                        title={registration.user?.phone || "No phone"}
+                      >
+                        {registration.user?.phone || "No phone"}
+                      </div>
+                    </td>
                   )}
 
                   {!compactView && (
@@ -782,14 +845,14 @@ export default function EventRegistrationsPage({
                         onClick={() => togglePaymentStatus(registration.id)}
                         disabled={processing === "payment" + registration.id}
                         className={`px-3 py-1 text-xs ${
-                          registration.paid
+                          registration.status === "PAID"
                             ? "bg-green-100 text-green-800 hover:bg-green-200"
                             : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
                         }`}
                       >
                         {processing === "payment" + registration.id
                           ? "Processing..."
-                          : registration.paid
+                          : registration.status === "PAID"
                             ? "✓ Paid"
                             : "⚠ Pending"}
                       </Button>
@@ -822,7 +885,7 @@ export default function EventRegistrationsPage({
                       <div className="flex space-x-2">
                         <span
                           className={`inline-flex cursor-pointer items-center rounded-full px-2 py-0.5 text-xs ${
-                            registration.paid
+                            registration.status === "PAID"
                               ? "bg-green-100 text-green-800 hover:bg-green-200"
                               : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
                           }`}
@@ -830,7 +893,7 @@ export default function EventRegistrationsPage({
                         >
                           {processing === "payment" + registration.id
                             ? "..."
-                            : registration.paid
+                            : registration.status === "PAID"
                               ? "Paid"
                               : "Pending"}
                         </span>
@@ -864,7 +927,9 @@ export default function EventRegistrationsPage({
                       {!compactView && (
                         <Button
                           variant="outline"
-                          onClick={() => duplicateRegistration(registration)}
+                          onClick={() =>
+                            handleDuplicateRegistration(registration)
+                          }
                           disabled={
                             processing === "duplicate" + registration.id
                           }
@@ -894,36 +959,36 @@ export default function EventRegistrationsPage({
           </table>
 
           <div className="divide-y divide-gray-200 sm:hidden">
-            {sortedRegistrations.map((registration) => (
+            {sortedRegistrations.map((registration: Registration) => (
               <div
                 key={registration.id}
                 className={`p-3 ${registration.id === lastArrivedId ? "bg-purple-50" : ""}`}
               >
                 <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium">
-                      {registration.firstName} {registration.lastName}
+                  <div className="max-w-[75%]">
+                    <h3 className="truncate font-medium">
+                      {registration.user?.name || "No name"}
                       {registration.id === lastArrivedId && (
                         <span className="ml-2 text-xs text-purple-600">
-                          (recently marked)
+                          (recent)
                         </span>
                       )}
                     </h3>
                     {!compactView && (
                       <>
-                        <p className="text-sm text-gray-500">
-                          {registration.email}
+                        <p className="truncate text-sm text-gray-500">
+                          {registration.user?.email || "No email"}
                         </p>
-                        {registration.phoneNumber && (
-                          <p className="text-sm text-gray-500">
-                            {registration.phoneNumber}
+                        {registration.user?.phone && (
+                          <p className="truncate text-sm text-gray-500">
+                            {registration.user?.phone}
                           </p>
                         )}
                       </>
                     )}
                   </div>
 
-                  <div className="flex gap-1">
+                  <div className="flex shrink-0 gap-1">
                     <Button
                       variant="outline"
                       onClick={() => handleEditClick(registration)}
@@ -976,7 +1041,7 @@ export default function EventRegistrationsPage({
                 <div className="mt-2 flex flex-wrap gap-1">
                   <span
                     className={`inline-flex cursor-pointer items-center rounded-full px-2 py-0.5 text-xs ${
-                      registration.paid
+                      registration.status === "PAID"
                         ? "bg-green-100 text-green-800 hover:bg-green-200"
                         : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
                     }`}
@@ -984,7 +1049,7 @@ export default function EventRegistrationsPage({
                   >
                     {processing === "payment" + registration.id
                       ? "..."
-                      : registration.paid
+                      : registration.status === "PAID"
                         ? "Paid"
                         : "Pending"}
                   </span>
@@ -1011,14 +1076,14 @@ export default function EventRegistrationsPage({
                       onClick={() => togglePaymentStatus(registration.id)}
                       disabled={processing === "payment" + registration.id}
                       className={`text-xs ${
-                        registration.paid
+                        registration.status === "PAID"
                           ? "bg-green-100 text-green-800"
                           : "bg-yellow-100 text-yellow-800"
                       }`}
                     >
                       {processing === "payment" + registration.id
                         ? "Processing..."
-                        : registration.paid
+                        : registration.status === "PAID"
                           ? "✓ Paid"
                           : "⚠ Pending"}
                     </Button>

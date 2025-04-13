@@ -58,19 +58,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse the request body
-    const data = await request.json();
-    const {
-      sourceEventId,
-      title,
-      description,
-      price,
-      place,
-      capacity,
-      from,
-      to,
-      visible,
-    } = data;
+    // Parse the FormData instead of JSON
+    const formData = await request.formData();
+
+    // Extract data from FormData
+    const sourceEventId = formData.get("sourceEventId") as string;
+    const title = formData.get("title") as string;
+    const description = formData.get("description") as string;
+    const price = formData.get("price") as string;
+    const place = formData.get("place") as string;
+    const capacity = formData.get("capacity") as string;
+    const from = formData.get("from") as string;
+    const to = formData.get("to") as string;
+    const visible = formData.get("visible") as string;
 
     if (!sourceEventId || !title || !from || !to) {
       return NextResponse.json(
@@ -99,20 +99,26 @@ export async function POST(request: NextRequest) {
       data: {
         title,
         description: description || null,
-        price: Number(price),
+        price: Number(price) || 0,
         place: place || null,
-        capacity: Number(capacity || 0),
+        capacity: Number(capacity) || 0,
         from: new Date(from),
         to: new Date(to),
         created_at: new Date(),
-        visible: Boolean(visible),
+        visible: visible === "true",
       },
     });
 
     return NextResponse.json({
       success: true,
       message: "Event duplicated successfully",
-      event: newEvent,
+      event: {
+        ...newEvent,
+        from: newEvent.from.toISOString(),
+        to: newEvent.to.toISOString(),
+        created_at: newEvent.created_at.toISOString(),
+        _count: { Registration: 0 },
+      },
     });
   } catch (error) {
     console.error("Error duplicating event:", error);

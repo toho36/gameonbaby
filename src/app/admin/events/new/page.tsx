@@ -4,13 +4,15 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "~/components/ui/button";
-import { createEvent } from "~/actions/actions";
+import { useCreateEvent } from "~/api/events";
 
 export default function CreateEventPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
+
+  const { mutate: createEventMutation, isPending: submitting } =
+    useCreateEvent();
 
   const [formData, setFormData] = useState({
     title: "",
@@ -58,22 +60,23 @@ export default function CreateEventPage() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setSubmitting(true);
 
     try {
       const formData = new FormData(e.currentTarget);
-      const result = await createEvent(formData);
 
-      if (result.success) {
-        router.push("/admin/events");
-      } else {
-        setError(result.error || "Failed to create event");
-      }
+      // Use the mutation instead of server action
+      createEventMutation(formData, {
+        onSuccess: () => {
+          // Navigate back to events page after successful creation
+          router.push("/admin/events");
+        },
+        onError: (error) => {
+          setError(error.message || "Failed to create event");
+        },
+      });
     } catch (error) {
       console.error("Error creating event:", error);
       setError("An error occurred while creating the event");
-    } finally {
-      setSubmitting(false);
     }
   }
 

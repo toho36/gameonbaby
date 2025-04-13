@@ -2,6 +2,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import prisma from "~/lib/db";
 import RegistrationForm from "~/components/RegistrationForm";
+import EventParticipantLists from "~/components/EventParticipantLists";
+import CheckRegistrationStatus from "~/components/CheckRegistrationStatus";
+import CapacityDisplay from "~/components/CapacityDisplay";
 import { PrismaClient, UserRole } from "@prisma/client";
 import { getCurrentUser, hasSpecialAccess } from "~/server/service/userService";
 
@@ -357,36 +360,11 @@ export default async function EventPage({
                 </div>
               )}
 
-              <div className="overflow-hidden rounded-xl bg-white/10 p-5 shadow-md backdrop-blur-sm">
-                <div className="mb-2 flex items-center justify-between">
-                  <h2 className="text-xl font-bold text-white">Capacity</h2>
-                  <div className="text-2xl font-bold text-white">
-                    {event._count.Registration} / {event.capacity}
-                  </div>
-                </div>
-                <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/20">
-                  <div
-                    className="h-2.5 rounded-full bg-white"
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        (event._count.Registration / event.capacity) * 100,
-                      )}%`,
-                    }}
-                  ></div>
-                </div>
-                {event._count.Registration < event.capacity && (
-                  <div className="mt-2 text-right text-sm text-white/80">
-                    {event.capacity - event._count.Registration} spots left
-                  </div>
-                )}
-                {event._count.Registration >= event.capacity &&
-                  event._count.WaitingList > 0 && (
-                    <div className="mt-2 text-right text-sm text-orange-200">
-                      {event._count.WaitingList} on waiting list
-                    </div>
-                  )}
-              </div>
+              {/* Use the CapacityDisplay component */}
+              <CapacityDisplay
+                initialRegCount={event._count.Registration}
+                capacity={event.capacity}
+              />
             </div>
 
             {event.description && (
@@ -451,71 +429,14 @@ export default async function EventPage({
               </>
             )}
 
-            {/* Display registrations */}
-            {event.registrations.length > 0 && (
-              <>
-                <h2 className="mb-5 mt-8 text-xl font-bold text-white">
-                  Registered ({event._count.Registration}/{event.capacity})
-                </h2>
-                <div className="rounded-xl border border-white/20 bg-white/5 p-5 backdrop-blur-sm">
-                  <div className="grid gap-3">
-                    {event.registrations.map((reg, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between rounded-lg bg-white/10 p-3"
-                      >
-                        <div className="flex items-center">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-600 text-white">
-                            {reg.first_name.charAt(0)}
-                            {reg.last_name ? reg.last_name.charAt(0) : ""}
-                          </div>
-                          <span className="ml-3 text-white">
-                            {reg.first_name} {reg.last_name}
-                          </span>
-                        </div>
-                        <span className="text-sm text-white/70">
-                          {new Date(reg.created_at).toLocaleDateString("cs-CZ")}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Display waiting list */}
-            <h2 className="mb-5 mt-8 text-xl font-bold text-white">
-              Waiting List ({event._count.WaitingList})
-            </h2>
-            <div className="rounded-xl border border-white/20 bg-white/5 p-5 backdrop-blur-sm">
-              {event.waitingList.length > 0 ? (
-                <div className="grid gap-3">
-                  {event.waitingList.map((entry, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between rounded-lg bg-white/10 p-3"
-                    >
-                      <div className="flex items-center">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-500 text-white">
-                          {entry.first_name.charAt(0)}
-                          {entry.last_name ? entry.last_name.charAt(0) : ""}
-                        </div>
-                        <span className="ml-3 text-white">
-                          {entry.first_name} {entry.last_name}
-                        </span>
-                      </div>
-                      <span className="text-sm text-white/70">
-                        {new Date(entry.created_at).toLocaleDateString("cs-CZ")}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="py-4 text-center text-white/70">
-                  No one on the waiting list yet (Event ID: {params.id})
-                </div>
-              )}
-            </div>
+            {/* Use the client-side EventParticipantLists component for real-time updates */}
+            <EventParticipantLists
+              eventId={event.id}
+              initialRegistrations={event.registrations}
+              initialWaitingList={event.waitingList}
+              initialRegCount={event._count.Registration}
+              capacity={event.capacity}
+            />
           </div>
         </div>
       </div>

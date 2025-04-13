@@ -4,7 +4,7 @@ import { PrismaClient } from "@prisma/client";
 declare global {
   namespace PrismaJson {
     interface User {
-      role: "USER" | "MODERATOR" | "ADMIN";
+      role: "USER" | "REGULAR" | "MODERATOR" | "ADMIN";
       createdAt: Date;
       updatedAt: Date;
       kindeId?: string | null;

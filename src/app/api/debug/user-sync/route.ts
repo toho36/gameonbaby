@@ -9,7 +9,7 @@ interface DbUser {
   id: string;
   name: string | null;
   email: string | null;
-  role: "USER" | "MODERATOR" | "ADMIN";
+  role: "USER" | "REGULAR" | "MODERATOR" | "ADMIN";
   emailVerified: Date | null;
   image: string | null;
   kindeId: string | null;

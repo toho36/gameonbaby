@@ -1,14 +1,14 @@
 "use server";
 
 import { PrismaClient, UserRole } from "@prisma/client";
-import { getKindeServerClient } from "@kinde-oss/kinde-auth-nextjs/server";
+import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 
 const prisma = new PrismaClient();
 
 export async function syncKindeUser() {
   try {
     console.log("Starting syncKindeUser process...");
-    const { getUser } = getKindeServerClient();
+    const { getUser } = getKindeServerSession();
     const kindeUser = await getUser();
 
     console.log("Kinde user data:", {
@@ -130,6 +130,34 @@ export async function isUserModerator() {
     return user?.role === UserRole.MODERATOR || user?.role === UserRole.ADMIN;
   } catch (error) {
     console.error("Error checking if user is moderator:", error);
+    return false;
+  }
+}
+
+export async function isUserRegular() {
+  try {
+    const user = await getCurrentUser();
+    return (
+      user?.role === UserRole.REGULAR ||
+      user?.role === UserRole.MODERATOR ||
+      user?.role === UserRole.ADMIN
+    );
+  } catch (error) {
+    console.error("Error checking if user can view hidden events:", error);
+    return false;
+  }
+}
+
+export async function hasSpecialAccess() {
+  try {
+    const user = await getCurrentUser();
+    return (
+      user?.role === UserRole.REGULAR ||
+      user?.role === UserRole.MODERATOR ||
+      user?.role === UserRole.ADMIN
+    );
+  } catch (error) {
+    console.error("Error checking for special access:", error);
     return false;
   }
 }

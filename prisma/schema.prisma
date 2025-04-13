@@ -44,6 +44,7 @@ model Session {
 
 enum UserRole {
   USER
+  REGULAR
   MODERATOR
   ADMIN
 }
@@ -61,6 +62,7 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   paymentPreference String @default("CARD") // CARD or CASH
+  phoneNumber   String?
 }
 
 model VerificationToken {

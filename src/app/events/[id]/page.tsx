@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import prisma from "~/lib/db";
 import RegistrationForm from "~/components/RegistrationForm";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, UserRole } from "@prisma/client";
+import { getCurrentUser, hasSpecialAccess } from "~/server/service/userService";
 
 // Create a separate client for raw queries
 const prismaRaw = new PrismaClient();
@@ -101,6 +102,9 @@ export default async function EventPage({
 }: {
   params: { id: string };
 }) {
+  // Check if user has special access to see hidden events
+  const userHasSpecialAccess = await hasSpecialAccess();
+
   const eventData = (await prisma.event.findUnique({
     where: {
       id: params.id,
@@ -167,8 +171,8 @@ export default async function EventPage({
     },
   };
 
-  // Check visibility after casting
-  if (!event.visible) {
+  // Check visibility - if event is not visible, only allow access to users with special access
+  if (!event.visible && !userHasSpecialAccess) {
     notFound();
   }
 
@@ -223,6 +227,29 @@ export default async function EventPage({
 
         <div className="overflow-hidden rounded-2xl bg-gradient-to-b from-[#2c1660] to-[#24134d] shadow-xl">
           <div className="p-6 md:p-8">
+            {!event.visible && (
+              <div className="mb-4 rounded-lg bg-yellow-500/20 p-3 text-yellow-200">
+                <div className="flex items-center">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="mr-2 h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <span className="font-medium">Hidden Event</span>
+                </div>
+                <p className="mt-1 pl-7 text-sm">
+                  This event is not publicly visible but you can see it because
+                  you have special access.
+                </p>
+              </div>
+            )}
             <h1 className="mb-6 text-2xl font-bold text-white md:text-3xl lg:text-4xl">
               {event.title}
             </h1>

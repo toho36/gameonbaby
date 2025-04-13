@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "~/lib/db";
 import { getCurrentUser } from "~/server/service/userService";
+import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { PrismaClient } from "@prisma/client";
+import { sendWaitingListPromotionEmail } from "~/server/service/emailService";
 
 export async function POST(
   request: NextRequest,
@@ -86,6 +89,11 @@ export async function POST(
     });
 
     if (waitingListEntry) {
+      // Get event details for the email
+      const event = await prisma.event.findUnique({
+        where: { id: eventId },
+      });
+
       // Move the first person from the waiting list to registrations
       await prisma.registration.create({
         data: {
@@ -106,7 +114,38 @@ export async function POST(
         },
       });
 
-      // TODO: Send notification email to the person moved from waiting list
+      // Send notification email to the person moved from waiting list
+      if (event) {
+        try {
+          const formattedDate = new Date(event.from).toLocaleDateString(
+            "cs-CZ",
+          );
+          const startTime = new Date(event.from).toLocaleTimeString("cs-CZ", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+          const endTime = new Date(event.to).toLocaleTimeString("cs-CZ", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+
+          await sendWaitingListPromotionEmail(
+            waitingListEntry.email,
+            waitingListEntry.first_name,
+            event.title,
+            formattedDate,
+            `${startTime} - ${endTime}`,
+            event.place || "See event details online",
+            waitingListEntry.payment_type,
+          );
+        } catch (emailError) {
+          console.error(
+            "Failed to send waiting list promotion email:",
+            emailError,
+          );
+          // Continue with the operation even if email fails
+        }
+      }
     }
 
     return NextResponse.json({

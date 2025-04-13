@@ -31,13 +31,33 @@ function DuplicateRegistrationModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-black/70 backdrop-blur-sm transition-opacity">
-      <div className="relative mx-auto my-6 w-full max-w-md p-4">
-        <div className="relative flex flex-col rounded-xl border border-white/20 bg-[#2c1660] p-6 text-white shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden bg-black/80 backdrop-blur-md transition-all duration-300">
+      <div className="relative mx-auto my-6 w-full max-w-md transform p-4 transition-all duration-300 ease-in-out">
+        <div className="relative flex flex-col rounded-xl border border-white/20 bg-gradient-to-br from-purple-900 to-indigo-900 p-6 text-white shadow-xl">
           <div className="mb-4 flex items-start justify-between">
-            <h3 className="text-xl font-bold text-white">Already Registered</h3>
+            <div className="flex items-center">
+              <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/20">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6 text-amber-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-white">
+                Already Registered
+              </h3>
+            </div>
             <button
-              className="ml-auto rounded-full p-1 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+              className="ml-auto rounded-full p-1 text-white/60 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/30"
               onClick={onClose}
               aria-label="Close"
             >
@@ -57,12 +77,15 @@ function DuplicateRegistrationModal({
               </svg>
             </button>
           </div>
-          <p className="mb-6 text-white/80">
-            This email is already registered for this event.
-          </p>
+          <div className="mb-6 rounded-lg bg-white/10 p-4">
+            <p className="text-white/90">
+              This email <span className="font-bold text-white">{email}</span>{" "}
+              is already registered for this event.
+            </p>
+          </div>
           <div className="flex justify-end">
             <button
-              className="rounded-lg bg-white/20 px-5 py-2.5 font-medium text-white transition hover:bg-white/30 focus:outline-none"
+              className="rounded-lg bg-white/20 px-5 py-2.5 font-medium text-white transition hover:bg-white/30 focus:outline-none focus:ring-2 focus:ring-white/30"
               type="button"
               onClick={onClose}
             >
@@ -559,28 +582,6 @@ export default function RegistrationForm({
     }
   };
 
-  async function handleUnregister() {
-    if (!userRegistration) return;
-
-    try {
-      const response = await fetch(`/api/events/${eventId}/unregister`, {
-        method: "POST",
-      });
-      const data = await response.json();
-
-      if (data.success) {
-        setIsRegistered(false);
-        setUserRegistration(null);
-        setSuccess("Successfully unregistered from the event.");
-      } else {
-        setError(data.message || "Failed to unregister from the event.");
-      }
-    } catch (error) {
-      console.error("Error unregistering:", error);
-      setError("Failed to unregister from the event.");
-    }
-  }
-
   if (isLoading) {
     return <div className="text-center text-white">Loading...</div>;
   }
@@ -596,22 +597,22 @@ export default function RegistrationForm({
     };
 
     return (
-      <div className="rounded-xl border border-white/20 bg-white/10 p-6 text-white shadow-lg backdrop-blur-sm">
+      <div className="rounded-xl border border-white/20 bg-gradient-to-br from-purple-900/70 to-indigo-900/70 p-6 text-white shadow-lg backdrop-blur-sm">
         <div className="flex flex-col items-center text-center">
-          <div className="mb-4 flex items-center gap-3">
-            {profileImage ? (
-              <div className="h-12 w-12 overflow-hidden rounded-full border-2 border-white/30">
-                <img
-                  src={profileImage}
-                  alt="Profile"
-                  className="h-full w-full object-cover"
-                />
-              </div>
-            ) : (
-              <div className="rounded-full bg-white/20 p-3">
+          <div className="mb-6 flex flex-col items-center gap-3">
+            <div className="rounded-full bg-green-500/20 p-4">
+              {profileImage ? (
+                <div className="h-16 w-16 overflow-hidden rounded-full border-4 border-white/30">
+                  <img
+                    src={profileImage}
+                    alt="Profile"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              ) : (
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6 text-white"
+                  className="h-10 w-10 text-green-400"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -623,33 +624,35 @@ export default function RegistrationForm({
                     d="M5 13l4 4L19 7"
                   />
                 </svg>
-              </div>
-            )}
-            <h3 className="text-xl font-bold text-white">
+              )}
+            </div>
+            <h3 className="text-2xl font-bold text-white">
               Registration Successful!
             </h3>
+            <p className="text-lg text-white/90">
+              A confirmation email has been sent to your email address.
+            </p>
           </div>
-          <p className="mb-6 text-white/90">
-            A confirmation email has been sent to your email address.
-          </p>
 
           {qrCodeUrl && (
-            <div className="mt-2 w-full rounded-xl border border-white/20 bg-white/10 p-6">
+            <div className="mb-6 w-full overflow-hidden rounded-xl border border-white/20 bg-white/10 p-6 transition-all hover:bg-white/15">
               <div className="flex flex-col items-center">
-                <h4 className="mb-3 text-lg font-bold text-white">
+                <h4 className="mb-4 text-lg font-bold text-white">
                   Payment Code
                 </h4>
-                <div className="mb-4 flex justify-center rounded-lg bg-white p-1">
+                <div className="mb-4 flex justify-center rounded-lg bg-white p-3 shadow-lg">
                   <img
                     src={qrCodeUrl}
                     alt="Payment QR Code"
-                    className="h-auto w-full max-w-[180px] rounded-md"
+                    className="h-auto w-full max-w-[200px] rounded-md"
                   />
                 </div>
-                <div className="mb-3 text-xl font-bold">{event.price} Kč</div>
+                <div className="mb-4 text-2xl font-bold text-green-300">
+                  {event.price} Kč
+                </div>
                 <button
                   onClick={downloadQRCode}
-                  className="flex w-full items-center justify-center rounded-lg bg-white/20 px-4 py-2.5 text-center font-medium text-white transition-colors hover:bg-white/30"
+                  className="flex w-full items-center justify-center rounded-lg bg-white/20 px-4 py-3 text-center font-medium text-white transition-colors hover:bg-white/30 focus:outline-none focus:ring-2 focus:ring-white/30 focus:ring-offset-1 focus:ring-offset-purple-900"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -671,7 +674,7 @@ export default function RegistrationForm({
             </div>
           )}
 
-          <div className="mt-6 w-full">
+          <div className="w-full">
             <div className="flex items-center justify-center">
               <UnregisterButton
                 eventId={eventId}
@@ -687,22 +690,22 @@ export default function RegistrationForm({
   // Show waiting list success if user is on waiting list
   if (isOnWaitingList) {
     return (
-      <div className="rounded-xl border border-white/20 bg-white/10 p-6 text-white shadow-lg backdrop-blur-sm">
+      <div className="rounded-xl border border-white/20 bg-gradient-to-br from-purple-900/70 to-indigo-900/70 p-6 text-white shadow-lg backdrop-blur-sm">
         <div className="flex flex-col items-center text-center">
-          <div className="mb-4 flex items-center gap-3">
-            {profileImage ? (
-              <div className="h-12 w-12 overflow-hidden rounded-full border-2 border-white/30">
-                <img
-                  src={profileImage}
-                  alt="Profile"
-                  className="h-full w-full object-cover"
-                />
-              </div>
-            ) : (
-              <div className="rounded-full bg-white/20 p-3">
+          <div className="mb-6 flex flex-col items-center gap-3">
+            <div className="rounded-full bg-indigo-500/20 p-4">
+              {profileImage ? (
+                <div className="h-16 w-16 overflow-hidden rounded-full border-4 border-white/30">
+                  <img
+                    src={profileImage}
+                    alt="Profile"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              ) : (
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6 text-white"
+                  className="h-10 w-10 text-indigo-400"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -711,18 +714,43 @@ export default function RegistrationForm({
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M5 13l4 4L19 7"
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                   />
                 </svg>
-              </div>
-            )}
-            <h3 className="text-xl font-bold text-white">
+              )}
+            </div>
+            <h3 className="text-2xl font-bold text-white">
               You're on the Waiting List!
             </h3>
+            <p className="text-lg text-white/90">
+              We'll notify you if a spot becomes available.
+            </p>
           </div>
-          <p className="mb-6 text-white/90">
-            We'll notify you if a spot becomes available.
-          </p>
+
+          <div className="mt-4 w-full rounded-lg border border-white/20 bg-white/10 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-500/30">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                    />
+                  </svg>
+                </div>
+                <span className="font-medium">Email Notification</span>
+              </div>
+              <span className="text-indigo-300">Enabled</span>
+            </div>
+          </div>
 
           <div className="mt-6 w-full">
             <div className="flex items-center justify-center">
@@ -740,28 +768,94 @@ export default function RegistrationForm({
   // Non-logged in user view with waiting list option if event is full
   if (!isAuthenticated) {
     return (
-      <div className="rounded-xl border border-white/20 bg-white/10 p-6 text-white shadow-lg backdrop-blur-sm">
+      <div className="rounded-xl border border-white/20 bg-gradient-to-br from-purple-900/70 to-indigo-900/70 p-6 text-white shadow-lg backdrop-blur-sm">
         {!showGuestForm ? (
-          <div className="grid grid-cols-1 gap-3">
+          <div className="grid grid-cols-1 gap-4">
+            <div className="mb-4 text-center">
+              <h3 className="mb-2 text-xl font-bold">Join the Event</h3>
+              <p className="text-white/80">
+                {event._count.Registration >= event.capacity
+                  ? "Event is full, but you can join the waiting list"
+                  : "Register for this exciting event"}
+              </p>
+            </div>
             <button
               onClick={() => router.push("/api/auth/login")}
-              className="w-full rounded-lg bg-white/20 px-5 py-3 font-medium text-white transition hover:bg-white/30 focus:ring-2 focus:ring-white/40"
+              className="w-full rounded-lg bg-white/20 px-5 py-3.5 font-medium text-white transition-all hover:bg-white/30 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-white/30 focus:ring-offset-1 focus:ring-offset-purple-900"
             >
-              {event._count.Registration >= event.capacity
-                ? "Sign In to Join Waiting List"
-                : "Sign In to Register"}
+              <div className="flex items-center justify-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="mr-2 h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
+                  />
+                </svg>
+                {event._count.Registration >= event.capacity
+                  ? "Sign In to Join Waiting List"
+                  : "Sign In to Register"}
+              </div>
             </button>
             <button
               onClick={() => setShowGuestForm(true)}
-              className="w-full rounded-lg border border-white/20 bg-transparent px-5 py-3 font-medium text-white transition hover:bg-white/10"
+              className="w-full rounded-lg border border-white/20 bg-transparent px-5 py-3.5 font-medium text-white transition-all hover:bg-white/10 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-white/20"
             >
-              {event._count.Registration >= event.capacity
-                ? "Join Waiting List as Guest"
-                : "Register as Guest"}
+              <div className="flex items-center justify-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="mr-2 h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+                {event._count.Registration >= event.capacity
+                  ? "Join Waiting List as Guest"
+                  : "Register as Guest"}
+              </div>
             </button>
           </div>
         ) : (
           <div>
+            <div className="mb-5 flex items-center">
+              <button
+                onClick={() => setShowGuestForm(false)}
+                className="mr-3 rounded-full p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+              </button>
+              <h3 className="text-xl font-bold">
+                {event._count.Registration >= event.capacity
+                  ? "Join Waiting List"
+                  : "Guest Registration"}
+              </h3>
+            </div>
             <form
               onSubmit={
                 event._count.Registration >= event.capacity
@@ -815,11 +909,25 @@ export default function RegistrationForm({
               </div>
 
               <div>
+                <label className="mb-1.5 block text-sm font-medium">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  name="phoneNumber"
+                  value={formData.phoneNumber}
+                  onChange={handleFormChange}
+                  className="w-full rounded-lg border border-white/20 bg-white/10 p-3 text-white placeholder-white/50 focus:border-white/40 focus:ring focus:ring-white/20"
+                  placeholder="Your phone number (optional)"
+                />
+              </div>
+
+              <div>
                 <label className="mb-3 block text-sm font-medium">
                   Payment Method <span className="text-red-300">*</span>
                 </label>
                 <div className="grid grid-cols-2 gap-3">
-                  <label className="flex cursor-pointer items-center rounded-lg border border-white/20 bg-white/10 p-3 hover:bg-white/20">
+                  <label className="flex cursor-pointer items-center rounded-lg border border-white/20 bg-white/10 p-3 transition-all hover:border-white/40 hover:bg-white/20">
                     <input
                       type="radio"
                       name="payment_preference"
@@ -832,7 +940,7 @@ export default function RegistrationForm({
                       <span className="block font-medium">QR Code Payment</span>
                     </div>
                   </label>
-                  <label className="flex cursor-pointer items-center rounded-lg border border-white/20 bg-white/10 p-3 hover:bg-white/20">
+                  <label className="flex cursor-pointer items-center rounded-lg border border-white/20 bg-white/10 p-3 transition-all hover:border-white/40 hover:bg-white/20">
                     <input
                       type="radio"
                       name="payment_preference"
@@ -848,11 +956,11 @@ export default function RegistrationForm({
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-2">
+              <div className="flex gap-2 pt-4">
                 <button
                   type="submit"
                   disabled={isUpdating}
-                  className="w-full rounded-lg bg-white/20 p-3 font-medium text-white transition hover:bg-white/30 disabled:opacity-50"
+                  className="w-full rounded-lg bg-white/20 p-3.5 font-medium text-white transition-all hover:bg-white/30 focus:outline-none focus:ring-2 focus:ring-white/30 disabled:opacity-50"
                 >
                   {isUpdating ? (
                     <span className="flex items-center justify-center">
@@ -890,7 +998,7 @@ export default function RegistrationForm({
                 <button
                   type="button"
                   onClick={() => setShowGuestForm(false)}
-                  className="w-auto rounded-lg border border-white/20 p-3 font-medium text-white transition hover:bg-white/10"
+                  className="rounded-lg border border-white/20 px-4 font-medium text-white transition-all hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/20"
                 >
                   Back
                 </button>
@@ -911,37 +1019,56 @@ export default function RegistrationForm({
 
   // Logged in user view with waiting list option if event is full
   return (
-    <div className="rounded-xl border border-white/20 bg-white/10 p-6 text-white shadow-lg backdrop-blur-sm">
+    <div className="rounded-xl border border-white/20 bg-gradient-to-br from-purple-900/70 to-indigo-900/70 p-6 text-white shadow-lg backdrop-blur-sm">
       <div className="space-y-5">
+        <div className="mb-4">
+          <h3 className="mb-2 text-center text-xl font-bold">
+            {event._count.Registration >= event.capacity
+              ? "Join the Waiting List"
+              : "Register for This Event"}
+          </h3>
+          <p className="text-center text-white/80">
+            {event._count.Registration >= event.capacity
+              ? "Get notified when a spot becomes available"
+              : `Secure your spot for ${eventDate}`}
+          </p>
+        </div>
+
         <div>
           <label className="mb-3 block text-sm font-medium">
             Payment Method <span className="text-red-300">*</span>
           </label>
           <div className="grid grid-cols-2 gap-3">
-            <label className="flex cursor-pointer items-center rounded-lg border border-white/20 bg-white/10 p-3 hover:bg-white/20">
+            <label className="flex cursor-pointer items-center rounded-lg border border-white/20 bg-white/10 p-4 transition-all hover:border-white/40 hover:bg-white/20">
               <input
                 type="radio"
                 name="payment_preference"
                 value="CARD"
                 checked={paymentPreference === "CARD"}
                 onChange={() => setPaymentPreference("CARD")}
-                className="h-4 w-4 border-white/40 text-white focus:ring-white/20"
+                className="h-5 w-5 border-white/40 text-white focus:ring-white/20"
               />
               <div className="ml-3">
                 <span className="block font-medium">QR Code Payment</span>
+                <span className="text-xs text-white/70">
+                  Pay via bank transfer
+                </span>
               </div>
             </label>
-            <label className="flex cursor-pointer items-center rounded-lg border border-white/20 bg-white/10 p-3 hover:bg-white/20">
+            <label className="flex cursor-pointer items-center rounded-lg border border-white/20 bg-white/10 p-4 transition-all hover:border-white/40 hover:bg-white/20">
               <input
                 type="radio"
                 name="payment_preference"
                 value="CASH"
                 checked={paymentPreference === "CASH"}
                 onChange={() => setPaymentPreference("CASH")}
-                className="h-4 w-4 border-white/40 text-white focus:ring-white/20"
+                className="h-5 w-5 border-white/40 text-white focus:ring-white/20"
               />
               <div className="ml-3">
                 <span className="block font-medium">Cash on Site</span>
+                <span className="text-xs text-white/70">
+                  Pay when you arrive
+                </span>
               </div>
             </label>
           </div>
@@ -954,7 +1081,7 @@ export default function RegistrationForm({
               : handleQuickRegister
           }
           disabled={isUpdating}
-          className="w-full rounded-lg bg-white/20 p-3 font-medium text-white transition hover:bg-white/30 disabled:opacity-50"
+          className="w-full rounded-lg bg-white/20 p-3.5 font-medium text-white transition-all hover:bg-white/30 focus:outline-none focus:ring-2 focus:ring-white/30 disabled:opacity-50"
         >
           {isUpdating ? (
             <span className="flex items-center justify-center">
@@ -983,17 +1110,49 @@ export default function RegistrationForm({
                 : "Registering..."}
             </span>
           ) : event._count.Registration >= event.capacity ? (
-            "Join Waiting List"
+            <span className="flex items-center justify-center">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="mr-2 h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                />
+              </svg>
+              Join Waiting List
+            </span>
           ) : (
-            "Register Now"
+            <span className="flex items-center justify-center">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="mr-2 h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+              Register Now
+            </span>
           )}
         </button>
 
         {event._count.Registration >= event.capacity && (
-          <div className="rounded-lg border border-orange-300/30 bg-orange-400/10 p-3 text-sm">
+          <div className="rounded-lg border border-orange-300/30 bg-orange-400/10 p-4 text-sm">
             <div className="flex">
               <svg
-                className="mr-2 h-5 w-5 flex-shrink-0"
+                className="mr-3 h-5 w-5 flex-shrink-0 text-orange-300"
                 fill="currentColor"
                 viewBox="0 0 20 20"
                 xmlns="http://www.w3.org/2000/svg"
@@ -1005,8 +1164,9 @@ export default function RegistrationForm({
                 ></path>
               </svg>
               <div>
-                <span className="font-medium">Event full!</span> You can join
-                the waiting list to be notified if spots become available.
+                <span className="font-medium text-orange-300">Event full!</span>{" "}
+                You can join the waiting list to be notified if spots become
+                available.
               </div>
             </div>
           </div>
@@ -1014,10 +1174,10 @@ export default function RegistrationForm({
 
         {event._count.Registration >= event.capacity - 5 &&
           event._count.Registration < event.capacity && (
-            <div className="rounded-lg border border-white/30 bg-white/10 p-3 text-sm">
+            <div className="rounded-lg border border-indigo-300/30 bg-indigo-400/10 p-4 text-sm">
               <div className="flex">
                 <svg
-                  className="mr-2 h-5 w-5 flex-shrink-0"
+                  className="mr-3 h-5 w-5 flex-shrink-0 text-indigo-300"
                   fill="currentColor"
                   viewBox="0 0 20 20"
                   xmlns="http://www.w3.org/2000/svg"
@@ -1029,8 +1189,11 @@ export default function RegistrationForm({
                   ></path>
                 </svg>
                 <div>
-                  <span className="font-medium">Almost full!</span> Only{" "}
-                  {event.capacity - event._count.Registration} spots remaining.
+                  <span className="font-medium text-indigo-300">
+                    Almost full!
+                  </span>{" "}
+                  Only {event.capacity - event._count.Registration} spots
+                  remaining.
                 </div>
               </div>
             </div>

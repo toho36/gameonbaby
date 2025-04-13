@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import prisma from "~/lib/db";
 import { PrismaClient } from "@prisma/client";
+import { sendWaitingListPromotionEmail } from "~/server/service/emailService";
 
 // Create a separate client for raw queries
 const prismaRaw = new PrismaClient();
@@ -272,6 +273,32 @@ export async function POST(
       DELETE FROM "WaitingList"
       WHERE id = ${entryId}
     `;
+
+    // Send notification email
+    try {
+      const formattedDate = new Date(event.from).toLocaleDateString("cs-CZ");
+      const startTime = new Date(event.from).toLocaleTimeString("cs-CZ", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      const endTime = new Date(event.to).toLocaleTimeString("cs-CZ", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      await sendWaitingListPromotionEmail(
+        waitingListEntry.email,
+        waitingListEntry.first_name,
+        event.title,
+        formattedDate,
+        `${startTime} - ${endTime}`,
+        event.place || "See event details online",
+        waitingListEntry.payment_type,
+      );
+    } catch (emailError) {
+      console.error("Failed to send waiting list promotion email:", emailError);
+      // Continue with the operation even if email fails
+    }
 
     return NextResponse.json({
       success: true,

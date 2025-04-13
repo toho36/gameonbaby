@@ -23,8 +23,11 @@ export default function EventManagement() {
 
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<string | null>(null);
   const [eventToDuplicate, setEventToDuplicate] = useState<Event | null>(null);
   const [eventToEdit, setEventToEdit] = useState<Event | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [duplicateFormData, setDuplicateFormData] = useState({
     title: "",
@@ -206,12 +209,31 @@ export default function EventManagement() {
   }
 
   async function handleDelete(id: string) {
-    if (
-      confirm(
-        "Are you sure you want to delete this event? This cannot be undone.",
-      )
-    ) {
-      deleteEventMutation(id);
+    setEventToDelete(id);
+    setDeleteError(null);
+    setShowDeleteModal(true);
+  }
+
+  async function confirmDelete() {
+    if (eventToDelete) {
+      try {
+        deleteEventMutation(eventToDelete, {
+          onSuccess: (data: any) => {
+            if (data && data.error) {
+              setDeleteError(data.error);
+            } else {
+              setShowDeleteModal(false);
+              setEventToDelete(null);
+              setDeleteError(null);
+            }
+          },
+          onError: () => {
+            setDeleteError("Failed to delete event. Please try again.");
+          },
+        });
+      } catch (error) {
+        setDeleteError("An unexpected error occurred. Please try again.");
+      }
     }
   }
 
@@ -446,7 +468,7 @@ export default function EventManagement() {
                       >
                         <Button
                           variant="outline"
-                          className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50"
+                          className="px-2 py-1 text-blue-600 hover:bg-blue-50"
                         >
                           Registrations
                         </Button>
@@ -956,6 +978,137 @@ export default function EventManagement() {
               <Button onClick={handleEditSubmit} className="w-full sm:w-auto">
                 Save Changes
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="mx-auto w-full max-w-md overflow-hidden rounded-lg bg-white shadow-xl">
+            <div className="p-6">
+              <div className="mb-4 flex items-center">
+                <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6 text-red-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900">
+                  Delete Event
+                </h3>
+              </div>
+
+              {deleteError ? (
+                <div className="mb-4 rounded-md bg-red-50 p-4">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg
+                        className="h-5 w-5 text-red-400"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-red-700">{deleteError}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="mb-6 text-sm text-gray-500">
+                  Are you sure you want to delete this event? This action cannot
+                  be undone and all registrations will be affected.
+                </p>
+              )}
+
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setEventToDelete(null);
+                    setDeleteError(null);
+                  }}
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                >
+                  {deleteError ? "Close" : "Cancel"}
+                </Button>
+                {!deleteError && (
+                  <Button
+                    onClick={confirmDelete}
+                    className="w-full bg-red-600 text-white hover:bg-red-700 sm:w-auto"
+                  >
+                    Delete Event
+                  </Button>
+                )}
+                {deleteError && deleteError.includes("registrations") && (
+                  <Button
+                    onClick={() => {
+                      // Handle hiding the event instead
+                      if (eventToDelete) {
+                        const eventToHide = events.find(
+                          (e) => e.id === eventToDelete,
+                        );
+                        if (eventToHide) {
+                          const formData = new FormData();
+                          formData.append("title", eventToHide.title);
+                          formData.append(
+                            "description",
+                            eventToHide.description || "",
+                          );
+                          formData.append(
+                            "price",
+                            eventToHide.price.toString(),
+                          );
+                          formData.append("place", eventToHide.place || "");
+                          formData.append(
+                            "capacity",
+                            (eventToHide.capacity || 0).toString(),
+                          );
+                          formData.append(
+                            "from",
+                            new Date(eventToHide.from).toISOString(),
+                          );
+                          formData.append(
+                            "to",
+                            new Date(eventToHide.to).toISOString(),
+                          );
+                          formData.append("visible", "false"); // Set to hidden
+
+                          updateEventMutation({
+                            eventId: eventToDelete,
+                            formData,
+                          });
+
+                          setShowDeleteModal(false);
+                          setEventToDelete(null);
+                          setDeleteError(null);
+                        }
+                      }
+                    }}
+                    className="w-full bg-yellow-600 text-white hover:bg-yellow-700 sm:w-auto"
+                  >
+                    Hide Event Instead
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>

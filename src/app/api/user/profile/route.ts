@@ -14,32 +14,46 @@ interface DbUser {
   emailVerified: Date | null;
   image: string | null;
   phoneNumber: string | null;
+  paymentPreference?: string;
 }
 
-export async function GET() {
+// Helper function to validate Kinde session - exported for use in other API routes
+export async function validateSession() {
   try {
-    // Get the authenticated user
     const { getUser } = getKindeServerSession();
     const kindeUser = await getUser();
 
     if (!kindeUser || !kindeUser.id) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 },
-      );
+      return { valid: false, user: null };
     }
 
-    // Find the user in our database
+    // Get user from database
     const user = (await prisma.user.findFirst({
       where: {
         OR: [{ email: kindeUser.email }],
       },
-    })) as unknown as DbUser;
+    })) as unknown as DbUser | null;
 
-    if (!user) {
+    return {
+      valid: true,
+      user,
+      kindeUser,
+    };
+  } catch (error) {
+    console.error("Session validation error:", error);
+    return { valid: false, user: null };
+  }
+}
+
+export async function GET() {
+  try {
+    // Validate the session
+    const { valid, user, kindeUser } = await validateSession();
+
+    if (!valid || !user) {
       return NextResponse.json(
-        { success: false, message: "User not found" },
-        { status: 404 },
+        { success: false, message: "Unauthorized" },
+        { status: 401 },
       );
     }
 
@@ -53,6 +67,7 @@ export async function GET() {
         createdAt: user.createdAt.toISOString(),
         image: user.image,
         phoneNumber: user.phoneNumber,
+        paymentPreference: user.paymentPreference,
       },
     });
   } catch (error) {
@@ -69,11 +84,10 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    // Get the authenticated user
-    const { getUser } = getKindeServerSession();
-    const kindeUser = await getUser();
+    // Validate the session
+    const { valid, user, kindeUser } = await validateSession();
 
-    if (!kindeUser || !kindeUser.id) {
+    if (!valid || !user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 },
@@ -87,7 +101,7 @@ export async function PUT(request: Request) {
     // Update user profile
     const updatedUser = await prisma.user.update({
       where: {
-        email: kindeUser.email as string,
+        email: kindeUser!.email as string,
       },
       data: {
         ...(name !== undefined && { name }),
@@ -106,6 +120,7 @@ export async function PUT(request: Request) {
         createdAt: updatedUser.createdAt.toISOString(),
         image: updatedUser.image,
         phoneNumber: updatedUser.phoneNumber,
+        paymentPreference: updatedUser.paymentPreference,
       },
     });
   } catch (error) {

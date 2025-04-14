@@ -12,6 +12,12 @@ import {
 } from "~/api/registrations";
 import { toast } from "react-hot-toast";
 import { duplicateRegistration } from "./duplicateHelper";
+import AddParticipantButton from "~/components/AddParticipantButton";
+import {
+  EditButton,
+  DeleteButton,
+  DuplicateButton,
+} from "~/components/ActionButtons";
 
 interface Event {
   id: string;
@@ -510,12 +516,8 @@ export default function EventRegistrationsPage({
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6 flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
         <div>
-          <h1 className="text-2xl font-bold">
-            Event Registrations{" "}
-            {!eventLoading && event ? `- ${event.title}` : null}
-            {eventLoading && (
-              <span className="ml-2 inline-block h-5 w-32 animate-pulse rounded bg-gray-200 align-middle"></span>
-            )}
+          <h1 className="text-2xl font-bold text-gray-900">
+            {event ? `Event Registrations - ${event.title}` : "Loading..."}
           </h1>
           {event && !eventLoading ? (
             <p className="mt-2 text-gray-600">
@@ -534,14 +536,11 @@ export default function EventRegistrationsPage({
             </p>
           ) : null}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="default"
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <AddParticipantButton
             onClick={() => setShowForm(true)}
             className="w-full sm:w-auto"
-          >
-            Add Participant
-          </Button>
+          />
           <Button
             variant="outline"
             onClick={() => setCompactView(!compactView)}
@@ -551,7 +550,7 @@ export default function EventRegistrationsPage({
           </Button>
           <Link
             href={`/admin/events`}
-            className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
           >
             <svg
               className="-ml-1 mr-2 h-5 w-5 text-gray-500"
@@ -750,11 +749,23 @@ export default function EventRegistrationsPage({
               </Button>
               <Button
                 type="button"
-                variant="outline"
+                variant="delete"
                 onClick={confirmDelete}
                 disabled={processing === "delete" + registrationToDelete}
-                className="w-full bg-red-100 text-red-700 hover:bg-red-200 sm:w-auto"
+                className="w-full sm:w-auto"
               >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="mr-1 h-4 w-4"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
                 {processing === "delete" + registrationToDelete
                   ? "Deleting..."
                   : "Delete"}
@@ -774,13 +785,11 @@ export default function EventRegistrationsPage({
       ) : registrations.length === 0 ? (
         <div className="rounded-lg border border-gray-200 bg-white p-8 text-center">
           <p className="text-gray-600">No registrations found for this event</p>
-          <Button
-            variant="default"
+          <AddParticipantButton
+            isFirst
             onClick={() => setShowForm(true)}
             className="mt-4"
-          >
-            Add First Participant
-          </Button>
+          />
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
@@ -918,15 +927,24 @@ export default function EventRegistrationsPage({
                   <td className="px-6 py-4">
                     <div className="flex flex-wrap gap-2">
                       <Button
-                        variant="outline"
+                        variant="edit"
                         onClick={() => handleEditClick(registration)}
                         className="px-3 py-1 text-xs"
+                        size="sm"
                       >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="mr-1 h-3 w-3"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                        </svg>
                         Edit
                       </Button>
                       {!compactView && (
                         <Button
-                          variant="outline"
+                          variant="duplicate"
                           onClick={() =>
                             handleDuplicateRegistration(registration)
                           }
@@ -934,22 +952,48 @@ export default function EventRegistrationsPage({
                             processing === "duplicate" + registration.id
                           }
                           className="px-3 py-1 text-xs"
+                          size="sm"
                         >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="mr-1 h-3 w-3"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" />
+                            <path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z" />
+                          </svg>
                           {processing === "duplicate" + registration.id
                             ? "..."
                             : "Duplicate"}
                         </Button>
                       )}
                       <Button
-                        variant="outline"
+                        variant="delete"
                         onClick={() => handleDeleteClick(registration.id)}
                         disabled={
                           processing === "payment" + registration.id ||
-                          processing === "attendance" + registration.id
+                          processing === "attendance" + registration.id ||
+                          processing === "delete" + registration.id
                         }
-                        className="px-3 py-1 text-xs text-red-500 hover:bg-red-50 hover:text-red-700"
+                        className="px-3 py-1 text-xs"
+                        size="sm"
                       >
-                        Delete
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="mr-1 h-3 w-3"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        {processing === "delete" + registration.id
+                          ? "..."
+                          : "Delete"}
                       </Button>
                     </div>
                   </td>
@@ -990,7 +1034,7 @@ export default function EventRegistrationsPage({
 
                   <div className="flex shrink-0 gap-1">
                     <Button
-                      variant="outline"
+                      variant="edit"
                       onClick={() => handleEditClick(registration)}
                       className="h-7 w-7 rounded-full p-0"
                     >
@@ -1010,11 +1054,12 @@ export default function EventRegistrationsPage({
                       </svg>
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="delete"
                       onClick={() => handleDeleteClick(registration.id)}
                       disabled={
                         processing === "payment" + registration.id ||
-                        processing === "attendance" + registration.id
+                        processing === "attendance" + registration.id ||
+                        processing === "delete" + registration.id
                       }
                       className="h-7 w-7 rounded-full p-0 text-red-500"
                     >
@@ -1072,8 +1117,8 @@ export default function EventRegistrationsPage({
                 {!compactView && (
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     <Button
-                      variant="outline"
-                      onClick={() => togglePaymentStatus(registration.id)}
+                      variant="edit"
+                      onClick={() => handleEditClick(registration)}
                       disabled={processing === "payment" + registration.id}
                       className={`text-xs ${
                         registration.status === "PAID"

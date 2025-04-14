@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
-import { LogoutLink } from "@kinde-oss/kinde-auth-nextjs/components";
+import { LogoutLink, LoginLink } from "@kinde-oss/kinde-auth-nextjs/components";
 import { Button } from "~/components/ui/button";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ProfileFormSchema, ProfileFormValues } from "./validations";
 import toast from "react-hot-toast";
+import { AuthCheck } from "~/components/AuthCheck";
 
 interface UserProfile {
   id: string;
@@ -21,6 +22,14 @@ interface UserProfile {
 }
 
 export default function ProfilePage() {
+  return (
+    <AuthCheck>
+      <ProfileContent />
+    </AuthCheck>
+  );
+}
+
+function ProfileContent() {
   const { user } = useKindeBrowserClient();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,6 +64,11 @@ export default function ProfilePage() {
     async function fetchProfile() {
       try {
         const response = await fetch("/api/user/profile");
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const data = await response.json();
 
         if (data.success) {
@@ -82,6 +96,10 @@ export default function ProfilePage() {
     fetchProfile();
   }, [user?.given_name, user?.family_name, setValue]);
 
+  if (loading) {
+    return <div className="p-8 text-center">Loading your profile...</div>;
+  }
+
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString();
   };
@@ -96,6 +114,11 @@ export default function ProfilePage() {
         },
         body: JSON.stringify({ paymentPreference: preference }),
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
       if (data.success) {
         setPaymentPreference(data.paymentPreference);
@@ -142,6 +165,10 @@ export default function ProfilePage() {
         body: JSON.stringify(data),
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const responseData = await response.json();
 
       if (responseData.success) {
@@ -178,10 +205,6 @@ export default function ProfilePage() {
       toast.error("Invalid phone number format");
     }
   };
-
-  if (loading) {
-    return <div className="p-8 text-center">Loading your profile...</div>;
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">

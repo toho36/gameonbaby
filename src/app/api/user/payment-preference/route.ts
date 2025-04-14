@@ -1,36 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { validateSession } from "../profile/route";
 
 const prisma = new PrismaClient();
 
 export async function GET() {
   try {
-    const { getUser } = getKindeServerSession();
-    const kindeUser = await getUser();
+    // Use the shared validation function
+    const sessionResult = await validateSession();
 
-    if (!kindeUser || !kindeUser.email) {
+    if (!sessionResult.valid || !sessionResult.user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 },
       );
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: kindeUser.email },
-      select: { paymentPreference: true },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "User not found" },
-        { status: 404 },
-      );
-    }
-
     return NextResponse.json({
       success: true,
-      paymentPreference: user.paymentPreference,
+      paymentPreference: sessionResult.user.paymentPreference || "CARD",
     });
   } catch (error) {
     console.error("Error fetching payment preference:", error);
@@ -43,10 +32,10 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
-    const { getUser } = getKindeServerSession();
-    const kindeUser = await getUser();
+    // Use the shared validation function
+    const sessionResult = await validateSession();
 
-    if (!kindeUser || !kindeUser.email) {
+    if (!sessionResult.valid || !sessionResult.user) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 },
@@ -63,7 +52,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const user = await prisma.user.update({
-      where: { email: kindeUser.email },
+      where: { email: sessionResult.user.email as string },
       data: { paymentPreference },
       select: { paymentPreference: true },
     });

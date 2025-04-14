@@ -33,6 +33,8 @@ export default function WaitingListPage({
   const [isLoading, setIsLoading] = useState(true);
   const [isPromoting, setIsPromoting] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [isAddingUser, setIsAddingUser] = useState(false);
   const router = useRouter();
 
   // Format a date
@@ -145,6 +147,56 @@ export default function WaitingListPage({
     }
   };
 
+  const handleAddToWaitingList = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
+
+    const firstName = formData.get("firstName") as string;
+    const lastName = formData.get("lastName") as string;
+    const email = formData.get("email") as string;
+    const phoneNumber = formData.get("phoneNumber") as string;
+    const paymentType = formData.get("paymentType") as string;
+
+    if (!firstName || !email) {
+      toast.error("First name and email are required");
+      return;
+    }
+
+    try {
+      setIsAddingUser(true);
+      const response = await fetch("/api/waitinglist/guest", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          firstName,
+          lastName: lastName || "",
+          email,
+          phoneNumber: phoneNumber || "",
+          eventId: params.id,
+          paymentType,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        toast.success("User added to the waiting list successfully!");
+        setShowAddForm(false);
+        form.reset();
+        fetchWaitingList();
+      } else {
+        toast.error(data.message || "Failed to add user to waiting list");
+      }
+    } catch (error) {
+      console.error("Error adding user to waiting list:", error);
+      toast.error("An error occurred while adding user to waiting list");
+    } finally {
+      setIsAddingUser(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-100">
@@ -240,11 +292,17 @@ export default function WaitingListPage({
             </div>
             <div className="mt-4 flex space-x-3 sm:mt-0">
               <Link
-                href={`/admin/events/${params.id}`}
+                href={`/admin/events/${params.id}/registrations`}
                 className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
               >
+                View Registrations
+              </Link>
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              >
                 <svg
-                  className="-ml-1 mr-2 h-5 w-5 text-gray-500"
+                  className="-ml-1 mr-2 h-5 w-5"
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 20 20"
                   fill="currentColor"
@@ -252,18 +310,12 @@ export default function WaitingListPage({
                 >
                   <path
                     fillRule="evenodd"
-                    d="M7.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l2.293 2.293a1 1 0 010 1.414z"
+                    d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
                     clipRule="evenodd"
                   />
                 </svg>
-                Back to Event
-              </Link>
-              <Link
-                href={`/admin/events/${params.id}/registrations`}
-                className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-              >
-                View Registrations
-              </Link>
+                Add to Waiting List
+              </button>
             </div>
           </div>
 
@@ -398,6 +450,165 @@ export default function WaitingListPage({
           )}
         </div>
       </div>
+
+      {/* Add to Waiting List Modal */}
+      {showAddForm && (
+        <div className="fixed inset-0 z-10 overflow-y-auto">
+          <div className="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
+            <div
+              className="fixed inset-0 transition-opacity"
+              aria-hidden="true"
+              onClick={() => setShowAddForm(false)}
+            >
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            <span
+              className="hidden sm:inline-block sm:h-screen sm:align-middle"
+              aria-hidden="true"
+            >
+              &#8203;
+            </span>
+
+            <div className="inline-block transform overflow-hidden rounded-lg bg-white text-left align-bottom shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:align-middle">
+              <div className="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
+                    <h3
+                      className="text-lg font-medium leading-6 text-gray-900"
+                      id="modal-title"
+                    >
+                      Add User to Waiting List
+                    </h3>
+                    <div className="mt-2">
+                      <form
+                        id="add-waiting-list-form"
+                        onSubmit={handleAddToWaitingList}
+                      >
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="col-span-2 sm:col-span-1">
+                            <label
+                              htmlFor="firstName"
+                              className="block text-sm font-medium text-gray-700"
+                            >
+                              First Name *
+                            </label>
+                            <input
+                              type="text"
+                              name="firstName"
+                              id="firstName"
+                              required
+                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            />
+                          </div>
+                          <div className="col-span-2 sm:col-span-1">
+                            <label
+                              htmlFor="lastName"
+                              className="block text-sm font-medium text-gray-700"
+                            >
+                              Last Name
+                            </label>
+                            <input
+                              type="text"
+                              name="lastName"
+                              id="lastName"
+                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <label
+                              htmlFor="email"
+                              className="block text-sm font-medium text-gray-700"
+                            >
+                              Email *
+                            </label>
+                            <input
+                              type="email"
+                              name="email"
+                              id="email"
+                              required
+                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <label
+                              htmlFor="phoneNumber"
+                              className="block text-sm font-medium text-gray-700"
+                            >
+                              Phone Number
+                            </label>
+                            <input
+                              type="tel"
+                              name="phoneNumber"
+                              id="phoneNumber"
+                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            />
+                          </div>
+                          <div className="col-span-2">
+                            <label className="block text-sm font-medium text-gray-700">
+                              Payment Method *
+                            </label>
+                            <div className="mt-2 space-y-2">
+                              <div className="flex items-center">
+                                <input
+                                  id="card"
+                                  name="paymentType"
+                                  type="radio"
+                                  value="CARD"
+                                  defaultChecked
+                                  className="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                <label
+                                  htmlFor="card"
+                                  className="ml-3 text-sm text-gray-700"
+                                >
+                                  Card / Bank Transfer
+                                </label>
+                              </div>
+                              <div className="flex items-center">
+                                <input
+                                  id="cash"
+                                  name="paymentType"
+                                  type="radio"
+                                  value="CASH"
+                                  className="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                <label
+                                  htmlFor="cash"
+                                  className="ml-3 text-sm text-gray-700"
+                                >
+                                  Cash
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+                <button
+                  type="submit"
+                  form="add-waiting-list-form"
+                  disabled={isAddingUser}
+                  className="inline-flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-70 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  {isAddingUser ? "Adding..." : "Add to Waiting List"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddForm(false)}
+                  className="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:ml-3 sm:mt-0 sm:w-auto sm:text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

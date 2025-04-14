@@ -59,19 +59,40 @@ export async function middleware(request: NextRequest) {
   const { getUser } = getKindeServerSession();
   const kindeUser = await getUser();
 
-  // If authenticated, sync user to database
-  if (kindeUser && kindeUser.id) {
-    const name =
-      `${kindeUser.given_name || ""} ${kindeUser.family_name || ""}`.trim();
+  // If user is not authenticated, redirect to login
+  if (!kindeUser || !kindeUser.id) {
+    // Construct login URL - use Kinde's login endpoint
+    const baseUrl =
+      process.env.KINDE_SITE_URL ||
+      (process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : "http://localhost:3000");
 
-    // Don't await this to avoid slowing down response
-    syncUser(kindeUser.id, kindeUser.email, name).catch(console.error);
+    // Store the URL that was attempted to be accessed
+    const callbackUrl = encodeURIComponent(request.nextUrl.pathname);
+
+    // Redirect to login
+    return NextResponse.redirect(
+      `${baseUrl}/api/auth/login?post_login_redirect_url=${callbackUrl}`,
+    );
   }
+
+  // If authenticated, sync user to database
+  const name =
+    `${kindeUser.given_name || ""} ${kindeUser.family_name || ""}`.trim();
+
+  // Don't await this to avoid slowing down response
+  syncUser(kindeUser.id, kindeUser.email, name).catch(console.error);
 
   return NextResponse.next();
 }
 
 // Only protect these routes
 export const config = {
-  matcher: ["/dashboard/:path*", "/createEvent/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/createEvent/:path*",
+    "/profile/:path*",
+    "/profile",
+  ],
 };

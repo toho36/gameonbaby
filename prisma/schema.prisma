@@ -119,7 +119,7 @@ model WaitingList {
 
 model Payment {
   id              String       @id @default(cuid())
-  registration    Registration @relation(fields: [registration_id], references: [id])
+  registration    Registration @relation(fields: [registration_id], references: [id], onDelete: Cascade)
   registration_id String       @unique
   variable_symbol String
   qr_data         String

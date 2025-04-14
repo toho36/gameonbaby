@@ -228,14 +228,23 @@ export async function deleteRegistration(id: string) {
     // First get the registration details
     const registration = await prisma.registration.findUnique({
       where: { id },
-      include: { event: true },
+      include: { event: true, payment: true },
     });
 
     if (!registration) {
       return { success: false, message: "Registration not found" };
     }
 
-    // Completely delete the registration instead of just marking it as deleted
+    // Delete the associated payment first if it exists
+    if (registration.payment) {
+      await prisma.payment.delete({
+        where: {
+          registration_id: registration.id,
+        },
+      });
+    }
+
+    // Now we can delete the registration
     await prisma.registration.delete({
       where: {
         id: registration.id,
@@ -302,6 +311,10 @@ export async function deleteRegistration(id: string) {
     return { success: true };
   } catch (error) {
     console.error("Error deleting registration:", error);
-    return { success: false, message: "Failed to delete registration" };
+    return {
+      success: false,
+      message: "Failed to delete registration",
+      error: String(error),
+    };
   }
 }

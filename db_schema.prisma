@@ -104,7 +104,7 @@ model Payment {
   qr_data         String
   paid            Boolean
   created_at      DateTime
-  registration    Registration @relation(fields: [registration_id], references: [id])
+  registration    Registration @relation(fields: [registration_id], references: [id], onDelete: Cascade)
 }
 
 enum UserRole {

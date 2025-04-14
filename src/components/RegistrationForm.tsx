@@ -406,26 +406,44 @@ export default function RegistrationForm({
         // Update the registration count in the store
         incrementRegistrationCount();
 
+        // Generate QR code regardless of payment type
+        const name = user.given_name || user.family_name || "User";
+        const qrUrl = generateQRCodeURL(name, eventDate);
+        setQrCodeUrl(qrUrl);
+
         setIsRegistered(true);
         toast.success(
           "Registration successful! Check your email for confirmation.",
         );
 
-        // Send confirmation email if payment type is CARD
-        if (paymentPreference === "CARD" && user.email) {
+        // Send confirmation email with all event details
+        if (user.email) {
           try {
-            const name = user.given_name || user.family_name || "User";
-            const qrUrl = generateQRCodeURL(name, eventDate);
+            const startTime = new Date(event.from).toLocaleTimeString("cs-CZ", {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+            const endTime = new Date(event.to).toLocaleTimeString("cs-CZ", {
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+            const eventTimeString = `${startTime} - ${endTime}`;
 
-            await sendRegistrationEmail(user.email, name, qrUrl, eventDate);
+            await sendRegistrationEmail(
+              user.email,
+              name,
+              qrUrl,
+              eventDate,
+              eventTimeString,
+              event.place || "Sportovní hala TJ JM Chodov, Mírového hnutí 2137",
+              event.title,
+            );
           } catch (emailError) {
-            // Removed console.error
+            console.error("Failed to send confirmation email:", emailError);
+            // Don't block the registration process if email fails
           }
         }
       } else {
-        // Removed console.log
-
-        // Check if the error is related to duplicate registration
         if (data.message && data.message.includes("already registered")) {
           setShowDuplicateModal(true);
         } else {
@@ -433,7 +451,6 @@ export default function RegistrationForm({
         }
       }
     } catch (error) {
-      // Removed console.error
       toast.error("Registration failed");
     } finally {
       setIsUpdating(false);

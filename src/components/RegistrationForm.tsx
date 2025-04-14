@@ -29,10 +29,14 @@ function DuplicateRegistrationModal({
   isOpen,
   onClose,
   email,
+  nameError = false,
+  duplicateName = "",
 }: {
   isOpen: boolean;
   onClose: () => void;
   email: string;
+  nameError?: boolean;
+  duplicateName?: string;
 }) {
   if (!isOpen) return null;
 
@@ -84,10 +88,22 @@ function DuplicateRegistrationModal({
             </button>
           </div>
           <div className="mb-6 rounded-lg bg-white/10 p-4">
-            <p className="text-white/90">
-              This email <span className="font-bold text-white">{email}</span>{" "}
-              is already registered for this event.
-            </p>
+            {nameError ? (
+              <div className="space-y-2">
+                <p className="text-white/90">
+                  <span className="font-bold text-white">{duplicateName}</span>{" "}
+                  is already registered for this event with your email address.
+                </p>
+                <p className="text-sm text-white/80">
+                  Each participant must have a unique name for the same email.
+                </p>
+              </div>
+            ) : (
+              <p className="text-white/90">
+                This email <span className="font-bold text-white">{email}</span>{" "}
+                is already registered for this event.
+              </p>
+            )}
           </div>
           <div className="flex justify-end">
             <button
@@ -150,6 +166,8 @@ export default function RegistrationForm({
     useState(false);
   const [friendName, setFriendName] = useState("");
   const [isRegistering, setIsRegistering] = useState(false);
+  const [duplicateName, setDuplicateName] = useState("");
+  const [isNameError, setIsNameError] = useState(false);
   // Add a ref for the friend registration form
   const friendFormRef = useRef<HTMLFormElement>(null);
 
@@ -542,6 +560,10 @@ export default function RegistrationForm({
 
   const handleFriendRegistration = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Reset any existing error state before starting a new registration
+    setIsNameError(false);
+    setDuplicateName("");
+
     // Get the form values using the form element directly from the event
     const form = e.target as HTMLFormElement;
     const friendFirstName = form.friendFirstName.value.trim();
@@ -559,6 +581,10 @@ export default function RegistrationForm({
       friendFirstName.toLowerCase() === user.given_name.toLowerCase() &&
       friendLastName.toLowerCase() === user.family_name.toLowerCase()
     ) {
+      // Set the duplicate name for display
+      setDuplicateName(`${friendFirstName} ${friendLastName}`.trim());
+      setIsNameError(true);
+      setShowDuplicateModal(true);
       toast.error("You cannot register yourself again");
       return;
     }
@@ -599,7 +625,31 @@ export default function RegistrationForm({
           console.log("Note: Form reset skipped");
         }
       } else {
-        if (data.message && data.message.includes("already registered")) {
+        // Check for specific name-based duplicate error
+        if (
+          data.message &&
+          data.message.includes("already exists a registration for") &&
+          data.message.includes("with email")
+        ) {
+          // Extract the duplicate name from the error message
+          // Format: "There already exists a registration for [NAME] with email..."
+          const nameMatch = data.message.match(
+            /registration for ([^]+?) with email/,
+          );
+          if (nameMatch && nameMatch[1]) {
+            const name = nameMatch[1].trim();
+            setDuplicateName(name);
+            setIsNameError(true);
+          } else {
+            setIsNameError(false);
+          }
+
+          setShowDuplicateModal(true);
+        } else if (
+          data.message &&
+          data.message.includes("already registered")
+        ) {
+          setIsNameError(false);
           setShowDuplicateModal(true);
         } else {
           toast.error(data.message || "Failed to register friend");
@@ -784,7 +834,11 @@ export default function RegistrationForm({
           <div className="mb-6 mt-4 w-full">
             {!showFriendForm && !friendRegistrationSuccess && (
               <button
-                onClick={() => setShowFriendForm(true)}
+                onClick={() => {
+                  setShowFriendForm(true);
+                  setIsNameError(false);
+                  setDuplicateName("");
+                }}
                 className="w-full rounded-lg bg-indigo-600/80 px-4 py-3 font-medium text-white transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1"
               >
                 <div className="flex items-center justify-center">
@@ -814,7 +868,11 @@ export default function RegistrationForm({
                     Register a Friend
                   </h4>
                   <button
-                    onClick={() => setShowFriendForm(false)}
+                    onClick={() => {
+                      setShowFriendForm(false);
+                      setIsNameError(false);
+                      setDuplicateName("");
+                    }}
                     className="rounded-full p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
                   >
                     <svg
@@ -838,6 +896,34 @@ export default function RegistrationForm({
                   Register a friend using your contact details. They'll be
                   registered with your email and phone number.
                 </p>
+
+                {isNameError && (
+                  <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+                    <div className="flex items-start">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="mr-2 h-5 w-5 flex-shrink-0 text-red-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                        />
+                      </svg>
+                      <div>
+                        <p className="font-medium">Name already registered</p>
+                        <p className="mt-1">
+                          {duplicateName} is already registered for this event.
+                          Please use a different name.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <form
                   ref={friendFormRef}
@@ -942,6 +1028,8 @@ export default function RegistrationForm({
                   onClick={() => {
                     setShowFriendForm(true);
                     setFriendRegistrationSuccess(false);
+                    setIsNameError(false);
+                    setDuplicateName("");
                   }}
                   className="w-full rounded-lg bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
                 >
@@ -1289,8 +1377,14 @@ export default function RegistrationForm({
         {/* Duplicate Registration Modal */}
         <DuplicateRegistrationModal
           isOpen={showDuplicateModal}
-          onClose={() => setShowDuplicateModal(false)}
+          onClose={() => {
+            setShowDuplicateModal(false);
+            setIsNameError(false);
+            setDuplicateName("");
+          }}
           email={getValues("email")}
+          nameError={isNameError}
+          duplicateName={duplicateName}
         />
       </div>
     );
@@ -1482,8 +1576,14 @@ export default function RegistrationForm({
       {/* Duplicate Registration Modal */}
       <DuplicateRegistrationModal
         isOpen={showDuplicateModal}
-        onClose={() => setShowDuplicateModal(false)}
+        onClose={() => {
+          setShowDuplicateModal(false);
+          setIsNameError(false);
+          setDuplicateName("");
+        }}
         email={getValues("email")}
+        nameError={isNameError}
+        duplicateName={duplicateName}
       />
     </div>
   );

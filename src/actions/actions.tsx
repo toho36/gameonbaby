@@ -235,9 +235,11 @@ export async function deleteRegistration(id: string) {
       return { success: false, message: "Registration not found" };
     }
 
-    // Delete the registration
+    // Completely delete the registration instead of just marking it as deleted
     await prisma.registration.delete({
-      where: { id },
+      where: {
+        id: registration.id,
+      },
     });
 
     // Record deletion history
@@ -251,6 +253,51 @@ export async function deleteRegistration(id: string) {
       actionType: RegistrationAction.DELETED_BY_MODERATOR,
       eventTitle: registration.event?.title,
     });
+
+    // Check if there's anyone on the waiting list for this event
+    const waitingListEntry = await prisma.waitingList.findFirst({
+      where: {
+        event_id: registration.event_id,
+      },
+      orderBy: {
+        created_at: "asc",
+      },
+    });
+
+    if (waitingListEntry) {
+      // Move the first person from the waiting list to registrations
+      const newRegistration = await prisma.registration.create({
+        data: {
+          event_id: registration.event_id,
+          first_name: waitingListEntry.first_name,
+          last_name: waitingListEntry.last_name,
+          email: waitingListEntry.email,
+          phone_number: waitingListEntry.phone_number,
+          payment_type: waitingListEntry.payment_type,
+          created_at: new Date(),
+        },
+      });
+
+      // Record moving from waiting list history
+      await recordRegistrationHistory({
+        eventId: registration.event_id,
+        registrationId: newRegistration.id,
+        waitingListId: waitingListEntry.id,
+        firstName: waitingListEntry.first_name,
+        lastName: waitingListEntry.last_name,
+        email: waitingListEntry.email,
+        phoneNumber: waitingListEntry.phone_number,
+        actionType: RegistrationAction.MOVED_FROM_WAITLIST,
+        eventTitle: registration.event?.title,
+      });
+
+      // Delete the entry from the waiting list
+      await prisma.waitingList.delete({
+        where: {
+          id: waitingListEntry.id,
+        },
+      });
+    }
 
     return { success: true };
   } catch (error) {

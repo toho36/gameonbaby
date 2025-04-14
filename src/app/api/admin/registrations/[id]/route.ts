@@ -150,15 +150,11 @@ export async function DELETE(
       );
     }
 
-    // Use a transaction to ensure both operations complete
+    // Use a transaction to ensure all operations complete
     await prisma.$transaction(async (tx) => {
-      // Mark registration as deleted instead of actually deleting it
-      await tx.registration.update({
+      // Delete the registration completely instead of just marking it as deleted
+      await tx.registration.delete({
         where: { id: params.id },
-        data: {
-          // @ts-ignore - deleted field exists in database but not yet in TypeScript types
-          deleted: true,
-        },
       });
 
       // Record the unregistration in the history table
@@ -170,22 +166,70 @@ export async function DELETE(
           last_name: registration.last_name || "",
           email: registration.email,
           phone_number: registration.phone_number || "",
-          // @ts-ignore - enum type exists in database but not yet in TypeScript types
-          action_type: "UNREGISTERED",
+          action_type: "DELETED_BY_MODERATOR",
+          user_id: kindeUser.id,
         },
       });
+
+      // Check if there's anyone on the waiting list for this event
+      const waitingListEntry = await tx.waitingList.findFirst({
+        where: {
+          event_id: registration.event_id,
+        },
+        orderBy: {
+          created_at: "asc",
+        },
+      });
+
+      if (waitingListEntry) {
+        // Move the first person from the waiting list to registrations
+        const newRegistration = await tx.registration.create({
+          data: {
+            event_id: registration.event_id,
+            first_name: waitingListEntry.first_name,
+            last_name: waitingListEntry.last_name,
+            email: waitingListEntry.email,
+            phone_number: waitingListEntry.phone_number,
+            payment_type: waitingListEntry.payment_type,
+            created_at: new Date(),
+          },
+        });
+
+        // Record moving from waiting list history
+        await (tx as any).registrationHistory.create({
+          data: {
+            event_id: registration.event_id,
+            registration_id: newRegistration.id,
+            waiting_list_id: waitingListEntry.id,
+            first_name: waitingListEntry.first_name,
+            last_name: waitingListEntry.last_name || "",
+            email: waitingListEntry.email,
+            phone_number: waitingListEntry.phone_number || "",
+            action_type: "MOVED_FROM_WAITLIST",
+            user_id: kindeUser.id,
+            event_title: registration.event?.title,
+          },
+        });
+
+        // Delete the entry from the waiting list
+        await tx.waitingList.delete({
+          where: {
+            id: waitingListEntry.id,
+          },
+        });
+      }
     });
 
     return NextResponse.json({
       success: true,
-      message: "Registration cancelled successfully",
+      message: "Registration deleted successfully",
     });
   } catch (error) {
-    console.error("Error cancelling registration:", error);
+    console.error("Error deleting registration:", error);
     return NextResponse.json(
       {
         success: false,
-        message: "Failed to cancel registration",
+        message: "Failed to delete registration",
       },
       { status: 500 },
     );

@@ -57,12 +57,13 @@ export async function POST(request: NextRequest) {
     const firstName = user.given_name || "";
     const lastName = user.family_name || "";
 
+    // Check if this user is already registered for this event
     const existingRegistration = await prisma.registration.findFirst({
       where: {
         event_id: eventId,
         email: userEmail,
-        first_name: firstName,
-        last_name: lastName,
+        // @ts-ignore - deleted field exists in database but not yet in TypeScript types
+        deleted: false,
       },
     });
 
@@ -75,6 +76,16 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+
+    // Check if there's a deleted registration to reactivate
+    const deletedRegistration = await prisma.registration.findFirst({
+      where: {
+        event_id: eventId,
+        email: userEmail,
+        // @ts-ignore - deleted field exists in database but not yet in TypeScript types
+        deleted: true,
+      },
+    });
 
     // Get payment type from payment preference
     const paymentType =
@@ -90,18 +101,72 @@ export async function POST(request: NextRequest) {
         ? userRecords[0]?.phoneNumber
         : null;
 
-    // Create the registration
-    const newRegistration = await prisma.registration.create({
-      data: {
-        first_name: firstName,
-        last_name: lastName,
-        email: userEmail,
-        phone_number: userPhoneNumber,
-        payment_type: paymentType,
-        created_at: new Date(),
-        event: { connect: { id: eventId } },
-      },
-    });
+    let newRegistration;
+
+    if (deletedRegistration) {
+      // Reactivate the deleted registration
+      newRegistration = await prisma.registration.update({
+        where: { id: deletedRegistration.id },
+        data: {
+          // @ts-ignore - deleted field exists in database but not yet in TypeScript types
+          deleted: false,
+          phone_number: userPhoneNumber,
+          payment_type: paymentType,
+          created_at: new Date(),
+        },
+      });
+
+      // Record history
+      await prisma.$executeRaw`
+        INSERT INTO "RegistrationHistory" (
+          id, event_id, registration_id, 
+          first_name, last_name, email, phone_number, 
+          action_type, timestamp
+        ) VALUES (
+          ${Math.random().toString(36).substring(2, 15)}, 
+          ${eventId}, 
+          ${newRegistration.id},
+          ${firstName}, 
+          ${lastName || null}, 
+          ${userEmail}, 
+          ${userPhoneNumber || null},
+          'REACTIVATED', 
+          ${new Date()}
+        );
+      `;
+    } else {
+      // Create the registration
+      newRegistration = await prisma.registration.create({
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+          email: userEmail,
+          phone_number: userPhoneNumber,
+          payment_type: paymentType,
+          created_at: new Date(),
+          event: { connect: { id: eventId } },
+        },
+      });
+
+      // Record history
+      await prisma.$executeRaw`
+        INSERT INTO "RegistrationHistory" (
+          id, event_id, registration_id, 
+          first_name, last_name, email, phone_number, 
+          action_type, timestamp
+        ) VALUES (
+          ${Math.random().toString(36).substring(2, 15)}, 
+          ${eventId}, 
+          ${newRegistration.id},
+          ${firstName}, 
+          ${lastName || null}, 
+          ${userEmail}, 
+          ${userPhoneNumber || null},
+          'REGISTERED', 
+          ${new Date()}
+        );
+      `;
+    }
 
     return NextResponse.json({
       success: true,

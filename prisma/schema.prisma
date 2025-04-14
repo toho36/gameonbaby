@@ -152,4 +152,5 @@ enum RegistrationAction {
   EVENT_CREATED
   EVENT_DELETED
   EVENT_UPDATED
+  REACTIVATED
 }

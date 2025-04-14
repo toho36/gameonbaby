@@ -203,7 +203,7 @@ export const useDeleteRegistration = () => {
         });
       }
 
-      toast.success("Registration deleted successfully");
+      toast.success("Registration marked as deleted successfully");
     },
     onError: (error) => {
       toast.error(

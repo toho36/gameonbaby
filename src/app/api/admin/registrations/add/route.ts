@@ -105,20 +105,49 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if there's a deleted registration with the same details that we can reactivate
+    const deletedRegistration = await prisma.registration.findFirst({
+      where: {
+        event_id: eventId,
+        email,
+        first_name: firstName,
+        last_name: lastName || "",
+        // @ts-ignore - deleted field exists in database but not yet in TypeScript types
+        deleted: true, // Look for deleted registrations
+      },
+    });
+
     // Use a transaction to ensure both operations complete
     const newRegistration = await prisma.$transaction(async (tx) => {
-      // Create the registration
-      const registration = await tx.registration.create({
-        data: {
-          first_name: firstName,
-          last_name: lastName,
-          email,
-          phone_number: phoneNumber,
-          payment_type: paymentType,
-          created_at: new Date(),
-          event: { connect: { id: eventId } },
-        },
-      });
+      let registration;
+
+      if (deletedRegistration) {
+        // Reactivate the deleted registration instead of creating a new one
+        registration = await tx.registration.update({
+          where: { id: deletedRegistration.id },
+          data: {
+            // @ts-ignore - deleted field exists in database but not yet in TypeScript types
+            deleted: false,
+            phone_number: phoneNumber,
+            payment_type: paymentType,
+            // Update created_at to reflect reactivation time
+            created_at: new Date(),
+          },
+        });
+      } else {
+        // Create new registration if no deleted one exists
+        registration = await tx.registration.create({
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            email,
+            phone_number: phoneNumber,
+            payment_type: paymentType,
+            created_at: new Date(),
+            event: { connect: { id: eventId } },
+          },
+        });
+      }
 
       // Record in history
       await (tx as any).registrationHistory.create({
@@ -130,7 +159,8 @@ export async function POST(request: NextRequest) {
           email,
           phone_number: phoneNumber || "",
           // @ts-ignore - enum type exists in database but not yet in TypeScript types
-          action_type: "REGISTERED",
+          action_type: deletedRegistration ? "REACTIVATED" : "REGISTERED",
+          user_id: kindeUser.id,
         },
       });
 

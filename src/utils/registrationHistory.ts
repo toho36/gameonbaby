@@ -16,6 +16,7 @@ export enum RegistrationAction {
   EVENT_CREATED = "EVENT_CREATED",
   EVENT_DELETED = "EVENT_DELETED",
   EVENT_UPDATED = "EVENT_UPDATED",
+  REACTIVATED = "REACTIVATED",
 }
 
 // Type definition for registration history entry

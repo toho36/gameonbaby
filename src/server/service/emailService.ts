@@ -16,17 +16,15 @@ export async function sendRegistrationEmail(
       from: "info@gameon.baby",
       to: [toEmail],
       subject: "Your Registration QR Code",
-      react: EmailTemplate({ firstName, qrCodeUrl, eventDate }), // Pass eventDate here
+      react: EmailTemplate({ firstName, qrCodeUrl, eventDate }),
     });
 
     if (error) {
-      console.error("Error sending email:", error);
       throw new Error("Failed to send email");
     }
 
     return data;
   } catch (error) {
-    console.error("Email sending error:", error);
     throw error;
   }
 }
@@ -56,13 +54,11 @@ export async function sendWaitingListPromotionEmail(
     });
 
     if (error) {
-      console.error("Error sending promotion email:", error);
       throw new Error("Failed to send promotion email");
     }
 
     return data;
   } catch (error) {
-    console.error("Email sending error:", error);
     throw error;
   }
 }

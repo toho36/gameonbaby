@@ -37,7 +37,6 @@ export async function createEvent(formData: FormData) {
         return { error: "Event with this data already exists" };
       }
     }
-    console.error(error);
     return { error: "Failed to create event" };
   }
 }
@@ -91,7 +90,6 @@ export async function updateEvent(id: string, formData: FormData) {
     revalidatePath(`/admin/events/${id}`);
     return { success: true };
   } catch (error) {
-    console.error(error);
     return { error: "Failed to update event" };
   }
 }
@@ -124,7 +122,6 @@ export async function duplicateEvent(id: string) {
     revalidatePath("/admin/events");
     return { success: true, eventId: newEvent.id };
   } catch (error) {
-    console.error(error);
     return { error: "Failed to duplicate event" };
   }
 }
@@ -151,7 +148,6 @@ export async function deleteEvent(id: string) {
     revalidatePath("/admin/events");
     return { success: true };
   } catch (error) {
-    console.error(error);
     return { error: "Failed to delete event" };
   }
 }
@@ -169,12 +165,6 @@ export async function createRegistration(
   formData: FormData,
 ): Promise<{ success: boolean; message?: string; registration?: any }> {
   try {
-    console.log(
-      "Received form data:",
-      formData.get("first_name"),
-      formData.get("email"),
-    );
-
     const eventId = formData.get("event_id") as string;
     let event;
 
@@ -189,14 +179,12 @@ export async function createRegistration(
     }
 
     if (!event) {
-      console.log("No event found for registration.");
       return {
         success: false,
         message: "No event available for registration.",
       };
     }
 
-    console.log("Creating new registration...");
     const registration = await prisma.registration.create({
       data: {
         first_name: formData.get("first_name") as string,
@@ -208,10 +196,8 @@ export async function createRegistration(
       },
     });
 
-    console.log("Registration created successfully.");
     return { success: true, registration };
   } catch (error) {
-    console.error("Error creating registration:", error);
     return {
       success: false,
       message: "Failed to complete registration. Please try again later.",

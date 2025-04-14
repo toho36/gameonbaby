@@ -133,7 +133,8 @@ export default function EventRegistrationsPage({
           return;
         }
       } catch (error) {
-        console.error("Error checking permissions:", error);
+        // Error handling without console.error
+        toast.error("Failed to check permissions");
       }
     }
 
@@ -150,10 +151,12 @@ export default function EventRegistrationsPage({
         if (data.success) {
           setEvent(data.event);
         } else {
-          console.error("Error loading event:", data.message);
+          // Error handling without console.error
+          toast.error(data.message || "Failed to load event");
         }
       } catch (error) {
-        console.error("Error loading event:", error);
+        // Error handling without console.error
+        toast.error("Failed to load event");
       } finally {
         setEventLoading(false);
       }
@@ -183,7 +186,7 @@ export default function EventRegistrationsPage({
           onSuccess: () =>
             handleStatusUpdate(registrationId, { status: newStatus }),
           onError: (error) => {
-            console.error("Error toggling payment status:", error);
+            // Error handling without console.error
             toast.error(
               error instanceof Error
                 ? error.message
@@ -194,7 +197,7 @@ export default function EventRegistrationsPage({
         },
       );
     } catch (error) {
-      console.error("Error toggling payment status:", error);
+      // Error handling without console.error
       toast.error("Failed to update payment status");
       setProcessing(null);
     }
@@ -219,7 +222,7 @@ export default function EventRegistrationsPage({
           onSuccess: () =>
             handleStatusUpdate(registrationId, { attended: newAttendedStatus }),
           onError: (error) => {
-            console.error("Error toggling attendance:", error);
+            // Error handling without console.error
             toast.error(
               error instanceof Error
                 ? error.message
@@ -230,7 +233,7 @@ export default function EventRegistrationsPage({
         },
       );
     } catch (error) {
-      console.error("Error toggling attendance:", error);
+      // Error handling without console.error
       toast.error("Failed to update attendance");
       setProcessing(null);
     }
@@ -254,7 +257,7 @@ export default function EventRegistrationsPage({
           toast.success("Registration deleted successfully");
         },
         onError: (error) => {
-          console.error("Error deleting registration:", error);
+          // Error handling without console.error
           toast.error(
             error instanceof Error
               ? error.message
@@ -409,14 +412,14 @@ export default function EventRegistrationsPage({
               setCurrentRegistration(null);
             },
             onError: (error) => {
-              console.error("Error updating participant:", error);
+              // Error handling without console.error
               toast.error("Failed to update participant");
             },
           },
         );
       }
     } catch (error) {
-      console.error("Form submission error:", error);
+      // Error handling without console.error
       toast.error(
         error instanceof Error
           ? error.message

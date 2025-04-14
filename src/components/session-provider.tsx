@@ -22,12 +22,9 @@ export function SessionProvider({ children }: SessionProviderProps) {
         .then(async (res) => {
           if (!res.ok) {
             const data = await res.json();
-            console.error("Error syncing user session:", data);
           }
         })
-        .catch((err) => {
-          console.error("Failed to sync user session:", err);
-        });
+        .catch((err) => {});
     }
   }, [isAuthenticated, isLoading, user?.id]);
 
@@ -67,13 +64,10 @@ export function SessionProvider({ children }: SessionProviderProps) {
           if (logoutLink) {
             logoutLink.click();
           }
-          console.log("Auth session expired, logging out user");
         } else {
           setSessionValid(true);
         }
-      } catch (error) {
-        console.error("Error validating session:", error);
-      }
+      } catch (error) {}
     };
 
     // Validate session immediately

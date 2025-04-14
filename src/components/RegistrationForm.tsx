@@ -175,16 +175,6 @@ export default function RegistrationForm({
   const { incrementRegistrationCount, initialize } =
     useEventRegistrationStore();
 
-  // Debug state for troubleshooting rendering issues
-  useEffect(() => {
-    console.log("Registration state updated:", {
-      isRegistered,
-      isAuthenticated,
-      userRegistration,
-      showGuestForm,
-    });
-  }, [isRegistered, isAuthenticated, userRegistration, showGuestForm]);
-
   // Initialize react-hook-form with Zod validation
   const {
     register,
@@ -257,7 +247,7 @@ export default function RegistrationForm({
         }
       }
     } catch (error) {
-      console.error("Error fetching user profile:", error);
+      // Removed console.error
     }
   }
 
@@ -269,7 +259,7 @@ export default function RegistrationForm({
         setPaymentPreference(data.paymentPreference);
       }
     } catch (error) {
-      console.error("Error fetching payment preference:", error);
+      // Removed console.error
     }
   }
 
@@ -287,7 +277,7 @@ export default function RegistrationForm({
         setPaymentPreference(data.paymentPreference);
       }
     } catch (error) {
-      console.error("Error updating payment preference:", error);
+      // Removed console.error
     }
   }
 
@@ -302,7 +292,7 @@ export default function RegistrationForm({
         setIsRegistered(true);
       }
     } catch (error) {
-      console.error("Error checking registration status:", error);
+      // Removed console.error
     }
   }
 
@@ -315,13 +305,12 @@ export default function RegistrationForm({
         setIsOnWaitingList(true);
       }
     } catch (error) {
-      console.error("Error checking waiting list status:", error);
+      // Removed console.error
     }
   }
 
   const handleGuestRegistration = async (data: RegistrationFormValues) => {
     setIsUpdating(true);
-    console.log("Starting guest registration process");
 
     if (event._count.Registration >= event.capacity) {
       toast.error("Event is full");
@@ -330,7 +319,6 @@ export default function RegistrationForm({
     }
 
     try {
-      console.log("Submitting registration data:", data);
       const response = await fetch("/api/registration", {
         method: "POST",
         headers: {
@@ -347,26 +335,20 @@ export default function RegistrationForm({
       });
 
       const responseData = await response.json();
-      console.log("Registration response:", response.status, responseData);
 
-      // For successful registration (201 Created)
       if (response.status === 201) {
-        // Generate QR code if payment type is CARD
         if (data.paymentType === "CARD") {
           const qrCode = generateQRCodeURL(
             `${data.firstName} ${data.lastName}`.trim(),
             eventDate,
           );
           setQrCodeUrl(qrCode);
-          console.log("QR code generated");
         }
 
-        // Important - clear form data and update success states
         reset();
         incrementRegistrationCount();
         toast.success("Registration successful!");
 
-        // Set required state variables
         setUserRegistration({
           firstName: data.firstName,
           lastName: data.lastName || "",
@@ -375,18 +357,10 @@ export default function RegistrationForm({
           ...responseData,
         });
 
-        // Clear form display
         setShowGuestForm(false);
-
-        // Clear any previous errors
         setError(null);
         setSuccess("Registration successful!");
-
-        // MOST IMPORTANT - force the component to re-render with success message
         setIsRegistered(true);
-
-        // Log final state
-        console.log("Registration successful, isRegistered set to true");
       } else if (response.status === 409) {
         setShowDuplicateModal(true);
       } else {
@@ -396,7 +370,6 @@ export default function RegistrationForm({
         toast.error(responseData.message || "Registration failed");
       }
     } catch (err) {
-      console.error("Registration error:", err);
       setError("An error occurred during registration. Please try again.");
       toast.error("Registration failed");
     } finally {
@@ -446,22 +419,21 @@ export default function RegistrationForm({
 
             await sendRegistrationEmail(user.email, name, qrUrl, eventDate);
           } catch (emailError) {
-            console.error("Failed to send registration email:", emailError);
+            // Removed console.error
           }
         }
       } else {
-        console.log("Registration failed:", data);
+        // Removed console.log
 
         // Check if the error is related to duplicate registration
         if (data.message && data.message.includes("already registered")) {
-          // Show the duplicate registration modal
           setShowDuplicateModal(true);
         } else {
           toast.error(data.error || data.message || "Registration failed");
         }
       }
     } catch (error) {
-      console.error("Error registering:", error);
+      // Removed console.error
       toast.error("Registration failed");
     } finally {
       setIsUpdating(false);
@@ -492,13 +464,13 @@ export default function RegistrationForm({
         setIsOnWaitingList(true);
         toast.success("You've been added to the waiting list!");
       } else {
-        console.log("Waiting list registration failed:", data);
+        // Removed console.log
         toast.error(
           data.error || data.message || "Failed to join waiting list",
         );
       }
     } catch (error) {
-      console.error("Error joining waiting list:", error);
+      // Removed console.error
       toast.error("Failed to join waiting list");
     } finally {
       setIsUpdating(false);
@@ -537,7 +509,7 @@ export default function RegistrationForm({
         setIsOnWaitingList(true);
         toast.success("You've been added to the waiting list!");
       } else {
-        console.error("Waiting list error:", data);
+        // Removed console.error
 
         // Check if error is related to already being on waiting list
         if (
@@ -551,7 +523,7 @@ export default function RegistrationForm({
         }
       }
     } catch (error) {
-      console.error("Error joining waiting list:", error);
+      // Removed console.error
       toast.error("Failed to join waiting list. Please try again later.");
     } finally {
       setIsUpdating(false);
@@ -622,7 +594,7 @@ export default function RegistrationForm({
             form.reset();
           }
         } catch (resetError) {
-          console.log("Note: Form reset skipped");
+          // Removed console.log
         }
       } else {
         // Check for specific name-based duplicate error
@@ -656,7 +628,7 @@ export default function RegistrationForm({
         }
       }
     } catch (error) {
-      console.error("Error registering friend:", error);
+      // Removed console.error
       toast.error("Failed to register friend");
     } finally {
       setIsRegistering(false);
@@ -669,7 +641,7 @@ export default function RegistrationForm({
 
   // Show guest registration success message
   if (isRegistered && !isAuthenticated) {
-    console.log("Rendering guest registration success message");
+    // Removed console.log
     return (
       <div className="rounded-xl border border-white/10 bg-gradient-to-br from-purple-900/40 to-indigo-900/40 p-6 shadow-xl backdrop-blur-lg">
         <div className="mb-6 text-center">

@@ -2,8 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
-import { LogoutLink } from "@kinde-oss/kinde-auth-nextjs/components";
+import { LogoutLink, LoginLink } from "@kinde-oss/kinde-auth-nextjs/components";
 import { Button } from "~/components/ui/button";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { ProfileFormSchema, ProfileFormValues } from "./validations";
+import toast from "react-hot-toast";
+import { AuthCheck } from "~/components/AuthCheck";
 
 interface UserProfile {
   id: string;
@@ -17,6 +22,14 @@ interface UserProfile {
 }
 
 export default function ProfilePage() {
+  return (
+    <AuthCheck>
+      <ProfileContent />
+    </AuthCheck>
+  );
+}
+
+function ProfileContent() {
   const { user } = useKindeBrowserClient();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,21 +44,47 @@ export default function ProfilePage() {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Initialize react-hook-form with Zod validation
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+    setError,
+  } = useForm<ProfileFormValues>({
+    resolver: zodResolver(ProfileFormSchema),
+    defaultValues: {
+      name: "",
+      phoneNumber: "",
+      image: null,
+    },
+  });
+
   useEffect(() => {
     async function fetchProfile() {
       try {
         const response = await fetch("/api/user/profile");
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const data = await response.json();
 
         if (data.success) {
           setProfile(data.user);
           setPaymentPreference(data.user.paymentPreference || "CARD");
-          setTempName(
+          const name =
             data.user.name ||
-              `${user?.given_name || ""} ${user?.family_name || ""}`.trim(),
-          );
+            `${user?.given_name || ""} ${user?.family_name || ""}`.trim();
+          setTempName(name);
           setTempPhone(data.user.phoneNumber || "");
           setProfileImage(data.user.image);
+
+          // Set form default values
+          setValue("name", name);
+          setValue("phoneNumber", data.user.phoneNumber || "");
+          setValue("image", data.user.image);
         }
       } catch (error) {
         console.error("Error fetching profile:", error);
@@ -55,7 +94,11 @@ export default function ProfilePage() {
     }
 
     fetchProfile();
-  }, [user?.given_name, user?.family_name]);
+  }, [user?.given_name, user?.family_name, setValue]);
+
+  if (loading) {
+    return <div className="p-8 text-center">Loading your profile...</div>;
+  }
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString();
@@ -71,6 +114,11 @@ export default function ProfilePage() {
         },
         body: JSON.stringify({ paymentPreference: preference }),
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
       if (data.success) {
         setPaymentPreference(data.paymentPreference);
@@ -117,6 +165,10 @@ export default function ProfilePage() {
         body: JSON.stringify(data),
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const responseData = await response.json();
 
       if (responseData.success) {
@@ -137,13 +189,22 @@ export default function ProfilePage() {
   };
 
   const handlePhoneSave = () => {
-    updateUserProfile({ phoneNumber: tempPhone });
-    setIsEditingPhone(false);
-  };
+    try {
+      // Validate the phone number using the Zod schema
+      const result = ProfileFormSchema.shape.phoneNumber.safeParse(tempPhone);
 
-  if (loading) {
-    return <div className="p-8 text-center">Loading your profile...</div>;
-  }
+      if (!result.success) {
+        toast.error("Please enter a valid phone number");
+        return;
+      }
+
+      updateUserProfile({ phoneNumber: tempPhone });
+      setIsEditingPhone(false);
+    } catch (error) {
+      console.error("Phone validation error:", error);
+      toast.error("Invalid phone number format");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -305,14 +366,25 @@ export default function ProfilePage() {
                 </h3>
                 {isEditingPhone ? (
                   <div className="mt-1 flex items-center">
-                    <input
-                      type="tel"
-                      value={tempPhone}
-                      onChange={(e) => setTempPhone(e.target.value)}
-                      className="block w-full rounded-md border-gray-300 py-1.5 text-gray-900 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm"
-                      placeholder="Your phone number"
-                      autoFocus
-                    />
+                    <div className="w-full">
+                      <input
+                        type="tel"
+                        value={tempPhone}
+                        onChange={(e) => setTempPhone(e.target.value)}
+                        className={`block w-full rounded-md border ${
+                          errors.phoneNumber
+                            ? "border-red-500"
+                            : "border-gray-300"
+                        } py-1.5 text-gray-900 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm`}
+                        placeholder="Your phone number"
+                        autoFocus
+                      />
+                      {errors.phoneNumber && (
+                        <p className="mt-1 text-xs text-red-500">
+                          {errors.phoneNumber.message}
+                        </p>
+                      )}
+                    </div>
                     <button
                       onClick={handlePhoneSave}
                       className="ml-2 inline-flex items-center rounded bg-purple-600 p-1 text-white hover:bg-purple-700"

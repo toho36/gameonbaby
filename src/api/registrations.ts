@@ -128,11 +128,15 @@ export const useUpdateRegistration = () => {
       updateRegistrationInStore(registrationId, updates);
 
       // Don't invalidate the query to avoid full refresh
-      // if (currentEventId) {
-      //   queryClient.invalidateQueries({
-      //     queryKey: ["registrations", currentEventId],
-      //   });
-      // }
+      if (currentEventId) {
+        queryClient.invalidateQueries({
+          queryKey: ["registrations", currentEventId],
+        });
+        // Also invalidate events to refresh the registration count
+        queryClient.invalidateQueries({
+          queryKey: ["events"],
+        });
+      }
 
       // Show a success message
       if (updates.status !== undefined) {
@@ -189,11 +193,15 @@ export const useDeleteRegistration = () => {
       removeRegistration(registrationId);
 
       // Don't invalidate the query to avoid full refresh
-      // if (currentEventId) {
-      //   queryClient.invalidateQueries({
-      //     queryKey: ["registrations", currentEventId],
-      //   });
-      // }
+      if (currentEventId) {
+        queryClient.invalidateQueries({
+          queryKey: ["registrations", currentEventId],
+        });
+        // Also invalidate events to refresh the registration count
+        queryClient.invalidateQueries({
+          queryKey: ["events"],
+        });
+      }
 
       toast.success("Registration deleted successfully");
     },

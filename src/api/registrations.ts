@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import useRegistrationStore from "~/stores/registrationStore";
 import { toast } from "react-hot-toast";
+import { NextResponse } from "next/server";
 
 // Fetch registrations for an event
 export const useRegistrations = (eventId: string) => {

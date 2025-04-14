@@ -31,7 +31,6 @@ async function syncUser(
           role: "USER",
         },
       });
-      console.log("Created new user for:", email);
     }
     // If found but doesn't have kindeId, update it
     else if (user && !user.kindeId) {
@@ -42,10 +41,9 @@ async function syncUser(
           kindeId: userId,
         },
       });
-      console.log("Updated kindeId for user:", email);
     }
   } catch (error) {
-    console.error("Error syncing user:", error);
+    // Silently handle error
   }
 }
 

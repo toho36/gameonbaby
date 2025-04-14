@@ -10,13 +10,23 @@ export async function sendRegistrationEmail(
   firstName: string,
   qrCodeUrl: string,
   eventDate: string,
+  eventTime?: string,
+  eventLocation?: string,
+  eventTitle?: string,
 ) {
   try {
     const { data, error } = await resend.emails.send({
       from: "info@gameon.baby",
       to: [toEmail],
-      subject: "Your Registration QR Code",
-      react: EmailTemplate({ firstName, qrCodeUrl, eventDate }),
+      subject: "Your Registration Confirmation - GameOn Event",
+      react: EmailTemplate({
+        firstName,
+        qrCodeUrl,
+        eventDate,
+        eventTime,
+        eventLocation,
+        eventTitle,
+      }),
     });
 
     if (error) {

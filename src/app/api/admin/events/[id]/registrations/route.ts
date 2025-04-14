@@ -28,11 +28,10 @@ export async function GET(
       );
     }
 
-    // Find the user in our database
+    // Find the user in our database - use a more efficient query
     const currentUser = (await prisma.user.findFirst({
-      where: {
-        OR: [{ email: user.email }],
-      },
+      where: { email: user.email },
+      select: { id: true, email: true, role: true },
     })) as unknown as DbUser;
 
     if (
@@ -45,9 +44,17 @@ export async function GET(
       );
     }
 
-    // Verify the event exists
+    // Verify the event exists - only select fields we need
     const event = await prisma.event.findUnique({
       where: { id: params.id },
+      select: {
+        id: true,
+        title: true,
+        price: true,
+        from: true,
+        to: true,
+        created_at: true,
+      },
     });
 
     if (!event) {
@@ -60,15 +67,17 @@ export async function GET(
       );
     }
 
-    // Fetch registrations for this event
+    // Use a more optimized query
     const registrations = await prismaRaw.$queryRaw`
-      SELECT r.*, 
-             p.id as payment_id, p.paid as payment_paid, 
-             p.created_at as payment_created_at, p.variable_symbol, p.qr_data
+      SELECT 
+        r.id, r.first_name, r.last_name, r.email, r.phone_number, 
+        r.payment_type, r.created_at, r.attended,
+        p.paid as payment_paid
       FROM "Registration" r
       LEFT JOIN "Payment" p ON r.id = p.registration_id
       WHERE r.event_id = ${params.id} AND r.deleted = false
       ORDER BY r.created_at ASC
+      LIMIT 500
     `;
 
     const formattedRegistrations = (registrations as any[]).map((reg) => ({

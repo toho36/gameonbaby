@@ -3,6 +3,10 @@ import useRegistrationStore from "~/stores/registrationStore";
 import { toast } from "react-hot-toast";
 import { NextResponse } from "next/server";
 
+// Cache time constants
+const STALE_TIME = 2 * 60 * 1000; // 2 minutes
+const CACHE_TIME = 10 * 60 * 1000; // 10 minutes
+
 // Fetch registrations for an event
 export const useRegistrations = (eventId: string) => {
   const setRegistrations = useRegistrationStore(
@@ -25,6 +29,9 @@ export const useRegistrations = (eventId: string) => {
       try {
         const response = await fetch(
           `/api/admin/events/${eventId}/registrations`,
+          {
+            cache: "no-cache", // Prevent browser caching
+          },
         );
         const data = await response.json();
 
@@ -63,6 +70,9 @@ export const useRegistrations = (eventId: string) => {
       }
     },
     enabled: !!eventId,
+    staleTime: STALE_TIME, // Data considered fresh for 2 minutes
+    gcTime: CACHE_TIME, // Keep data in cache for 10 minutes
+    refetchOnWindowFocus: false, // Don't refetch when window regains focus
   });
 };
 
@@ -123,21 +133,21 @@ export const useUpdateRegistration = () => {
 
       return { registrationId, updates };
     },
-    onSuccess: ({ registrationId, updates }) => {
-      // Update local store without triggering a full refetch
-      updateRegistrationInStore(registrationId, updates);
-
-      // Don't invalidate the query to avoid full refresh
+    onMutate: async ({ registrationId, updates }) => {
+      // Cancel any outgoing refetches
       if (currentEventId) {
-        queryClient.invalidateQueries({
+        await queryClient.cancelQueries({
           queryKey: ["registrations", currentEventId],
-        });
-        // Also invalidate events to refresh the registration count
-        queryClient.invalidateQueries({
-          queryKey: ["events"],
         });
       }
 
+      // Apply optimistic update to the local store
+      updateRegistrationInStore(registrationId, updates);
+
+      // Return context for potential rollback
+      return { registrationId, updates };
+    },
+    onSuccess: ({ registrationId, updates }) => {
       // Show a success message
       if (updates.status !== undefined) {
         toast.success(
@@ -152,8 +162,32 @@ export const useUpdateRegistration = () => {
       } else if (updates.paymentMethod !== undefined) {
         toast.success("Payment method updated");
       }
+
+      // Only invalidate the counts query, not the full registrations data
+      if (currentEventId) {
+        queryClient.invalidateQueries({
+          queryKey: ["eventCounts"],
+        });
+      }
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // On error, revert the optimistic update
+      if (context && currentEventId) {
+        const { registrationId, updates } = context;
+        const invertedUpdates: any = {};
+
+        if (updates.status !== undefined) {
+          invertedUpdates.status =
+            updates.status === "PAID" ? "UNPAID" : "PAID";
+        }
+        if (updates.attended !== undefined) {
+          invertedUpdates.attended = !updates.attended;
+        }
+
+        // Revert the optimistic update
+        updateRegistrationInStore(registrationId, invertedUpdates);
+      }
+
       toast.error(
         error instanceof Error
           ? error.message

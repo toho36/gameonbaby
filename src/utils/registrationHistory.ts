@@ -88,17 +88,26 @@ export async function recordRegistrationHistory({
     };
 
     try {
-      // Check if the table exists using raw query
-      const result = await prismaRaw.$queryRaw`
-        SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_schema = 'public'
-          AND table_name = 'RegistrationHistory'
-        );
-      `;
+      // Use the same caching approach for table existence check
+      const cacheKey = `registrationHistoryTable_exists_${process.env.NODE_ENV}`;
+      let tableExists = false;
+
+      if (typeof global[cacheKey as keyof typeof global] === "boolean") {
+        tableExists = global[cacheKey as keyof typeof global] as boolean;
+      } else {
+        const result = await prismaRaw.$queryRaw`
+          SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_schema = 'public'
+            AND table_name = 'RegistrationHistory'
+          );
+        `;
+        tableExists = (result as any)[0]?.exists;
+        (global as any)[cacheKey] = tableExists;
+      }
 
       // If the table exists, insert directly using raw SQL
-      if ((result as any)[0]?.exists) {
+      if (tableExists) {
         await prismaRaw.$executeRaw`
           INSERT INTO "RegistrationHistory" (
             id, event_id, registration_id, waiting_list_id, 
@@ -110,21 +119,16 @@ export async function recordRegistrationHistory({
             ${actionType}, ${new Date()}, ${userId || null}, ${eventTitle || null}
           );
         `;
-        console.log("Registration history recorded in database");
       } else {
         // Store in memory if table doesn't exist
         registrationHistoryStorage.push(historyEntry);
-        console.log(
-          "Table doesn't exist, registration history recorded in memory",
-        );
       }
     } catch (dbError) {
       // If database operation fails, store in memory as backup
-      console.error("Database error, falling back to memory storage:", dbError);
       registrationHistoryStorage.push(historyEntry);
     }
   } catch (error) {
-    console.error("Error recording registration history:", error);
+    // Silent error handling to prevent blocking main functionality
   }
 }
 
@@ -136,34 +140,42 @@ export async function getRegistrationHistory(): Promise<
   RegistrationHistoryEntry[]
 > {
   try {
-    // Check if the table exists
-    const result = await prismaRaw.$queryRaw`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public'
-        AND table_name = 'RegistrationHistory'
-      );
-    `;
+    // Use the same caching approach as in getEventRegistrationHistory
+    const cacheKey = `registrationHistoryTable_exists_${process.env.NODE_ENV}`;
+    let tableExists = false;
+
+    if (typeof global[cacheKey as keyof typeof global] === "boolean") {
+      tableExists = global[cacheKey as keyof typeof global] as boolean;
+    } else {
+      const result = await prismaRaw.$queryRaw`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public'
+          AND table_name = 'RegistrationHistory'
+        );
+      `;
+      tableExists = (result as any)[0]?.exists;
+      (global as any)[cacheKey] = tableExists;
+    }
 
     // If table exists, get data from database
-    if ((result as any)[0]?.exists) {
+    if (tableExists) {
       const history = await prismaRaw.$queryRaw<RegistrationHistoryEntry[]>`
         SELECT * FROM "RegistrationHistory"
-        ORDER BY timestamp DESC;
+        ORDER BY timestamp DESC
+        LIMIT 200;
       `;
-      console.log(`Retrieved ${history.length} history entries from database`);
       return history;
     } else {
-      console.log("Table doesn't exist, returning from memory");
-      return [...registrationHistoryStorage].sort(
-        (a, b) => b.timestamp.getTime() - a.timestamp.getTime(),
-      );
+      return [...registrationHistoryStorage]
+        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+        .slice(0, 200);
     }
   } catch (dbError) {
     console.error("Database error, falling back to memory storage:", dbError);
-    return [...registrationHistoryStorage].sort(
-      (a, b) => b.timestamp.getTime() - a.timestamp.getTime(),
-    );
+    return [...registrationHistoryStorage]
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      .slice(0, 200);
   }
 }
 
@@ -175,36 +187,48 @@ export async function getEventRegistrationHistory(
   eventId: string,
 ): Promise<RegistrationHistoryEntry[]> {
   try {
-    // Check if the table exists
-    const result = await prismaRaw.$queryRaw`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public'
-        AND table_name = 'RegistrationHistory'
-      );
-    `;
+    // Check if the table exists with a cached approach to avoid redundant schema queries
+    const cacheKey = `registrationHistoryTable_exists_${process.env.NODE_ENV}`;
+    let tableExists = false;
+
+    // Use cache if available (could be enhanced with actual caching library)
+    if (typeof global[cacheKey as keyof typeof global] === "boolean") {
+      tableExists = global[cacheKey as keyof typeof global] as boolean;
+    } else {
+      const result = await prismaRaw.$queryRaw`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public'
+          AND table_name = 'RegistrationHistory'
+        );
+      `;
+      tableExists = (result as any)[0]?.exists;
+
+      // Cache the result
+      (global as any)[cacheKey] = tableExists;
+    }
 
     // If table exists, get data from database
-    if ((result as any)[0]?.exists) {
+    if (tableExists) {
+      // Add LIMIT to prevent excessive data fetching
       const history = await prismaRaw.$queryRaw<RegistrationHistoryEntry[]>`
         SELECT * FROM "RegistrationHistory"
         WHERE event_id = ${eventId}
-        ORDER BY timestamp DESC;
+        ORDER BY timestamp DESC
+        LIMIT 200;
       `;
-      console.log(
-        `Retrieved ${history.length} history entries for event ${eventId} from database`,
-      );
       return history;
     } else {
-      console.log("Table doesn't exist, returning from memory");
       return [...registrationHistoryStorage]
         .filter((entry) => entry.event_id === eventId)
-        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+        .slice(0, 200); // Limit results for consistent behavior
     }
   } catch (dbError) {
     console.error(`Database error, falling back to memory storage:`, dbError);
     return [...registrationHistoryStorage]
       .filter((entry) => entry.event_id === eventId)
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      .slice(0, 200); // Limit results for consistent behavior
   }
 }

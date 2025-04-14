@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  Suspense,
+  lazy,
+  useMemo,
+} from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "~/components/ui/button";
@@ -19,6 +26,7 @@ import {
   DuplicateButton,
 } from "~/components/ActionButtons";
 import { useQueryClient } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
 
 interface Event {
   id: string;
@@ -34,6 +42,792 @@ interface RegistrationSummary {
   paid: number;
   attended: number;
 }
+
+// Lazy load some components to improve initial load time
+// Using dynamic import with next/dynamic instead of React.lazy for better Next.js compatibility
+const RegistrationFormModal = dynamic(
+  () => import("~/components/RegistrationFormModal"),
+  {
+    loading: () => (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="rounded-lg bg-white p-4">
+          <div className="flex items-center space-x-2">
+            <svg
+              className="h-5 w-5 animate-spin text-blue-600"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            <span>Loading...</span>
+          </div>
+        </div>
+      </div>
+    ),
+  },
+);
+
+const DeleteConfirmationModal = dynamic(
+  () => import("~/components/DeleteConfirmationModal"),
+  {
+    loading: () => (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="rounded-lg bg-white p-4">
+          <div className="flex items-center space-x-2">
+            <svg
+              className="h-5 w-5 animate-spin text-blue-600"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            <span>Loading...</span>
+          </div>
+        </div>
+      </div>
+    ),
+  },
+);
+
+// Loading Skeleton component
+const LoadingSkeleton = () => (
+  <div className="container mx-auto px-4 py-8">
+    <div className="mb-6 flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+      <div>
+        <div className="h-8 w-64 animate-pulse rounded bg-gray-200"></div>
+        <div className="mt-2 h-5 w-80 animate-pulse rounded bg-gray-200"></div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <div className="h-10 w-40 animate-pulse rounded bg-gray-200"></div>
+        <div className="h-10 w-40 animate-pulse rounded bg-gray-200"></div>
+        <div className="h-10 w-40 animate-pulse rounded bg-gray-200"></div>
+      </div>
+    </div>
+
+    <div className="mb-6 grid grid-cols-3 gap-3 rounded-lg border border-gray-200 bg-white p-4">
+      <div className="rounded-lg bg-gray-100 p-3 text-center">
+        <div className="mx-auto h-8 w-8 animate-pulse rounded-full bg-gray-300"></div>
+        <div className="mx-auto mt-2 h-4 w-24 animate-pulse rounded bg-gray-300"></div>
+      </div>
+      <div className="rounded-lg bg-gray-100 p-3 text-center">
+        <div className="mx-auto h-8 w-8 animate-pulse rounded-full bg-gray-300"></div>
+        <div className="mx-auto mt-2 h-4 w-16 animate-pulse rounded bg-gray-300"></div>
+      </div>
+      <div className="rounded-lg bg-gray-100 p-3 text-center">
+        <div className="mx-auto h-8 w-8 animate-pulse rounded-full bg-gray-300"></div>
+        <div className="mx-auto mt-2 h-4 w-20 animate-pulse rounded bg-gray-300"></div>
+      </div>
+    </div>
+
+    <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+      <table className="hidden w-full table-auto sm:table">
+        <thead>
+          <tr className="border-b bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+            <th className="px-6 py-3">Participant</th>
+            <th className="px-6 py-3">Status</th>
+            <th className="px-6 py-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-200">
+          {[...Array(5)].map((_, i) => (
+            <tr key={i}>
+              <td className="px-6 py-4">
+                <div className="h-5 w-32 animate-pulse rounded bg-gray-200"></div>
+              </td>
+              <td className="px-6 py-4">
+                <div className="h-6 w-20 animate-pulse rounded bg-gray-200"></div>
+              </td>
+              <td className="px-6 py-4">
+                <div className="flex gap-2">
+                  <div className="h-8 w-16 animate-pulse rounded bg-gray-200"></div>
+                  <div className="h-8 w-16 animate-pulse rounded bg-gray-200"></div>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+);
+
+// Extracted RegistrationTable component for better code organization
+interface RegistrationTableProps {
+  registrations: Registration[];
+  compactView: boolean;
+  lastArrivedId: string | null;
+  processing: string | null;
+  togglePaymentStatus: (id: string) => void;
+  toggleAttendance: (id: string) => void;
+  handleEditClick: (registration: Registration) => void;
+  handleDuplicateRegistration: (registration: Registration) => void;
+  handleDeleteClick: (id: string) => void;
+}
+
+const RegistrationTable: React.FC<RegistrationTableProps> = ({
+  registrations,
+  compactView,
+  lastArrivedId,
+  processing,
+  togglePaymentStatus,
+  toggleAttendance,
+  handleEditClick,
+  handleDuplicateRegistration,
+  handleDeleteClick,
+}) => {
+  return (
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+      <table className="hidden min-w-full table-auto divide-y divide-gray-200 sm:table">
+        <thead>
+          <tr className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+            <th className="px-6 py-4">Participant</th>
+            <th className="px-6 py-4">
+              {compactView ? "Status" : "Payment & Attendance"}
+            </th>
+            <th className="px-6 py-4">Actions</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-200">
+          {registrations.map((registration) => (
+            <tr
+              key={registration.id}
+              className={`transition-colors duration-200 ${
+                lastArrivedId === registration.id
+                  ? "bg-green-50"
+                  : "hover:bg-gray-50"
+              }`}
+            >
+              <td className="whitespace-nowrap px-6 py-4">
+                <div
+                  className={`text-sm font-medium text-gray-900 ${compactView ? "text-lg" : ""}`}
+                >
+                  {registration.user.name || "No name provided"}
+                </div>
+                {!compactView && (
+                  <div className="mt-1 text-xs text-gray-500">
+                    <div>{registration.user.email || "No email"}</div>
+                    <div>{registration.user.phone || "No phone"}</div>
+                  </div>
+                )}
+              </td>
+              <td className="whitespace-nowrap px-6 py-4">
+                <div className="flex flex-col gap-2 text-sm">
+                  <button
+                    onClick={() => togglePaymentStatus(registration.id)}
+                    disabled={processing === "payment" + registration.id}
+                    className={`${
+                      compactView
+                        ? `mr-2 rounded-md px-3 py-2 text-sm font-medium ${
+                            registration.status === "PAID"
+                              ? "bg-green-100 text-green-800 hover:bg-green-200"
+                              : "bg-red-100 text-red-800 hover:bg-red-200"
+                          }`
+                        : `mr-2 rounded-md px-2 py-1 text-xs font-medium ${
+                            registration.status === "PAID"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`
+                    }`}
+                  >
+                    {processing === "payment" + registration.id ? (
+                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
+                    ) : (
+                      <>
+                        {registration.status === "PAID" ? (
+                          <>
+                            <span className="inline-flex items-center">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="mr-1 h-4 w-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M5 13l4 4L19 7"
+                                />
+                              </svg>
+                              {compactView ? "Paid" : "Paid"}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="inline-flex items-center">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="mr-1 h-4 w-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
+                              </svg>
+                              {compactView ? "Not Paid" : "Not Paid"}
+                            </span>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => toggleAttendance(registration.id)}
+                    disabled={processing === "attendance" + registration.id}
+                    className={`${
+                      compactView
+                        ? `rounded-md px-3 py-2 text-sm font-medium ${
+                            registration.attended
+                              ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                              : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                          }`
+                        : `rounded-md px-2 py-1 text-xs font-medium ${
+                            registration.attended
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-gray-100 text-gray-800"
+                          }`
+                    }`}
+                  >
+                    {processing === "attendance" + registration.id ? (
+                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
+                    ) : (
+                      <>
+                        {registration.attended ? (
+                          <>
+                            <span className="inline-flex items-center">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="mr-1 h-4 w-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M5 13l4 4L19 7"
+                                />
+                              </svg>
+                              {compactView ? "Checked In" : "Attended"}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="inline-flex items-center">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="mr-1 h-4 w-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                />
+                              </svg>
+                              {compactView ? "Check In" : "Not Attended"}
+                            </span>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </td>
+              <td className="whitespace-nowrap px-6 py-4">
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => handleEditClick(registration)}
+                    className={`${compactView ? "hidden" : "bg-blue-50 text-blue-700 hover:bg-blue-100"} ${
+                      compactView ? "px-4 py-2 text-sm" : "px-3 py-1 text-xs"
+                    } inline-flex items-center rounded-md font-medium`}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="mr-1 h-4 w-4"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                    </svg>
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteClick(registration.id)}
+                    className={`${compactView ? "hidden" : "bg-red-50 text-red-700 hover:bg-red-100"} ${
+                      compactView ? "px-4 py-2 text-sm" : "px-3 py-1 text-xs"
+                    } inline-flex items-center rounded-md font-medium`}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="mr-1 h-4 w-4"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    Delete
+                  </button>
+
+                  {!compactView && (
+                    <button
+                      onClick={() => handleDuplicateRegistration(registration)}
+                      disabled={processing === "duplicate" + registration.id}
+                      className="inline-flex items-center rounded-md bg-purple-50 px-3 py-1 text-xs font-medium text-purple-700 hover:bg-purple-100"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="mr-1 h-4 w-4"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" />
+                        <path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z" />
+                      </svg>
+                      {processing === "duplicate" + registration.id
+                        ? "Processing..."
+                        : "Duplicate"}
+                    </button>
+                  )}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {/* Mobile view */}
+      <div className="divide-y divide-gray-200 sm:hidden">
+        {registrations.map((registration) => (
+          <div
+            key={registration.id}
+            className={`${
+              compactView
+                ? "mb-2 rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+                : "p-4"
+            } ${
+              lastArrivedId === registration.id
+                ? "bg-green-50 transition-colors duration-1000"
+                : ""
+            }`}
+          >
+            <div className="flex flex-col space-y-3">
+              <div className="flex justify-between">
+                <div
+                  className={`${compactView ? "text-lg font-semibold" : "font-medium"}`}
+                >
+                  {registration.user.name || "No name provided"}
+                </div>
+                <div className="flex space-x-2">
+                  {!compactView && (
+                    <>
+                      <button
+                        onClick={() => handleEditClick(registration)}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-blue-700"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(registration.id)}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-red-50 text-red-700"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Only show email and phone in non-compact view */}
+              {!compactView && (
+                <div className="text-sm text-gray-500">
+                  <div>{registration.user.email || "No email"}</div>
+                  <div>{registration.user.phone || "No phone"}</div>
+                </div>
+              )}
+
+              <div
+                className={`flex ${compactView ? "justify-between" : "flex-wrap"} gap-2`}
+              >
+                <button
+                  onClick={() => togglePaymentStatus(registration.id)}
+                  disabled={processing === "payment" + registration.id}
+                  className={`${
+                    compactView
+                      ? `flex-1 rounded-lg px-3 py-3 text-sm font-medium shadow-sm ${
+                          registration.status === "PAID"
+                            ? "bg-green-100 text-green-800 hover:bg-green-200"
+                            : "bg-red-100 text-red-800 hover:bg-red-200"
+                        }`
+                      : `mr-2 rounded-md px-2 py-1 text-xs font-medium ${
+                          registration.status === "PAID"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                        }`
+                  }`}
+                >
+                  {processing === "payment" + registration.id ? (
+                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
+                  ) : (
+                    <>
+                      {registration.status === "PAID" ? (
+                        <>
+                          <span className="inline-flex items-center justify-center">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="mr-1 h-4 w-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                            {compactView ? "Paid" : "Paid"}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="inline-flex items-center justify-center">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="mr-1 h-4 w-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
+                            </svg>
+                            {compactView ? "Not Paid" : "Not Paid"}
+                          </span>
+                        </>
+                      )}
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => toggleAttendance(registration.id)}
+                  disabled={processing === "attendance" + registration.id}
+                  className={`${
+                    compactView
+                      ? `flex-1 rounded-lg px-3 py-3 text-sm font-medium shadow-sm ${
+                          registration.attended
+                            ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                            : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                        }`
+                      : `rounded-md px-2 py-1 text-xs font-medium ${
+                          registration.attended
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`
+                  }`}
+                >
+                  {processing === "attendance" + registration.id ? (
+                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
+                  ) : (
+                    <>
+                      {registration.attended ? (
+                        <>
+                          <span className="inline-flex items-center justify-center">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="mr-1 h-4 w-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                            {compactView ? "Checked In" : "Attended"}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="inline-flex items-center justify-center">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="mr-1 h-4 w-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                              />
+                            </svg>
+                            {compactView ? "Check In" : "Not Attended"}
+                          </span>
+                        </>
+                      )}
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Define improved header styling
+const PageHeader = ({
+  event,
+  eventLoading,
+  setShowForm,
+  compactView,
+  setCompactView,
+  params,
+  formatDateTime,
+}: {
+  event: Event | null;
+  eventLoading: boolean;
+  setShowForm: (show: boolean) => void;
+  compactView: boolean;
+  setCompactView: (compact: boolean) => void;
+  params: { id: string; eventId: string };
+  formatDateTime: (dateStr: string) => string;
+}) => {
+  return (
+    <div className="mb-8 flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">
+          {event ? event.title : "Loading..."}
+        </h1>
+        {event && !eventLoading ? (
+          <div className="mt-2 flex flex-wrap items-center text-sm text-gray-600">
+            <span className="flex items-center text-gray-700">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="mr-1 h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+              {formatDateTime(event.from).split(",")[0]}
+            </span>
+            <span className="mx-2 text-gray-400">|</span>
+            <span className="flex items-center text-gray-700">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="mr-1 h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              {formatDateTime(event.from).split(",")[1]} -{" "}
+              {formatDateTime(event.to).split(",")[1]}
+            </span>
+            <span className="mx-2 text-gray-400">|</span>
+            <span className="flex items-center text-gray-700">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="mr-1 h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              {event.price} Kč
+            </span>
+          </div>
+        ) : eventLoading ? (
+          <p className="mt-2 text-gray-600">
+            <span className="inline-block h-4 w-40 animate-pulse rounded bg-gray-200 align-middle"></span>{" "}
+            |
+            <span className="ml-1 mr-1 inline-block h-4 w-24 animate-pulse rounded bg-gray-200 align-middle"></span>{" "}
+            |
+            <span className="inline-block h-4 w-32 animate-pulse rounded bg-gray-200 align-middle"></span>
+          </p>
+        ) : null}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setShowForm(true)}
+          className="inline-flex items-center justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="mr-1.5 h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+            />
+          </svg>
+          Add Participant
+        </button>
+        <button
+          onClick={() => setCompactView(!compactView)}
+          className={`inline-flex items-center justify-center rounded-md border px-4 py-2 text-sm font-medium shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+            compactView
+              ? "border-green-500 bg-green-50 text-green-700 hover:bg-green-100"
+              : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+          }`}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className={`mr-1.5 h-4 w-4 ${compactView ? "text-green-500" : "text-gray-500"}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d={
+                compactView
+                  ? "M4 6h16M4 10h16M4 14h16M4 18h16"
+                  : "M4 6h16M4 12h8m-8 6h16"
+              }
+            />
+          </svg>
+          {compactView ? "Event Mode Active" : "Enable Event Mode"}
+        </button>
+        <Link
+          href={`/admin/events`}
+          className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+        >
+          <svg
+            className="mr-1.5 h-4 w-4 text-gray-500"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M7.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l2.293 2.293a1 1 0 010 1.414z"
+              clipRule="evenodd"
+            />
+          </svg>
+          Back to Events
+        </Link>
+        <Link
+          href={`/admin/events/${params.id}/waitinglist`}
+          className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+        >
+          <svg
+            className="mr-1.5 h-4 w-4 text-gray-500"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 11a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+              clipRule="evenodd"
+            />
+          </svg>
+          View Waiting List
+        </Link>
+      </div>
+    </div>
+  );
+};
 
 export default function EventRegistrationsPage({
   params,
@@ -338,6 +1132,18 @@ export default function EventRegistrationsPage({
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
 
+  // Add a new state for search functionality
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Add filtered registrations based on search query
+  const filteredRegistrations = useMemo(() => {
+    if (!searchQuery.trim()) return sortedRegistrations;
+
+    return sortedRegistrations.filter((registration) =>
+      registration.user.name?.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+  }, [sortedRegistrations, searchQuery]);
+
   // Handle form submission
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -433,734 +1239,595 @@ export default function EventRegistrationsPage({
     }
   };
 
-  if (loading || registrationsLoading) {
+  // Update the memoizedRender function to use the new PageHeader component
+  const memoizedRender = useCallback(() => {
+    if (loading || registrationsLoading) {
+      return <LoadingSkeleton />;
+    }
+
+    if (error) {
+      return <div className="p-8 text-center text-red-600">{error}</div>;
+    }
+
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-6 flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-          <div>
-            <div className="h-8 w-64 animate-pulse rounded bg-gray-200"></div>
-            <div className="mt-2 h-5 w-80 animate-pulse rounded bg-gray-200"></div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <div className="h-10 w-40 animate-pulse rounded bg-gray-200"></div>
-            <div className="h-10 w-40 animate-pulse rounded bg-gray-200"></div>
-            <div className="h-10 w-40 animate-pulse rounded bg-gray-200"></div>
-          </div>
-        </div>
-
-        <div className="mb-6 grid grid-cols-3 gap-3 rounded-lg border border-gray-200 bg-white p-4">
-          <div className="rounded-lg bg-gray-100 p-3 text-center">
-            <div className="mx-auto h-8 w-8 animate-pulse rounded-full bg-gray-300"></div>
-            <div className="mx-auto mt-2 h-4 w-24 animate-pulse rounded bg-gray-300"></div>
-          </div>
-          <div className="rounded-lg bg-gray-100 p-3 text-center">
-            <div className="mx-auto h-8 w-8 animate-pulse rounded-full bg-gray-300"></div>
-            <div className="mx-auto mt-2 h-4 w-16 animate-pulse rounded bg-gray-300"></div>
-          </div>
-          <div className="rounded-lg bg-gray-100 p-3 text-center">
-            <div className="mx-auto h-8 w-8 animate-pulse rounded-full bg-gray-300"></div>
-            <div className="mx-auto mt-2 h-4 w-20 animate-pulse rounded bg-gray-300"></div>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-          <table className="hidden w-full table-auto sm:table">
-            <thead>
-              <tr className="border-b bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                <th className="px-6 py-3">Participant</th>
-                <th className="px-6 py-3">Status</th>
-                <th className="px-6 py-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {[...Array(5)].map((_, i) => (
-                <tr key={i}>
-                  <td className="px-6 py-4">
-                    <div className="h-5 w-32 animate-pulse rounded bg-gray-200"></div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="h-6 w-20 animate-pulse rounded bg-gray-200"></div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex gap-2">
-                      <div className="h-8 w-16 animate-pulse rounded bg-gray-200"></div>
-                      <div className="h-8 w-16 animate-pulse rounded bg-gray-200"></div>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <div className="divide-y divide-gray-200 sm:hidden">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="p-3">
-                <div className="flex items-center justify-between">
-                  <div className="h-5 w-32 animate-pulse rounded bg-gray-200"></div>
-                  <div className="flex gap-1">
-                    <div className="h-7 w-7 animate-pulse rounded-full bg-gray-200"></div>
-                    <div className="h-7 w-7 animate-pulse rounded-full bg-gray-200"></div>
-                  </div>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-1">
-                  <div className="h-5 w-16 animate-pulse rounded-full bg-gray-200"></div>
-                  <div className="h-5 w-16 animate-pulse rounded-full bg-gray-200"></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return <div className="p-8 text-center text-red-600">{error}</div>;
-  }
-
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6 flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            {event ? `Event Registrations - ${event.title}` : "Loading..."}
-          </h1>
-          {event && !eventLoading ? (
-            <p className="mt-2 text-gray-600">
-              <span className="font-semibold">{event.title}</span> |
-              {formatDateTime(event.from).split(",")[0]} |
-              {formatDateTime(event.from).split(",")[1]} -
-              {formatDateTime(event.to).split(",")[1]} |{event.price} Kč
-            </p>
-          ) : eventLoading ? (
-            <p className="mt-2 text-gray-600">
-              <span className="inline-block h-4 w-40 animate-pulse rounded bg-gray-200 align-middle"></span>{" "}
-              |
-              <span className="ml-1 mr-1 inline-block h-4 w-24 animate-pulse rounded bg-gray-200 align-middle"></span>{" "}
-              |
-              <span className="inline-block h-4 w-32 animate-pulse rounded bg-gray-200 align-middle"></span>
-            </p>
-          ) : null}
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <AddParticipantButton
-            onClick={() => setShowForm(true)}
-            className="w-full sm:w-auto"
+      <div className="min-h-screen bg-gray-50 pb-12">
+        <div className="container mx-auto px-4 py-8">
+          <PageHeader
+            event={event}
+            eventLoading={eventLoading}
+            setShowForm={setShowForm}
+            compactView={compactView}
+            setCompactView={setCompactView}
+            params={params}
+            formatDateTime={formatDateTime}
           />
-          <Button
-            variant="outline"
-            onClick={() => setCompactView(!compactView)}
-            className="w-full sm:w-auto"
-          >
-            {compactView ? "Show Details" : "Compact View"}
-          </Button>
-          <Link
-            href={`/admin/events`}
-            className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-          >
-            <svg
-              className="-ml-1 mr-2 h-5 w-5 text-gray-500"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                fillRule="evenodd"
-                d="M7.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l2.293 2.293a1 1 0 010 1.414z"
-                clipRule="evenodd"
-              />
-            </svg>
-            Back to Events
-          </Link>
-          <Link
-            href={`/admin/events/${params.id}/waitinglist`}
-            className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-          >
-            <svg
-              className="-ml-1 mr-2 h-5 w-5 text-gray-500"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                fillRule="evenodd"
-                d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 11a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                clipRule="evenodd"
-              />
-            </svg>
-            View Waiting List
-          </Link>
-        </div>
-      </div>
 
-      <div className="mb-6 grid grid-cols-3 gap-3 rounded-lg border border-gray-200 bg-white p-4">
-        <div className="rounded-lg bg-blue-50 p-3 text-center">
-          <span className="block text-2xl font-bold text-blue-700">
-            {summary.total}
-          </span>
-          <span className="text-xs text-blue-600 sm:text-sm">
-            <span className="hidden sm:inline">Total </span>Registrations
-          </span>
-        </div>
-        <div className="rounded-lg bg-green-50 p-3 text-center">
-          <span className="block text-2xl font-bold text-green-700">
-            {summary.paid}
-          </span>
-          <span className="text-xs text-green-600 sm:text-sm">Paid</span>
-        </div>
-        <div className="rounded-lg bg-purple-50 p-3 text-center">
-          <span className="block text-2xl font-bold text-purple-700">
-            {summary.attended}
-          </span>
-          <span className="text-xs text-purple-600 sm:text-sm">Attended</span>
-        </div>
-      </div>
+          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-blue-100 p-4 shadow-sm transition-all hover:shadow-md">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-blue-700">
+                  Total Registrations
+                </span>
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                    />
+                  </svg>
+                </span>
+              </div>
+              <p className="mt-2 text-3xl font-bold text-blue-700">
+                {summary.total}
+              </p>
+            </div>
 
-      {showForm && (
-        <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4 sm:p-6">
-          <h2 className="mb-4 text-xl font-semibold">
-            {formType === "add" ? "Add New Participant" : "Edit Participant"}
-          </h2>
-          <form onSubmit={handleFormSubmit} className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  First Name*
-                </label>
+            <div className="rounded-xl border border-green-100 bg-gradient-to-br from-green-50 to-green-100 p-4 shadow-sm transition-all hover:shadow-md">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-green-700">Paid</span>
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-green-700">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </span>
+              </div>
+              <p className="mt-2 text-3xl font-bold text-green-700">
+                {summary.paid}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-purple-100 bg-gradient-to-br from-purple-50 to-purple-100 p-4 shadow-sm transition-all hover:shadow-md">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-purple-700">
+                  Attended
+                </span>
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 text-purple-700">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </span>
+              </div>
+              <p className="mt-2 text-3xl font-bold text-purple-700">
+                {summary.attended}
+              </p>
+            </div>
+          </div>
+
+          {/* Add a search filter at the top of the table for quickly finding participants in compact mode */}
+          <div className="mb-4">
+            {compactView && (
+              <div className="relative">
                 <input
                   type="text"
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, firstName: e.target.value })
-                  }
-                  required
-                  className="w-full rounded-md border border-gray-300 p-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="Quick search by name..."
+                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 pr-10 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5 text-gray-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                </div>
               </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Last Name
-                </label>
-                <input
-                  type="text"
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, lastName: e.target.value })
-                  }
-                  className="w-full rounded-md border border-gray-300 p-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
+            )}
+          </div>
+
+          {/* Desktop view */}
+          <div className="hidden sm:block">
+            <div className="min-w-full overflow-hidden overflow-x-auto align-middle shadow sm:rounded-lg">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr>
+                    <th
+                      scope="col"
+                      className={`${
+                        compactView ? "w-1/2" : "w-1/4"
+                      } bg-gray-50 px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500`}
+                    >
+                      Name
+                    </th>
+                    {!compactView && (
+                      <>
+                        <th
+                          scope="col"
+                          className="w-1/4 bg-gray-50 px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+                        >
+                          Email
+                        </th>
+                        <th
+                          scope="col"
+                          className="w-1/4 bg-gray-50 px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+                        >
+                          Phone
+                        </th>
+                        <th
+                          scope="col"
+                          className="w-1/4 bg-gray-50 px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500"
+                        >
+                          Status
+                        </th>
+                      </>
+                    )}
+                    <th
+                      scope="col"
+                      className={`${
+                        compactView ? "w-1/2" : "w-1/4"
+                      } bg-gray-50 px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500`}
+                    >
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {registrations.map((registration) => (
+                    <tr
+                      key={registration.id}
+                      className={
+                        lastArrivedId === registration.id
+                          ? "bg-green-50 transition-colors duration-1000"
+                          : ""
+                      }
+                    >
+                      <td
+                        className={`whitespace-nowrap px-6 py-4 ${compactView ? "text-base font-medium" : ""}`}
+                      >
+                        <div className="flex items-center">
+                          <div className="h-10 w-10 flex-shrink-0">
+                            <div className="h-10 w-10 rounded-full bg-gray-200 text-center">
+                              <span className="inline-block pt-2 text-lg font-medium text-gray-600">
+                                {registration.user.name
+                                  ? registration.user.name.charAt(0)
+                                  : "?"}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {registration.user.name || "No name provided"}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      {!compactView && (
+                        <>
+                          <td className="whitespace-nowrap px-6 py-4">
+                            <div className="text-sm text-gray-900">
+                              {registration.user.email || "No email"}
+                            </div>
+                          </td>
+                          <td className="whitespace-nowrap px-6 py-4">
+                            <div className="text-sm text-gray-900">
+                              {registration.user.phone || "No phone"}
+                            </div>
+                          </td>
+                          <td className="whitespace-nowrap px-6 py-4 text-center">
+                            <div className="flex flex-col items-center justify-center gap-2">
+                              <button
+                                onClick={() =>
+                                  togglePaymentStatus(registration.id)
+                                }
+                                disabled={
+                                  processing === "payment" + registration.id
+                                }
+                                className={`${
+                                  registration.status === "PAID"
+                                    ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                    : "bg-red-100 text-red-800 hover:bg-red-200"
+                                } inline-flex items-center rounded-md px-3 py-1 text-xs font-medium`}
+                              >
+                                {processing === "payment" + registration.id ? (
+                                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
+                                ) : (
+                                  <>
+                                    {registration.status === "PAID" ? (
+                                      <>
+                                        <svg
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          className="mr-1 h-4 w-4"
+                                          fill="none"
+                                          viewBox="0 0 24 24"
+                                          stroke="currentColor"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M5 13l4 4L19 7"
+                                          />
+                                        </svg>
+                                        Paid
+                                      </>
+                                    ) : (
+                                      <>
+                                        <svg
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          className="mr-1 h-4 w-4"
+                                          fill="none"
+                                          viewBox="0 0 24 24"
+                                          stroke="currentColor"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                          />
+                                        </svg>
+                                        Not Paid
+                                      </>
+                                    )}
+                                  </>
+                                )}
+                              </button>
+
+                              <button
+                                onClick={() =>
+                                  toggleAttendance(registration.id)
+                                }
+                                disabled={
+                                  processing === "attendance" + registration.id
+                                }
+                                className={`${
+                                  registration.attended
+                                    ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                                    : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                                } inline-flex items-center rounded-md px-3 py-1 text-xs font-medium`}
+                              >
+                                {processing ===
+                                "attendance" + registration.id ? (
+                                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
+                                ) : (
+                                  <>
+                                    {registration.attended ? (
+                                      <>
+                                        <svg
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          className="mr-1 h-4 w-4"
+                                          fill="none"
+                                          viewBox="0 0 24 24"
+                                          stroke="currentColor"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M5 13l4 4L19 7"
+                                          />
+                                        </svg>
+                                        Attended
+                                      </>
+                                    ) : (
+                                      <>
+                                        <svg
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          className="mr-1 h-4 w-4"
+                                          fill="none"
+                                          viewBox="0 0 24 24"
+                                          stroke="currentColor"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                          />
+                                        </svg>
+                                        Check In
+                                      </>
+                                    )}
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </td>
+                        </>
+                      )}
+                      <td className="flex-wrap whitespace-nowrap px-6 py-4 text-center text-sm font-medium">
+                        <div className="flex flex-wrap justify-center gap-2">
+                          {compactView && (
+                            <>
+                              <button
+                                onClick={() =>
+                                  togglePaymentStatus(registration.id)
+                                }
+                                disabled={
+                                  processing === "payment" + registration.id
+                                }
+                                className={`${
+                                  registration.status === "PAID"
+                                    ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                    : "bg-red-100 text-red-800 hover:bg-red-200"
+                                } inline-flex items-center rounded-md px-4 py-2 text-sm font-medium`}
+                              >
+                                {processing === "payment" + registration.id ? (
+                                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
+                                ) : (
+                                  <>
+                                    {registration.status === "PAID" ? (
+                                      <>
+                                        <svg
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          className="mr-1 h-4 w-4"
+                                          fill="none"
+                                          viewBox="0 0 24 24"
+                                          stroke="currentColor"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M5 13l4 4L19 7"
+                                          />
+                                        </svg>
+                                        Paid
+                                      </>
+                                    ) : (
+                                      <>
+                                        <svg
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          className="mr-1 h-4 w-4"
+                                          fill="none"
+                                          viewBox="0 0 24 24"
+                                          stroke="currentColor"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                          />
+                                        </svg>
+                                        Not Paid
+                                      </>
+                                    )}
+                                  </>
+                                )}
+                              </button>
+
+                              <button
+                                onClick={() =>
+                                  toggleAttendance(registration.id)
+                                }
+                                disabled={
+                                  processing === "attendance" + registration.id
+                                }
+                                className={`${
+                                  registration.attended
+                                    ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                                    : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                                } inline-flex items-center rounded-md px-4 py-2 text-sm font-medium`}
+                              >
+                                {processing ===
+                                "attendance" + registration.id ? (
+                                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
+                                ) : (
+                                  <>
+                                    {registration.attended ? (
+                                      <>
+                                        <svg
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          className="mr-1 h-4 w-4"
+                                          fill="none"
+                                          viewBox="0 0 24 24"
+                                          stroke="currentColor"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M5 13l4 4L19 7"
+                                          />
+                                        </svg>
+                                        Attended
+                                      </>
+                                    ) : (
+                                      <>
+                                        <svg
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          className="mr-1 h-4 w-4"
+                                          fill="none"
+                                          viewBox="0 0 24 24"
+                                          stroke="currentColor"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                          />
+                                        </svg>
+                                        Check In
+                                      </>
+                                    )}
+                                  </>
+                                )}
+                              </button>
+                            </>
+                          )}
+
+                          {!compactView && (
+                            <>
+                              <button
+                                onClick={() => handleEditClick(registration)}
+                                className="inline-flex items-center rounded-md bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="mr-1 h-4 w-4"
+                                  viewBox="0 0 20 20"
+                                  fill="currentColor"
+                                >
+                                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                </svg>
+                                Edit
+                              </button>
+
+                              <button
+                                onClick={() =>
+                                  handleDeleteClick(registration.id)
+                                }
+                                className="inline-flex items-center rounded-md bg-red-50 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="mr-1 h-4 w-4"
+                                  viewBox="0 0 20 20"
+                                  fill="currentColor"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                                Delete
+                              </button>
+
+                              <button
+                                onClick={() =>
+                                  handleDuplicateRegistration(registration)
+                                }
+                                disabled={
+                                  processing === "duplicate" + registration.id
+                                }
+                                className="inline-flex items-center rounded-md bg-purple-50 px-3 py-1 text-xs font-medium text-purple-700 hover:bg-purple-100"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="mr-1 h-4 w-4"
+                                  viewBox="0 0 20 20"
+                                  fill="currentColor"
+                                >
+                                  <path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" />
+                                  <path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z" />
+                                </svg>
+                                {processing === "duplicate" + registration.id
+                                  ? "Processing..."
+                                  : "Duplicate"}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Email*
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  required
-                  className="w-full rounded-md border border-gray-300 p-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  name="phoneNumber"
-                  value={formData.phoneNumber}
-                  onChange={(e) =>
-                    setFormData({ ...formData, phoneNumber: e.target.value })
-                  }
-                  className="w-full rounded-md border border-gray-300 p-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Payment Type*
-              </label>
-              <select
-                name="paymentType"
-                value={formData.paymentType}
-                onChange={(e) =>
-                  setFormData({ ...formData, paymentType: e.target.value })
-                }
-                required
-                className="w-full rounded-md border border-gray-300 p-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              >
-                <option value="CASH">Cash</option>
-                <option value="CARD">Card (QR)</option>
-              </select>
-            </div>
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
+          </div>
+
+          {/* Forms and modals */}
+          <Suspense fallback={null}>
+            {showForm && (
+              <RegistrationFormModal
+                formType={formType}
+                currentRegistration={currentRegistration}
+                formData={formData}
+                setFormData={setFormData}
+                onSubmit={handleFormSubmit}
+                onCancel={() => {
                   setShowForm(false);
                   setCurrentRegistration(null);
                 }}
-                className="w-full sm:w-auto"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={processing === "form"}
-                className="w-full sm:w-auto"
-              >
-                {processing === "form"
-                  ? "Processing..."
-                  : formType === "add"
-                    ? "Add Participant"
-                    : "Update Participant"}
-              </Button>
-            </div>
-          </form>
-        </div>
-      )}
+                processing={!!processing}
+              />
+            )}
 
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="mx-4 max-w-md rounded-lg bg-white p-6 shadow-lg">
-            <h3 className="text-lg font-medium text-gray-900">
-              Confirm Deletion
-            </h3>
-            <p className="mt-2 text-sm text-gray-500">
-              Are you sure you want to delete this registration? This action
-              cannot be undone.
-            </p>
-            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
+            {showDeleteModal && (
+              <DeleteConfirmationModal
+                onConfirm={confirmDelete}
+                onCancel={() => {
                   setShowDeleteModal(false);
                   setRegistrationToDelete(null);
                 }}
-                className="w-full sm:w-auto"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                variant="delete"
-                onClick={confirmDelete}
-                disabled={processing === "delete" + registrationToDelete}
-                className="w-full sm:w-auto"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="mr-1 h-4 w-4"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                {processing === "delete" + registrationToDelete
-                  ? "Deleting..."
-                  : "Delete"}
-              </Button>
-            </div>
-          </div>
+                title="Delete Registration"
+                message="Are you sure you want to delete this registration? This action cannot be undone."
+                confirmButtonText="Delete"
+                isProcessing={!!processing}
+              />
+            )}
+          </Suspense>
         </div>
-      )}
+      </div>
+    );
+  }, [
+    loading,
+    registrationsLoading,
+    error,
+    registrations,
+    event,
+    compactView,
+    lastArrivedId,
+    processing,
+    showForm,
+    formType,
+    currentRegistration,
+    formData,
+    showDeleteModal,
+    searchQuery,
+  ]);
 
-      {error ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-center text-red-700">
-          <p>{error}</p>
-          <Button onClick={() => refetch()} className="mt-2" variant="outline">
-            Try Again
-          </Button>
-        </div>
-      ) : registrations.length === 0 ? (
-        <div className="rounded-lg border border-gray-200 bg-white p-8 text-center">
-          <p className="text-gray-600">No registrations found for this event</p>
-          <AddParticipantButton
-            isFirst
-            onClick={() => setShowForm(true)}
-            className="mt-4"
-          />
-        </div>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-          <table className="hidden w-full table-auto sm:table">
-            <thead>
-              <tr className="border-b bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                <th className="px-6 py-3">Participant</th>
-                {!compactView && <th className="px-6 py-3">Email</th>}
-                {!compactView && <th className="px-6 py-3">Phone</th>}
-                {!compactView && <th className="px-6 py-3">Payment</th>}
-                {!compactView && <th className="px-6 py-3">Attendance</th>}
-                {compactView && <th className="px-6 py-3">Status</th>}
-                <th className="px-6 py-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {sortedRegistrations.map((registration: Registration) => (
-                <tr
-                  key={registration.id}
-                  className={`hover:bg-gray-50 ${registration.id === lastArrivedId ? "bg-purple-50" : ""}`}
-                >
-                  <td className="max-w-[200px] px-6 py-4">
-                    <div
-                      className="truncate font-medium"
-                      title={registration.user?.name || "No name"}
-                    >
-                      {registration.user?.name || "No name"}
-                      {registration.id === lastArrivedId && (
-                        <span className="ml-2 text-xs text-purple-600">
-                          (recently marked)
-                        </span>
-                      )}
-                    </div>
-                  </td>
-
-                  {!compactView && (
-                    <td className="max-w-[200px] px-6 py-4">
-                      <div
-                        className="truncate"
-                        title={registration.user?.email || "No email"}
-                      >
-                        {registration.user?.email || "No email"}
-                      </div>
-                    </td>
-                  )}
-
-                  {!compactView && (
-                    <td className="max-w-[150px] px-6 py-4">
-                      <div
-                        className="truncate"
-                        title={registration.user?.phone || "No phone"}
-                      >
-                        {registration.user?.phone || "No phone"}
-                      </div>
-                    </td>
-                  )}
-
-                  {!compactView && (
-                    <td className="px-6 py-4">
-                      <Button
-                        variant="outline"
-                        onClick={() => togglePaymentStatus(registration.id)}
-                        disabled={processing === "payment" + registration.id}
-                        className={`px-3 py-1 text-xs ${
-                          registration.status === "PAID"
-                            ? "bg-green-100 text-green-800 hover:bg-green-200"
-                            : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
-                        }`}
-                      >
-                        {processing === "payment" + registration.id
-                          ? "Processing..."
-                          : registration.status === "PAID"
-                            ? "✓ Paid"
-                            : "⚠ Pending"}
-                      </Button>
-                    </td>
-                  )}
-
-                  {!compactView && (
-                    <td className="px-6 py-4">
-                      <Button
-                        variant="outline"
-                        onClick={() => toggleAttendance(registration.id)}
-                        disabled={processing === "attendance" + registration.id}
-                        className={`px-3 py-1 text-xs ${
-                          registration.attended
-                            ? "bg-purple-100 text-purple-800 hover:bg-purple-200"
-                            : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                        }`}
-                      >
-                        {processing === "attendance" + registration.id
-                          ? "Processing..."
-                          : registration.attended
-                            ? "✓ Arrived"
-                            : "◯ Not arrived"}
-                      </Button>
-                    </td>
-                  )}
-
-                  {compactView && (
-                    <td className="px-6 py-4">
-                      <div className="flex space-x-2">
-                        <span
-                          className={`inline-flex cursor-pointer items-center rounded-full px-2 py-0.5 text-xs ${
-                            registration.status === "PAID"
-                              ? "bg-green-100 text-green-800 hover:bg-green-200"
-                              : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
-                          }`}
-                          onClick={() => togglePaymentStatus(registration.id)}
-                        >
-                          {processing === "payment" + registration.id
-                            ? "..."
-                            : registration.status === "PAID"
-                              ? "Paid"
-                              : "Pending"}
-                        </span>
-                        <span
-                          className={`inline-flex cursor-pointer items-center rounded-full px-2 py-0.5 text-xs ${
-                            registration.attended
-                              ? "bg-purple-100 text-purple-800 hover:bg-purple-200"
-                              : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                          }`}
-                          onClick={() => toggleAttendance(registration.id)}
-                        >
-                          {processing === "attendance" + registration.id
-                            ? "..."
-                            : registration.attended
-                              ? "Arrived"
-                              : "Not arrived"}
-                        </span>
-                      </div>
-                    </td>
-                  )}
-
-                  <td className="px-6 py-4">
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        variant="edit"
-                        onClick={() => handleEditClick(registration)}
-                        className="px-3 py-1 text-xs"
-                        size="sm"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="mr-1 h-3 w-3"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                        </svg>
-                        Edit
-                      </Button>
-                      {!compactView && (
-                        <Button
-                          variant="duplicate"
-                          onClick={() =>
-                            handleDuplicateRegistration(registration)
-                          }
-                          disabled={
-                            processing === "duplicate" + registration.id
-                          }
-                          className="px-3 py-1 text-xs"
-                          size="sm"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="mr-1 h-3 w-3"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" />
-                            <path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z" />
-                          </svg>
-                          {processing === "duplicate" + registration.id
-                            ? "..."
-                            : "Duplicate"}
-                        </Button>
-                      )}
-                      <Button
-                        variant="delete"
-                        onClick={() => handleDeleteClick(registration.id)}
-                        disabled={
-                          processing === "payment" + registration.id ||
-                          processing === "attendance" + registration.id ||
-                          processing === "delete" + registration.id
-                        }
-                        className="px-3 py-1 text-xs"
-                        size="sm"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="mr-1 h-3 w-3"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        {processing === "delete" + registration.id
-                          ? "..."
-                          : "Delete"}
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <div className="divide-y divide-gray-200 sm:hidden">
-            {sortedRegistrations.map((registration: Registration) => (
-              <div
-                key={registration.id}
-                className={`p-3 ${registration.id === lastArrivedId ? "bg-purple-50" : ""}`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="max-w-[75%]">
-                    <h3 className="truncate font-medium">
-                      {registration.user?.name || "No name"}
-                      {registration.id === lastArrivedId && (
-                        <span className="ml-2 text-xs text-purple-600">
-                          (recent)
-                        </span>
-                      )}
-                    </h3>
-                    {!compactView && (
-                      <>
-                        <p className="truncate text-sm text-gray-500">
-                          {registration.user?.email || "No email"}
-                        </p>
-                        {registration.user?.phone && (
-                          <p className="truncate text-sm text-gray-500">
-                            {registration.user?.phone}
-                          </p>
-                        )}
-                      </>
-                    )}
-                  </div>
-
-                  <div className="flex shrink-0 gap-1">
-                    <Button
-                      variant="edit"
-                      onClick={() => handleEditClick(registration)}
-                      className="h-7 w-7 rounded-full p-0"
-                    >
-                      <span className="sr-only">Edit</span>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
-                      </svg>
-                    </Button>
-                    <Button
-                      variant="delete"
-                      onClick={() => handleDeleteClick(registration.id)}
-                      disabled={
-                        processing === "payment" + registration.id ||
-                        processing === "attendance" + registration.id ||
-                        processing === "delete" + registration.id
-                      }
-                      className="h-7 w-7 rounded-full p-0 text-red-500"
-                    >
-                      <span className="sr-only">Delete</span>
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M3 6h18"></path>
-                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                      </svg>
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="mt-2 flex flex-wrap gap-1">
-                  <span
-                    className={`inline-flex cursor-pointer items-center rounded-full px-2 py-0.5 text-xs ${
-                      registration.status === "PAID"
-                        ? "bg-green-100 text-green-800 hover:bg-green-200"
-                        : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
-                    }`}
-                    onClick={() => togglePaymentStatus(registration.id)}
-                  >
-                    {processing === "payment" + registration.id
-                      ? "..."
-                      : registration.status === "PAID"
-                        ? "Paid"
-                        : "Pending"}
-                  </span>
-                  <span
-                    className={`inline-flex cursor-pointer items-center rounded-full px-2 py-0.5 text-xs ${
-                      registration.attended
-                        ? "bg-purple-100 text-purple-800 hover:bg-purple-200"
-                        : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                    }`}
-                    onClick={() => toggleAttendance(registration.id)}
-                  >
-                    {processing === "attendance" + registration.id
-                      ? "..."
-                      : registration.attended
-                        ? "Arrived"
-                        : "Not arrived"}
-                  </span>
-                </div>
-
-                {!compactView && (
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    <Button
-                      variant="edit"
-                      onClick={() => handleEditClick(registration)}
-                      disabled={processing === "payment" + registration.id}
-                      className={`text-xs ${
-                        registration.status === "PAID"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-yellow-100 text-yellow-800"
-                      }`}
-                    >
-                      {processing === "payment" + registration.id
-                        ? "Processing..."
-                        : registration.status === "PAID"
-                          ? "✓ Paid"
-                          : "⚠ Pending"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => toggleAttendance(registration.id)}
-                      disabled={processing === "attendance" + registration.id}
-                      className={`text-xs ${
-                        registration.attended
-                          ? "bg-purple-100 text-purple-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {processing === "attendance" + registration.id
-                        ? "Processing..."
-                        : registration.attended
-                          ? "✓ Arrived"
-                          : "◯ Not arrived"}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  return memoizedRender();
 }

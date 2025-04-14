@@ -112,7 +112,7 @@ export async function PUT(
   }
 }
 
-// DELETE - Delete a registration
+// DELETE - Mark a registration as deleted and record in history
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } },
@@ -137,10 +137,10 @@ export async function DELETE(
       );
     }
 
-    // Check if registration exists and get related payment
+    // Check if registration exists
     const registration = await prisma.registration.findUnique({
       where: { id: params.id },
-      include: { payment: true },
+      include: { payment: true, event: true },
     });
 
     if (!registration) {
@@ -150,28 +150,42 @@ export async function DELETE(
       );
     }
 
-    // Delete payment first if it exists
-    if (registration.payment) {
-      await prisma.payment.delete({
-        where: { registration_id: registration.id },
+    // Use a transaction to ensure both operations complete
+    await prisma.$transaction(async (tx) => {
+      // Mark registration as deleted instead of actually deleting it
+      await tx.registration.update({
+        where: { id: params.id },
+        data: {
+          // @ts-ignore - deleted field exists in database but not yet in TypeScript types
+          deleted: true,
+        },
       });
-    }
 
-    // Delete the registration
-    await prisma.registration.delete({
-      where: { id: params.id },
+      // Record the unregistration in the history table
+      await (tx as any).registrationHistory.create({
+        data: {
+          event_id: registration.event_id,
+          registration_id: registration.id,
+          first_name: registration.first_name,
+          last_name: registration.last_name || "",
+          email: registration.email,
+          phone_number: registration.phone_number || "",
+          // @ts-ignore - enum type exists in database but not yet in TypeScript types
+          action_type: "UNREGISTERED",
+        },
+      });
     });
 
     return NextResponse.json({
       success: true,
-      message: "Registration deleted successfully",
+      message: "Registration cancelled successfully",
     });
   } catch (error) {
-    console.error("Error deleting registration:", error);
+    console.error("Error cancelling registration:", error);
     return NextResponse.json(
       {
         success: false,
-        message: "Failed to delete registration",
+        message: "Failed to cancel registration",
       },
       { status: 500 },
     );

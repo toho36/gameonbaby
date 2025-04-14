@@ -3,40 +3,39 @@
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import prisma from "~/lib/db";
+import {
+  recordRegistrationHistory,
+  RegistrationAction,
+} from "~/utils/registrationHistory";
 
 export async function createEvent(formData: FormData) {
   try {
-    const newEvent = await prisma.event.create({
+    const event = await prisma.event.create({
       data: {
         title: formData.get("title") as string,
         description: formData.get("description") as string,
-        price: Number(formData.get("price") || 0),
-        place: (formData.get("place") as string) || null,
-        capacity: Number(formData.get("capacity") || 0),
+        price: Number(formData.get("price")),
+        place: formData.get("place") as string,
+        capacity: Number(formData.get("capacity")),
         from: new Date(formData.get("from") as string),
         to: new Date(formData.get("to") as string),
         created_at: new Date(),
-        visible: formData.get("visible") === "true",
       },
     });
+
+    // Record event creation history
+    await recordRegistrationHistory({
+      eventId: event.id,
+      firstName: "System",
+      email: "system@event.management",
+      actionType: RegistrationAction.EVENT_CREATED,
+      eventTitle: event.title,
+    });
+
     revalidatePath("/events");
-    revalidatePath("/admin/events");
-    return {
-      success: true,
-      event: {
-        ...newEvent,
-        from: newEvent.from.toISOString(),
-        to: newEvent.to.toISOString(),
-        created_at: newEvent.created_at.toISOString(),
-        _count: { Registration: 0 },
-      },
-    };
+    revalidatePath("/");
+    return { id: event.id };
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === "P2002") {
-        return { error: "Event with this data already exists" };
-      }
-    }
     return { error: "Failed to create event" };
   }
 }
@@ -128,24 +127,31 @@ export async function duplicateEvent(id: string) {
 
 export async function deleteEvent(id: string) {
   try {
-    // Check if event has registrations
-    const registrationCount = await prisma.registration.count({
-      where: { event_id: id },
+    // Get event details before deletion
+    const event = await prisma.event.findUnique({
+      where: { id },
     });
 
-    if (registrationCount > 0) {
-      return {
-        error:
-          "Cannot delete event with existing registrations. Consider hiding it instead.",
-      };
+    if (!event) {
+      return { error: "Event not found" };
     }
 
+    // Delete the event
     await prisma.event.delete({
       where: { id },
     });
 
+    // Record event deletion history
+    await recordRegistrationHistory({
+      eventId: id,
+      firstName: "System",
+      email: "system@event.management",
+      actionType: RegistrationAction.EVENT_DELETED,
+      eventTitle: event.title,
+    });
+
     revalidatePath("/events");
-    revalidatePath("/admin/events");
+    revalidatePath("/");
     return { success: true };
   } catch (error) {
     return { error: "Failed to delete event" };
@@ -196,6 +202,18 @@ export async function createRegistration(
       },
     });
 
+    // Record registration history
+    await recordRegistrationHistory({
+      eventId: event.id,
+      registrationId: registration.id,
+      firstName: registration.first_name,
+      lastName: registration.last_name || null,
+      email: registration.email,
+      phoneNumber: registration.phone_number || null,
+      actionType: RegistrationAction.REGISTERED,
+      eventTitle: event.title,
+    });
+
     return { success: true, registration };
   } catch (error) {
     return {
@@ -206,7 +224,37 @@ export async function createRegistration(
 }
 
 export async function deleteRegistration(id: string) {
-  await prisma.registration.delete({
-    where: { id },
-  });
+  try {
+    // First get the registration details
+    const registration = await prisma.registration.findUnique({
+      where: { id },
+      include: { event: true },
+    });
+
+    if (!registration) {
+      return { success: false, message: "Registration not found" };
+    }
+
+    // Delete the registration
+    await prisma.registration.delete({
+      where: { id },
+    });
+
+    // Record deletion history
+    await recordRegistrationHistory({
+      eventId: registration.event_id,
+      registrationId: id,
+      firstName: registration.first_name,
+      lastName: registration.last_name,
+      email: registration.email,
+      phoneNumber: registration.phone_number,
+      actionType: RegistrationAction.DELETED_BY_MODERATOR,
+      eventTitle: registration.event?.title,
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting registration:", error);
+    return { success: false, message: "Failed to delete registration" };
+  }
 }

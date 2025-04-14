@@ -12,7 +12,12 @@
     "dev": "next dev",
     "postinstall": "prisma generate",
     "lint": "next lint",
-    "start": "next start"
+    "start": "next start",
+    "init-reg-history": "node src/scripts/create-registration-history-table.cjs",
+    "fix-reg-history": "node --loader ts-node/esm src/scripts/add-missing-columns.js",
+    "fix-action-type": "node --loader ts-node/esm src/scripts/fix-action-type.js",
+    "fix-action-type-cjs": "node src/scripts/fix-action-type.cjs",
+    "migrate-enum-values": "node src/scripts/migrate-enum-values.cjs"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"

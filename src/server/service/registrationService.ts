@@ -4,6 +4,10 @@ import getCode, { ErrorCodes, Modules } from "~/app/api/error/error-codes";
 import { PaymentType } from "~/app/constant/paymentType";
 import { ApiError } from "~/utils/ApiError";
 import * as paymentService from "~/server/service/paymentService";
+import {
+  recordRegistrationHistory,
+  RegistrationAction,
+} from "~/utils/registrationHistory";
 
 const prisma = new PrismaClient();
 
@@ -91,6 +95,18 @@ export async function createRegistration(
         payment_type: command.paymentType,
         created_at: new Date(),
       },
+    });
+
+    // Record registration history
+    await recordRegistrationHistory({
+      eventId: event.id,
+      registrationId: registration.id,
+      firstName: registration.first_name,
+      lastName: registration.last_name,
+      email: registration.email,
+      phoneNumber: registration.phone_number,
+      actionType: RegistrationAction.REGISTERED,
+      eventTitle: event.title,
     });
 
     const paymentData =

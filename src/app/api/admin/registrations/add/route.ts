@@ -90,6 +90,8 @@ export async function POST(request: NextRequest) {
         email,
         first_name: firstName,
         last_name: lastName || "",
+        // @ts-ignore - deleted field exists in database but not yet in TypeScript types
+        deleted: false, // Only check active registrations
       },
     });
 
@@ -103,17 +105,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create the registration
-    const newRegistration = await prisma.registration.create({
-      data: {
-        first_name: firstName,
-        last_name: lastName,
-        email,
-        phone_number: phoneNumber,
-        payment_type: paymentType,
-        created_at: new Date(),
-        event: { connect: { id: eventId } },
-      },
+    // Use a transaction to ensure both operations complete
+    const newRegistration = await prisma.$transaction(async (tx) => {
+      // Create the registration
+      const registration = await tx.registration.create({
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+          email,
+          phone_number: phoneNumber,
+          payment_type: paymentType,
+          created_at: new Date(),
+          event: { connect: { id: eventId } },
+        },
+      });
+
+      // Record in history
+      await (tx as any).registrationHistory.create({
+        data: {
+          event_id: eventId,
+          registration_id: registration.id,
+          first_name: firstName,
+          last_name: lastName || "",
+          email,
+          phone_number: phoneNumber || "",
+          // @ts-ignore - enum type exists in database but not yet in TypeScript types
+          action_type: "REGISTERED",
+        },
+      });
+
+      return registration;
     });
 
     return NextResponse.json({

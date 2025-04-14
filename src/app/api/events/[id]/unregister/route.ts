@@ -4,6 +4,10 @@ import { getCurrentUser } from "~/server/service/userService";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { PrismaClient } from "@prisma/client";
 import { sendWaitingListPromotionEmail } from "~/server/service/emailService";
+import {
+  recordRegistrationHistory,
+  RegistrationAction,
+} from "~/utils/registrationHistory";
 
 export async function POST(
   request: NextRequest,
@@ -78,6 +82,19 @@ export async function POST(
       },
     });
 
+    // Record unregistration history
+    await recordRegistrationHistory({
+      eventId: eventId,
+      registrationId: registration.id,
+      firstName: registration.first_name,
+      lastName: registration.last_name,
+      email: registration.email,
+      phoneNumber: registration.phone_number,
+      actionType: RegistrationAction.UNREGISTERED,
+      userId: user.id,
+      eventTitle: event.title,
+    });
+
     // Check if there's anyone on the waiting list for this event
     const waitingListEntry = await prisma.waitingList.findFirst({
       where: {
@@ -95,7 +112,7 @@ export async function POST(
       });
 
       // Move the first person from the waiting list to registrations
-      await prisma.registration.create({
+      const newRegistration = await prisma.registration.create({
         data: {
           event_id: eventId,
           first_name: waitingListEntry.first_name,
@@ -105,6 +122,19 @@ export async function POST(
           payment_type: waitingListEntry.payment_type,
           created_at: new Date(),
         },
+      });
+
+      // Record moving from waiting list history
+      await recordRegistrationHistory({
+        eventId: eventId,
+        registrationId: newRegistration.id,
+        waitingListId: waitingListEntry.id,
+        firstName: waitingListEntry.first_name,
+        lastName: waitingListEntry.last_name,
+        email: waitingListEntry.email,
+        phoneNumber: waitingListEntry.phone_number,
+        actionType: RegistrationAction.MOVED_FROM_WAITLIST,
+        eventTitle: event?.title,
       });
 
       // Delete the entry from the waiting list

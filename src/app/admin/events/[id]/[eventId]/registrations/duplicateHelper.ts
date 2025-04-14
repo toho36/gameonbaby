@@ -1,12 +1,14 @@
 import { Registration } from "~/stores/registrationStore";
 import { toast } from "react-hot-toast";
 import useRegistrationStore from "~/stores/registrationStore";
+import { QueryClient } from "@tanstack/react-query";
 
 export async function duplicateRegistration(
   registration: Registration,
   eventId: string,
   setProcessing: (id: string | null) => void,
   refetch: () => void,
+  queryClient?: QueryClient,
 ) {
   try {
     setProcessing("duplicate" + registration.id);
@@ -57,10 +59,26 @@ export async function duplicateRegistration(
 
         // Add the new registration to the store
         addRegistration(newRegistration);
+
+        // Invalidate events query to refresh counts
+        if (queryClient) {
+          queryClient.invalidateQueries({
+            queryKey: ["events"],
+          });
+        }
+
         toast.success("Registration duplicated successfully");
       } else {
         // Fallback to refetch if response doesn't include registration data
         refetch();
+
+        // Invalidate events query to refresh counts
+        if (queryClient) {
+          queryClient.invalidateQueries({
+            queryKey: ["events"],
+          });
+        }
+
         toast.success("Registration duplicated successfully");
       }
     } else {

@@ -18,6 +18,7 @@ import {
   DeleteButton,
   DuplicateButton,
 } from "~/components/ActionButtons";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Event {
   id: string;
@@ -80,6 +81,7 @@ export default function EventRegistrationsPage({
   );
   const { mutate: updateRegistration } = useUpdateRegistration();
   const { mutate: deleteRegistration } = useDeleteRegistration();
+  const queryClient = useQueryClient();
 
   // Force update registrations when the page loads
   useEffect(() => {
@@ -318,6 +320,7 @@ export default function EventRegistrationsPage({
       params.eventId,
       setProcessing,
       refetch,
+      queryClient,
     );
   }
 

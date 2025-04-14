@@ -112,7 +112,7 @@ export async function PUT(
   }
 }
 
-// DELETE - Delete a registration
+// DELETE - Mark a registration as deleted and record in history
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } },
@@ -137,10 +137,10 @@ export async function DELETE(
       );
     }
 
-    // Check if registration exists and get related payment
+    // Check if registration exists
     const registration = await prisma.registration.findUnique({
       where: { id: params.id },
-      include: { payment: true },
+      include: { payment: true, event: true },
     });
 
     if (!registration) {
@@ -150,16 +150,74 @@ export async function DELETE(
       );
     }
 
-    // Delete payment first if it exists
-    if (registration.payment) {
-      await prisma.payment.delete({
-        where: { registration_id: registration.id },
+    // Use a transaction to ensure all operations complete
+    await prisma.$transaction(async (tx) => {
+      // Delete the registration completely instead of just marking it as deleted
+      await tx.registration.delete({
+        where: { id: params.id },
       });
-    }
 
-    // Delete the registration
-    await prisma.registration.delete({
-      where: { id: params.id },
+      // Record the unregistration in the history table
+      await (tx as any).registrationHistory.create({
+        data: {
+          event_id: registration.event_id,
+          registration_id: registration.id,
+          first_name: registration.first_name,
+          last_name: registration.last_name || "",
+          email: registration.email,
+          phone_number: registration.phone_number || "",
+          action_type: "DELETED_BY_MODERATOR",
+          user_id: kindeUser.id,
+        },
+      });
+
+      // Check if there's anyone on the waiting list for this event
+      const waitingListEntry = await tx.waitingList.findFirst({
+        where: {
+          event_id: registration.event_id,
+        },
+        orderBy: {
+          created_at: "asc",
+        },
+      });
+
+      if (waitingListEntry) {
+        // Move the first person from the waiting list to registrations
+        const newRegistration = await tx.registration.create({
+          data: {
+            event_id: registration.event_id,
+            first_name: waitingListEntry.first_name,
+            last_name: waitingListEntry.last_name,
+            email: waitingListEntry.email,
+            phone_number: waitingListEntry.phone_number,
+            payment_type: waitingListEntry.payment_type,
+            created_at: new Date(),
+          },
+        });
+
+        // Record moving from waiting list history
+        await (tx as any).registrationHistory.create({
+          data: {
+            event_id: registration.event_id,
+            registration_id: newRegistration.id,
+            waiting_list_id: waitingListEntry.id,
+            first_name: waitingListEntry.first_name,
+            last_name: waitingListEntry.last_name || "",
+            email: waitingListEntry.email,
+            phone_number: waitingListEntry.phone_number || "",
+            action_type: "MOVED_FROM_WAITLIST",
+            user_id: kindeUser.id,
+            event_title: registration.event?.title,
+          },
+        });
+
+        // Delete the entry from the waiting list
+        await tx.waitingList.delete({
+          where: {
+            id: waitingListEntry.id,
+          },
+        });
+      }
     });
 
     return NextResponse.json({

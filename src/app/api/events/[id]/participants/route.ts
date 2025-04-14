@@ -26,13 +26,6 @@ export async function GET(
       where: {
         id: eventId,
       },
-      select: {
-        _count: {
-          select: {
-            Registration: true,
-          },
-        },
-      },
     });
 
     if (!event) {
@@ -43,20 +36,20 @@ export async function GET(
     }
 
     // Fetch registrations with email for identification
-    const registrations = await prisma.registration.findMany({
-      where: {
-        event_id: eventId,
-      },
-      select: {
-        first_name: true,
-        last_name: true,
-        created_at: true,
-        email: true, // Include email for user identification
-      },
-      orderBy: {
-        created_at: "asc",
-      },
-    });
+    // Use raw query to filter out deleted registrations
+    const registrationsRaw = await prismaRaw.$queryRaw`
+      SELECT first_name, last_name, created_at, email
+      FROM "Registration"
+      WHERE event_id = ${eventId} AND deleted = false
+      ORDER BY created_at ASC
+    `;
+
+    const registrations = registrationsRaw as {
+      first_name: string;
+      last_name: string | null;
+      created_at: Date;
+      email: string;
+    }[];
 
     // Fetch waiting list entries with raw query
     let waitingList: WaitingListEntry[] = [];
@@ -72,11 +65,22 @@ export async function GET(
       waitingList = [];
     }
 
+    // Get active registration count (non-deleted registrations)
+    const registrationCountResult = await prismaRaw.$queryRaw`
+      SELECT COUNT(*) as count
+      FROM "Registration"
+      WHERE event_id = ${eventId} AND deleted = false
+    `;
+
+    const registrationCount = Number(
+      (registrationCountResult as any)[0]?.count || 0,
+    );
+
     return NextResponse.json({
       success: true,
       registrations,
       waitingList,
-      registrationCount: event._count.Registration,
+      registrationCount,
       waitingListCount: waitingList.length,
     });
   } catch (error) {

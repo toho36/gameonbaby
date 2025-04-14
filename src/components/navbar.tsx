@@ -44,13 +44,14 @@ export function Navbar() {
           return res.json();
         })
         .then((data) => {
+          console.log("Admin check response:", data);
           setIsAdmin(data.isAdmin);
 
           // If the user is admin, they're also a moderator
           if (data.isAdmin) {
             setIsModerator(true);
           } else {
-            // Check if user is a moderator (if needed)
+            // Check if user is a moderator
             checkIfModerator();
           }
         })
@@ -63,11 +64,13 @@ export function Navbar() {
   // Function to check if user is a moderator
   async function checkIfModerator() {
     try {
+      console.log("Checking moderator status...");
       const response = await fetch("/api/admin/check-moderator");
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
+      console.log("Moderator check response:", data);
       setIsModerator(data.isModerator);
     } catch (error) {
       console.error("Error checking moderator status:", error);
@@ -100,6 +103,12 @@ export function Navbar() {
                         className="rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
                       >
                         Manage Events
+                      </Link>
+                      <Link
+                        href="/admin/registration-history"
+                        className="rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                      >
+                        Registration History
                       </Link>
                       {isAdmin && (
                         <Link
@@ -197,6 +206,13 @@ export function Navbar() {
                                 onClick={() => setMenuOpen(false)}
                               >
                                 Manage Events
+                              </Link>
+                              <Link
+                                href="/admin/registration-history"
+                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                onClick={() => setMenuOpen(false)}
+                              >
+                                Registration History
                               </Link>
                               {isAdmin && (
                                 <Link

@@ -57,6 +57,11 @@ export default function EventManagement() {
   const { mutate: updateEventMutation } = useUpdateEvent();
   const { mutate: duplicateEventMutation } = useDuplicateEvent();
 
+  // Refresh data when component mounts to ensure registration counts are up-to-date
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
   useEffect(() => {
     async function checkPermission() {
       try {

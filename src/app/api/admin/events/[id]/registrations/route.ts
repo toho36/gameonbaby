@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import prisma from "~/lib/db";
+import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
+// Create a raw client for SQL queries
+const prismaRaw = new PrismaClient();
 
 // Define user interface with role property
 interface DbUser {
   id: string;
-  name: string | null;
-  email: string | null;
-  role: "USER" | "MODERATOR" | "ADMIN";
-  emailVerified: Date | null;
-  image: string | null;
+  email: string;
+  role: string;
 }
 
 export async function GET(
@@ -62,13 +61,27 @@ export async function GET(
     }
 
     // Fetch registrations for this event
-    const registrations = await prisma.registration.findMany({
-      where: { event_id: params.id },
-      include: {
-        event: true,
-        payment: true,
-      },
-    });
+    const registrations = await prismaRaw.$queryRaw`
+      SELECT r.*, 
+             p.id as payment_id, p.paid as payment_paid, 
+             p.created_at as payment_created_at, p.variable_symbol, p.qr_data
+      FROM "Registration" r
+      LEFT JOIN "Payment" p ON r.id = p.registration_id
+      WHERE r.event_id = ${params.id} AND r.deleted = false
+      ORDER BY r.created_at ASC
+    `;
+
+    const formattedRegistrations = (registrations as any[]).map((reg) => ({
+      id: reg.id,
+      firstName: reg.first_name,
+      lastName: reg.last_name,
+      email: reg.email,
+      phoneNumber: reg.phone_number,
+      paymentType: reg.payment_type,
+      createdAt: new Date(reg.created_at).toISOString(),
+      paid: reg.payment_paid || false,
+      attended: reg.attended,
+    }));
 
     return NextResponse.json({
       success: true,
@@ -80,17 +93,7 @@ export async function GET(
         to: event.to.toISOString(),
         created_at: event.created_at.toISOString(),
       },
-      registrations: registrations.map((reg) => ({
-        id: reg.id,
-        firstName: reg.first_name,
-        lastName: reg.last_name,
-        email: reg.email,
-        phoneNumber: reg.phone_number,
-        paymentType: reg.payment_type,
-        createdAt: reg.created_at.toISOString(),
-        paid: reg.payment?.paid || false,
-        attended: reg.attended,
-      })),
+      registrations: formattedRegistrations,
     });
   } catch (error) {
     console.error("Error fetching registrations:", error);

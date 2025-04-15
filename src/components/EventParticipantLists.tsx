@@ -76,15 +76,22 @@ export default function EventParticipantLists({
 
   // Set up polling for updates
   useEffect(() => {
-    // Initial fetch
-    fetchParticipantData();
+    if (isAuthenticated) {
+      // Initial fetch
+      fetchParticipantData();
 
-    // Set up polling interval (every 10 seconds)
-    const intervalId = setInterval(fetchParticipantData, 10000);
+      // Set up polling interval (every 10 seconds)
+      const intervalId = setInterval(fetchParticipantData, 10000);
 
-    // Clean up interval on component unmount
-    return () => clearInterval(intervalId);
-  }, [eventId]);
+      // Clean up interval on component unmount
+      return () => clearInterval(intervalId);
+    }
+  }, [eventId, isAuthenticated]);
+
+  // If user is not authenticated, don't render anything
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <>

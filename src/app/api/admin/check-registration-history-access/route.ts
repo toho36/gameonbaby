@@ -1,23 +1,20 @@
 import { NextResponse } from "next/server";
-import { isUserAdmin, isUserModerator } from "~/server/service/userService";
+import { isUserAdmin } from "~/server/service/userService";
 
 export async function GET() {
   try {
-    // Check if user is admin or moderator
-    const [isAdmin, isModerator] = await Promise.all([
-      isUserAdmin(),
-      isUserModerator(),
-    ]);
+    // Check if user is admin
+    const isAdmin = await isUserAdmin();
 
     console.log(
-      `User access check for registration history: isAdmin=${isAdmin}, isModerator=${isModerator}`,
+      `User access check for registration history: isAdmin=${isAdmin}`,
     );
 
-    if (isAdmin || isModerator) {
+    if (isAdmin) {
       return NextResponse.json({
         success: true,
         hasAccess: true,
-        role: isAdmin ? "ADMIN" : "MODERATOR",
+        role: "ADMIN",
       });
     }
 

@@ -10,12 +10,8 @@ export async function GET(request: NextRequest) {
     // Get the current authenticated user
     const user = await getCurrentUser();
 
-    // Check if user is authenticated and has proper permissions (moderator/admin)
-    if (
-      !user ||
-      !user.id ||
-      (user.role !== "MODERATOR" && user.role !== "ADMIN")
-    ) {
+    // Check if user is authenticated and has admin permissions
+    if (!user || !user.id || user.role !== "ADMIN") {
       return NextResponse.json(
         { success: false, error: "Unauthorized access" },
         { status: 401 },

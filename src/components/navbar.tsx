@@ -104,19 +104,21 @@ export function Navbar() {
                       >
                         Manage Events
                       </Link>
-                      <Link
-                        href="/admin/registration-history"
-                        className="rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-                      >
-                        Registration History
-                      </Link>
                       {isAdmin && (
-                        <Link
-                          href="/admin"
-                          className="rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-                        >
-                          User Management
-                        </Link>
+                        <>
+                          <Link
+                            href="/admin/registration-history"
+                            className="rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                          >
+                            Registration History
+                          </Link>
+                          <Link
+                            href="/admin"
+                            className="rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                          >
+                            User Management
+                          </Link>
+                        </>
                       )}
                     </>
                   )}
@@ -207,21 +209,23 @@ export function Navbar() {
                               >
                                 Manage Events
                               </Link>
-                              <Link
-                                href="/admin/registration-history"
-                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                onClick={() => setMenuOpen(false)}
-                              >
-                                Registration History
-                              </Link>
                               {isAdmin && (
-                                <Link
-                                  href="/admin"
-                                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                  onClick={() => setMenuOpen(false)}
-                                >
-                                  User Management
-                                </Link>
+                                <>
+                                  <Link
+                                    href="/admin/registration-history"
+                                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    onClick={() => setMenuOpen(false)}
+                                  >
+                                    Registration History
+                                  </Link>
+                                  <Link
+                                    href="/admin"
+                                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    onClick={() => setMenuOpen(false)}
+                                  >
+                                    User Management
+                                  </Link>
+                                </>
                               )}
                             </>
                           )}

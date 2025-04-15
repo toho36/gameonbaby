@@ -4,7 +4,7 @@ import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 export async function GET() {
   try {
     // Get the authenticated user from Kinde
-    const { getUser } = getKindeServerSession();
+    const { getUser, getAccessToken } = getKindeServerSession();
     const kindeUser = await getUser();
 
     // If no user is found or the ID is missing, session is invalid
@@ -15,8 +15,15 @@ export async function GET() {
       );
     }
 
+    // Get fresh access token to extend session lifetime
+    const token = await getAccessToken();
+
     // Session is valid
-    return NextResponse.json({ valid: true });
+    return NextResponse.json({
+      valid: true,
+      // Just return that token exists, no need to access properties
+      token_refreshed: !!token,
+    });
   } catch (error) {
     console.error("Error validating session:", error);
 

@@ -73,8 +73,8 @@ export function SessionProvider({ children }: SessionProviderProps) {
     // Validate session immediately
     validateSession();
 
-    // Then set up periodic check every 5 minutes
-    const intervalId = setInterval(validateSession, 5 * 60 * 1000);
+    // Then set up periodic check every 30 minutes instead of 5 minutes
+    const intervalId = setInterval(validateSession, 30 * 60 * 1000);
 
     return () => clearInterval(intervalId);
   }, [isAuthenticated, isLoading, logoutLink]);

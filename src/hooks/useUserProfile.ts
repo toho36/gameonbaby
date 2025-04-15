@@ -7,7 +7,6 @@ interface User {
   name?: string;
   email?: string | null;
   phoneNumber?: string;
-  image?: string;
   given_name?: string | null;
   family_name?: string | null;
   picture?: string | null;
@@ -17,7 +16,6 @@ export default function useUserProfile(
   user?: User | null,
   setValue?: UseFormSetValue<RegistrationFormValues>,
 ) {
-  const [profileImage, setProfileImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -33,8 +31,6 @@ export default function useUserProfile(
       const response = await fetch("/api/user/profile");
       const data = await response.json();
       if (data.success) {
-        setProfileImage(data.user.image);
-
         // Update form values if setValue is provided
         if (setValue) {
           if (data.user.name) {
@@ -63,7 +59,6 @@ export default function useUserProfile(
   }
 
   return {
-    profileImage,
     isLoading,
     fetchUserProfile,
   };

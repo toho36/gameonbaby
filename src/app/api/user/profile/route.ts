@@ -65,7 +65,6 @@ export async function GET() {
         email: user.email,
         role: user.role,
         createdAt: user.createdAt.toISOString(),
-        image: user.image,
         phoneNumber: user.phoneNumber,
         paymentPreference: user.paymentPreference,
       },
@@ -96,7 +95,7 @@ export async function PUT(request: Request) {
 
     // Get request body
     const data = await request.json();
-    const { name, phoneNumber, image } = data;
+    const { name, phoneNumber } = data;
 
     // Update user profile
     const updatedUser = await prisma.user.update({
@@ -106,7 +105,6 @@ export async function PUT(request: Request) {
       data: {
         ...(name !== undefined && { name }),
         ...(phoneNumber !== undefined && { phoneNumber }),
-        ...(image !== undefined && { image }),
       },
     });
 

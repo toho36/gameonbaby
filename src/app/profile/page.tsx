@@ -17,7 +17,6 @@ interface UserProfile {
   role: string;
   createdAt: string;
   paymentPreference: string;
-  image: string | null;
   phoneNumber: string | null;
 }
 
@@ -41,8 +40,6 @@ function ProfileContent() {
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [tempName, setTempName] = useState<string>("");
   const [tempPhone, setTempPhone] = useState<string>("");
-  const [profileImage, setProfileImage] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize react-hook-form with Zod validation
   const {
@@ -56,7 +53,6 @@ function ProfileContent() {
     defaultValues: {
       name: "",
       phoneNumber: "",
-      image: null,
     },
   });
 
@@ -79,12 +75,10 @@ function ProfileContent() {
             `${user?.given_name || ""} ${user?.family_name || ""}`.trim();
           setTempName(name);
           setTempPhone(data.user.phoneNumber || "");
-          setProfileImage(data.user.image);
 
           // Set form default values
           setValue("name", name);
           setValue("phoneNumber", data.user.phoneNumber || "");
-          setValue("image", data.user.image);
         }
       } catch (error) {
         console.error("Error fetching profile:", error);
@@ -133,27 +127,9 @@ function ProfileContent() {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setProfileImage(base64String);
-        updateUserProfile({ image: base64String });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const triggerImageUpload = () => {
-    fileInputRef.current?.click();
-  };
-
   const updateUserProfile = async (data: {
     name?: string;
     phoneNumber?: string;
-    image?: string;
   }) => {
     setIsUpdating(true);
     try {
@@ -217,62 +193,6 @@ function ProfileContent() {
             <p className="mt-1 max-w-2xl text-sm text-gray-500">
               Your personal information and account settings
             </p>
-          </div>
-
-          {/* Profile Picture */}
-          <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
-            <div className="flex items-center justify-center">
-              <div className="relative">
-                <div
-                  className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-full border-2 border-gray-300 bg-gray-100"
-                  onClick={triggerImageUpload}
-                >
-                  {profileImage ? (
-                    <img
-                      src={profileImage}
-                      alt="Profile"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="text-4xl font-bold text-gray-400">
-                      {tempName ? tempName.charAt(0).toUpperCase() : "U"}
-                    </div>
-                  )}
-                </div>
-                <button
-                  className="absolute bottom-0 right-0 rounded-full bg-purple-600 p-2 text-white shadow-lg hover:bg-purple-700"
-                  onClick={triggerImageUpload}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                  </svg>
-                </button>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  className="hidden"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                />
-              </div>
-            </div>
           </div>
 
           <div className="border-t border-gray-200 px-4 py-5 sm:p-6">

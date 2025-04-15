@@ -22,7 +22,6 @@ export const ProfileFormSchema = z.object({
     .min(9, "Czech phone numbers must be at least 9 digits")
     .max(20, "Phone number must be 20 characters or less")
     .regex(phoneRegex, "Please enter a valid phone number format"),
-  image: z.string().optional().nullable(),
 });
 
 export type ProfileFormValues = z.infer<typeof ProfileFormSchema>;

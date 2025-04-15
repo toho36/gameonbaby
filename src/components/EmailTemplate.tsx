@@ -32,7 +32,7 @@ export function EmailTemplate({
       }}
     >
       <img
-        src="https://i.ibb.co/3BBgQf7/Game-On.png"
+        src="https://i.ibb.co/G4SS7RhD/gameoncrop.png"
         alt="Game-on-logo"
         style={{
           maxWidth: "200px",

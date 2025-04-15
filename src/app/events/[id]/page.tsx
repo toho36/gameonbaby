@@ -6,7 +6,11 @@ import EventParticipantLists from "~/components/EventParticipantLists";
 import CheckRegistrationStatus from "~/components/CheckRegistrationStatus";
 import CapacityDisplay from "~/components/CapacityDisplay";
 import { PrismaClient, UserRole } from "@prisma/client";
-import { getCurrentUser, hasSpecialAccess } from "~/server/service/userService";
+import {
+  getCurrentUser,
+  hasSpecialAccess,
+  isUserModerator,
+} from "~/server/service/userService";
 
 // Create a separate client for raw queries
 const prismaRaw = new PrismaClient();
@@ -107,6 +111,8 @@ export default async function EventPage({
 }) {
   // Check if user has special access to see hidden events
   const userHasSpecialAccess = await hasSpecialAccess();
+  // Check if user has permission to view participant details
+  const userCanViewParticipants = await isUserModerator();
 
   const eventData = (await prisma.event.findUnique({
     where: {
@@ -180,6 +186,15 @@ export default async function EventPage({
   }
 
   const isEventInPast = new Date(event.to) < new Date();
+
+  // For regular users, filter out the participant data but keep the counts
+  const registrationsForComponent = userCanViewParticipants
+    ? event.registrations
+    : [];
+
+  const waitingListForComponent = userCanViewParticipants
+    ? event.waitingList
+    : [];
 
   return (
     <main className="min-h-screen bg-[#1a0a3a] px-4 py-6 md:py-8">
@@ -429,14 +444,16 @@ export default async function EventPage({
               </>
             )}
 
-            {/* Use the client-side EventParticipantLists component for real-time updates */}
-            <EventParticipantLists
-              eventId={event.id}
-              initialRegistrations={event.registrations}
-              initialWaitingList={event.waitingList}
-              initialRegCount={event._count.Registration}
-              capacity={event.capacity}
-            />
+            {/* Only show participant lists to administrators and moderators */}
+            {userCanViewParticipants && (
+              <EventParticipantLists
+                eventId={event.id}
+                initialRegistrations={registrationsForComponent}
+                initialWaitingList={waitingListForComponent}
+                initialRegCount={event._count.Registration}
+                capacity={event.capacity}
+              />
+            )}
           </div>
         </div>
       </div>

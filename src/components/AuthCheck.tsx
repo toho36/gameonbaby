@@ -52,8 +52,9 @@ export function AuthCheck({ children, fallback }: AuthCheckProps) {
 
     // Otherwise, show the default session expired UI
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-8">
-        <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-md">
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="absolute inset-0 bg-gray-800 bg-opacity-75"></div>
+        <div className="relative z-10 w-full max-w-md rounded-lg bg-white p-8 shadow-md">
           <div className="mb-6 text-center">
             <svg
               xmlns="http://www.w3.org/2000/svg"

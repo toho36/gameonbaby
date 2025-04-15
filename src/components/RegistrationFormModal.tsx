@@ -3,7 +3,7 @@ import { Button } from "~/components/ui/button";
 import { Registration } from "~/stores/registrationStore";
 
 interface RegistrationFormModalProps {
-  formType: "add" | "edit";
+  formType: "add" | "edit" | "duplicate";
   currentRegistration: Registration | null;
   formData: {
     firstName: string;
@@ -40,7 +40,11 @@ const RegistrationFormModal: React.FC<RegistrationFormModalProps> = ({
       <div className="w-full max-w-xl overflow-hidden rounded-xl bg-white shadow-xl transition-all">
         <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
           <h2 className="text-lg font-medium text-gray-900">
-            {formType === "add" ? "Add New Participant" : "Edit Participant"}
+            {formType === "add"
+              ? "Add New Participant"
+              : formType === "duplicate"
+                ? "Duplicate Participant"
+                : "Edit Participant"}
           </h2>
         </div>
         <form onSubmit={onSubmit} className="p-6">
@@ -190,6 +194,8 @@ const RegistrationFormModal: React.FC<RegistrationFormModalProps> = ({
                 </span>
               ) : formType === "add" ? (
                 "Add Participant"
+              ) : formType === "duplicate" ? (
+                "Duplicate Participant"
               ) : (
                 "Update Participant"
               )}

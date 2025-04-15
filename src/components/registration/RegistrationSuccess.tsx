@@ -35,6 +35,7 @@ export default function RegistrationSuccess({
   const [duplicateName, setDuplicateName] = useState("");
   const [friendName, setFriendName] = useState("");
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [friendQrCodeUrl, setFriendQrCodeUrl] = useState<string | null>(null);
 
   const { incrementRegistrationCount } = useEventRegistrationStore();
 
@@ -99,7 +100,17 @@ export default function RegistrationSuccess({
         // Only increment registration count on successful registration
         incrementRegistrationCount();
         setFriendRegistrationSuccess(true);
-        setFriendName(`${friendFirstName} ${friendLastName}`.trim());
+
+        // Set the complete friend name
+        const fullFriendName = `${friendFirstName} ${friendLastName}`.trim();
+        setFriendName(fullFriendName);
+
+        // Generate QR code with friend's name
+        import("../../utils/qrCodeUtils").then(({ generateQRCodeURL }) => {
+          const friendQrUrl = generateQRCodeURL(fullFriendName, event.from);
+          setFriendQrCodeUrl(friendQrUrl);
+        });
+
         toast.success("Friend successfully registered!");
 
         // Clear form inputs manually instead of using reset()
@@ -414,12 +425,61 @@ export default function RegistrationSuccess({
                 They'll be using your contact details.
               </p>
 
+              {friendQrCodeUrl && (
+                <div className="mb-4 w-full overflow-hidden rounded-xl border border-white/20 bg-white/10 p-4 transition-all hover:bg-white/15">
+                  <div className="flex flex-col items-center">
+                    <h4 className="mb-3 text-sm font-bold text-white">
+                      {friendName}'s Payment Code
+                    </h4>
+                    <div className="mb-3 flex justify-center rounded-lg bg-white p-2 shadow-lg">
+                      <img
+                        src={friendQrCodeUrl}
+                        alt="Friend's Payment QR Code"
+                        className="h-auto w-full max-w-[150px] rounded-md"
+                      />
+                    </div>
+                    <div className="mb-3 text-xl font-bold text-green-300">
+                      {event.price} Kč
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (!friendQrCodeUrl) return;
+                        const link = document.createElement("a");
+                        link.href = friendQrCodeUrl;
+                        link.download = `gameon-payment-friend-${new Date().getTime()}.png`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      }}
+                      className="flex w-full items-center justify-center rounded-lg bg-white/20 px-3 py-2 text-center text-sm font-medium text-white transition-colors hover:bg-white/30 focus:outline-none focus:ring-2 focus:ring-white/30 focus:ring-offset-1 focus:ring-offset-purple-900"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="mr-2 h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                        />
+                      </svg>
+                      Save QR Code
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <button
                 onClick={() => {
                   setShowFriendForm(true);
                   setFriendRegistrationSuccess(false);
                   setIsNameError(false);
                   setDuplicateName("");
+                  setFriendQrCodeUrl(null);
                 }}
                 className="w-full rounded-lg bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
               >

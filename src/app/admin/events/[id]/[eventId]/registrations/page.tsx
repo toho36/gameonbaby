@@ -18,7 +18,6 @@ import {
   useDeleteRegistration,
 } from "~/api/registrations";
 import { toast } from "react-hot-toast";
-import { duplicateRegistration } from "./duplicateHelper";
 import AddParticipantButton from "~/components/AddParticipantButton";
 import {
   EditButton,
@@ -185,7 +184,6 @@ interface RegistrationTableProps {
   processing: string | null;
   togglePaymentStatus: (id: string) => void;
   toggleAttendance: (id: string) => void;
-  handleEditClick: (registration: Registration) => void;
   handleDuplicateRegistration: (registration: Registration) => void;
   handleDeleteClick: (id: string) => void;
 }
@@ -197,7 +195,6 @@ const RegistrationTable: React.FC<RegistrationTableProps> = ({
   processing,
   togglePaymentStatus,
   toggleAttendance,
-  handleEditClick,
   handleDuplicateRegistration,
   handleDeleteClick,
 }) => {
@@ -374,22 +371,6 @@ const RegistrationTable: React.FC<RegistrationTableProps> = ({
                 </td>
                 <td className="whitespace-nowrap px-6 py-4">
                   <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleEditClick(registration)}
-                      className={`${compactView ? "hidden" : "bg-blue-50 text-blue-700 hover:bg-blue-100"} ${
-                        compactView ? "px-4 py-2 text-sm" : "px-3 py-1 text-xs"
-                      } inline-flex items-center rounded-md font-medium`}
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="mr-1 h-4 w-4"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                      </svg>
-                      Edit
-                    </button>
                     <button
                       onClick={() => handleDeleteClick(registration.id)}
                       className={`${compactView ? "hidden" : "bg-red-50 text-red-700 hover:bg-red-100"} ${
@@ -649,7 +630,7 @@ export default function EventRegistrationsPage({
   });
 
   const [showForm, setShowForm] = useState(false);
-  const [formType, setFormType] = useState<"add" | "edit">("add");
+  const [formType, setFormType] = useState<"add" | "edit" | "duplicate">("add");
   const [currentRegistration, setCurrentRegistration] =
     useState<Registration | null>(null);
   const [formData, setFormData] = useState({
@@ -889,29 +870,23 @@ export default function EventRegistrationsPage({
     }).format(date);
   }
 
-  // Add a function to handle editing a registration
-  function handleEditClick(registration: Registration) {
+  // Add a function to duplicate a registration
+  async function handleDuplicateRegistration(registration: Registration) {
+    // Prefill the form with the registration data
+    const nameParts = registration.user?.name?.split(" ") || [];
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || "";
+
     setCurrentRegistration(registration);
     setFormData({
-      firstName: registration.user?.name?.split(" ")[0] || "",
-      lastName: registration.user?.name?.split(" ").slice(1).join(" ") || "",
+      firstName: `${firstName} (Copy)`,
+      lastName: lastName,
       email: registration.user?.email || "",
       phoneNumber: registration.user?.phone || "",
       paymentType: registration.paymentMethod || "CASH",
     });
-    setFormType("edit");
+    setFormType("duplicate");
     setShowForm(true);
-  }
-
-  // Add a function to duplicate a registration
-  async function handleDuplicateRegistration(registration: Registration) {
-    await duplicateRegistration(
-      registration,
-      params.eventId,
-      setProcessing,
-      refetch,
-      queryClient,
-    );
   }
 
   // Add a sorted version of registrations
@@ -981,6 +956,34 @@ export default function EventRegistrationsPage({
           toast.success("Participant added successfully");
         } else {
           toast.error(data.message || "Failed to add participant");
+        }
+      } else if (formType === "duplicate") {
+        // Call API to duplicate the registration with modified data
+        const response = await fetch("/api/admin/registrations/duplicate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            eventId: params.eventId,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            phoneNumber: formData.phoneNumber,
+            paymentType: formData.paymentType,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // Refresh the registration list
+          refetch();
+          setShowForm(false);
+          setCurrentRegistration(null);
+          toast.success("Registration duplicated successfully");
+        } else {
+          toast.error(data.message || "Failed to duplicate registration");
         }
       } else if (formType === "edit" && currentRegistration) {
         // Call API to update participant
@@ -1506,21 +1509,6 @@ export default function EventRegistrationsPage({
                           {!compactView && (
                             <>
                               <button
-                                onClick={() => handleEditClick(registration)}
-                                className="inline-flex items-center rounded-md bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
-                              >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="mr-1 h-4 w-4"
-                                  viewBox="0 0 20 20"
-                                  fill="currentColor"
-                                >
-                                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                                </svg>
-                                Edit
-                              </button>
-
-                              <button
                                 onClick={() =>
                                   handleDeleteClick(registration.id)
                                 }
@@ -1731,20 +1719,6 @@ export default function EventRegistrationsPage({
 
                   {!compactView && (
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <button
-                        onClick={() => handleEditClick(registration)}
-                        className="flex-1 rounded-md bg-blue-50 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="mr-1 inline-block h-4 w-4"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                        </svg>
-                        Edit
-                      </button>
                       <button
                         onClick={() => handleDeleteClick(registration.id)}
                         className="flex-1 rounded-md bg-red-50 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100"

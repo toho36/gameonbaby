@@ -203,218 +203,182 @@ const RegistrationTable: React.FC<RegistrationTableProps> = ({
 }) => {
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-      <table className="hidden min-w-full table-auto divide-y divide-gray-200 sm:table">
-        <thead>
-          <tr className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-            <th className="px-6 py-4">Participant</th>
-            <th className="px-6 py-4">
-              {compactView ? "Status" : "Payment & Attendance"}
-            </th>
-            <th className="px-6 py-4">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200">
-          {registrations.map((registration) => (
-            <tr
-              key={registration.id}
-              className={`transition-colors duration-200 ${
-                lastArrivedId === registration.id
-                  ? "bg-green-50"
-                  : "hover:bg-gray-50"
-              }`}
-            >
-              <td className="whitespace-nowrap px-6 py-4">
-                <div
-                  className={`text-sm font-medium text-gray-900 ${compactView ? "text-lg" : ""}`}
-                >
-                  {registration.user.name || "No name provided"}
-                </div>
-                {!compactView && (
-                  <div className="mt-1 text-xs text-gray-500">
-                    <div>{registration.user.email || "No email"}</div>
-                    <div>{registration.user.phone || "No phone"}</div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full table-auto divide-y divide-gray-200">
+          <thead>
+            <tr className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+              <th className="px-6 py-4">Participant</th>
+              <th className="px-6 py-4">
+                {compactView ? "Status" : "Payment & Attendance"}
+              </th>
+              <th className="px-6 py-4">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {registrations.map((registration) => (
+              <tr
+                key={registration.id}
+                className={`transition-colors duration-200 ${
+                  lastArrivedId === registration.id
+                    ? "bg-green-50"
+                    : "hover:bg-gray-50"
+                }`}
+              >
+                <td className="whitespace-nowrap px-6 py-4">
+                  <div
+                    className={`text-sm font-medium text-gray-900 ${compactView ? "text-lg" : ""}`}
+                  >
+                    {registration.user.name || "No name provided"}
                   </div>
-                )}
-              </td>
-              <td className="whitespace-nowrap px-6 py-4">
-                <div className="flex flex-col gap-2 text-sm">
-                  <button
-                    onClick={() => togglePaymentStatus(registration.id)}
-                    disabled={processing === "payment" + registration.id}
-                    className={`${
-                      compactView
-                        ? `mr-2 rounded-md px-3 py-2 text-sm font-medium ${
-                            registration.status === "PAID"
-                              ? "bg-green-100 text-green-800 hover:bg-green-200"
-                              : "bg-red-100 text-red-800 hover:bg-red-200"
-                          }`
-                        : `mr-2 rounded-md px-2 py-1 text-xs font-medium ${
-                            registration.status === "PAID"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`
-                    }`}
-                  >
-                    {processing === "payment" + registration.id ? (
-                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
-                    ) : (
-                      <>
-                        {registration.status === "PAID" ? (
-                          <>
-                            <span className="inline-flex items-center">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="mr-1 h-4 w-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M5 13l4 4L19 7"
-                                />
-                              </svg>
-                              {compactView ? "Paid" : "Paid"}
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="inline-flex items-center">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="mr-1 h-4 w-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                />
-                              </svg>
-                              {compactView ? "Not Paid" : "Not Paid"}
-                            </span>
-                          </>
-                        )}
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    onClick={() => toggleAttendance(registration.id)}
-                    disabled={processing === "attendance" + registration.id}
-                    className={`${
-                      compactView
-                        ? `rounded-md px-3 py-2 text-sm font-medium ${
-                            registration.attended
-                              ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
-                              : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                          }`
-                        : `rounded-md px-2 py-1 text-xs font-medium ${
-                            registration.attended
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-gray-100 text-gray-800"
-                          }`
-                    }`}
-                  >
-                    {processing === "attendance" + registration.id ? (
-                      <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
-                    ) : (
-                      <>
-                        {registration.attended ? (
-                          <>
-                            <span className="inline-flex items-center">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="mr-1 h-4 w-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M5 13l4 4L19 7"
-                                />
-                              </svg>
-                              {compactView ? "Checked In" : "Attended"}
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="inline-flex items-center">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="mr-1 h-4 w-4"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                />
-                              </svg>
-                              {compactView ? "Check In" : "Not Attended"}
-                            </span>
-                          </>
-                        )}
-                      </>
-                    )}
-                  </button>
-                </div>
-              </td>
-              <td className="whitespace-nowrap px-6 py-4">
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => handleEditClick(registration)}
-                    className={`${compactView ? "hidden" : "bg-blue-50 text-blue-700 hover:bg-blue-100"} ${
-                      compactView ? "px-4 py-2 text-sm" : "px-3 py-1 text-xs"
-                    } inline-flex items-center rounded-md font-medium`}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="mr-1 h-4 w-4"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                    </svg>
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDeleteClick(registration.id)}
-                    className={`${compactView ? "hidden" : "bg-red-50 text-red-700 hover:bg-red-100"} ${
-                      compactView ? "px-4 py-2 text-sm" : "px-3 py-1 text-xs"
-                    } inline-flex items-center rounded-md font-medium`}
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="mr-1 h-4 w-4"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    Delete
-                  </button>
-
                   {!compactView && (
+                    <div className="mt-1 text-xs text-gray-500">
+                      <div>{registration.user.email || "No email"}</div>
+                      <div>{registration.user.phone || "No phone"}</div>
+                    </div>
+                  )}
+                </td>
+                <td className="whitespace-nowrap px-6 py-4">
+                  <div className="flex flex-col gap-2 text-sm">
                     <button
-                      onClick={() => handleDuplicateRegistration(registration)}
-                      disabled={processing === "duplicate" + registration.id}
-                      className="inline-flex items-center rounded-md bg-purple-50 px-3 py-1 text-xs font-medium text-purple-700 hover:bg-purple-100"
+                      onClick={() => togglePaymentStatus(registration.id)}
+                      disabled={processing === "payment" + registration.id}
+                      className={`${
+                        compactView
+                          ? `mr-2 rounded-md px-3 py-2 text-sm font-medium ${
+                              registration.status === "PAID"
+                                ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                : "bg-red-100 text-red-800 hover:bg-red-200"
+                            }`
+                          : `mr-2 rounded-md px-2 py-1 text-xs font-medium ${
+                              registration.status === "PAID"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`
+                      }`}
+                    >
+                      {processing === "payment" + registration.id ? (
+                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
+                      ) : (
+                        <>
+                          {registration.status === "PAID" ? (
+                            <>
+                              <span className="inline-flex items-center">
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="mr-1 h-4 w-4"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M5 13l4 4L19 7"
+                                  />
+                                </svg>
+                                {compactView ? "Paid" : "Paid"}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="inline-flex items-center">
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="mr-1 h-4 w-4"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                  />
+                                </svg>
+                                {compactView ? "Not Paid" : "Not Paid"}
+                              </span>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => toggleAttendance(registration.id)}
+                      disabled={processing === "attendance" + registration.id}
+                      className={`${
+                        compactView
+                          ? `rounded-md px-3 py-2 text-sm font-medium ${
+                              registration.attended
+                                ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                                : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                            }`
+                          : `rounded-md px-2 py-1 text-xs font-medium ${
+                              registration.attended
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`
+                      }`}
+                    >
+                      {processing === "attendance" + registration.id ? (
+                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
+                      ) : (
+                        <>
+                          {registration.attended ? (
+                            <>
+                              <span className="inline-flex items-center">
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="mr-1 h-4 w-4"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M5 13l4 4L19 7"
+                                  />
+                                </svg>
+                                {compactView ? "Checked In" : "Attended"}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="inline-flex items-center">
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="mr-1 h-4 w-4"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                  />
+                                </svg>
+                                {compactView ? "Check In" : "Not Attended"}
+                              </span>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </td>
+                <td className="whitespace-nowrap px-6 py-4">
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => handleEditClick(registration)}
+                      className={`${compactView ? "hidden" : "bg-blue-50 text-blue-700 hover:bg-blue-100"} ${
+                        compactView ? "px-4 py-2 text-sm" : "px-3 py-1 text-xs"
+                      } inline-flex items-center rounded-md font-medium`}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -422,227 +386,59 @@ const RegistrationTable: React.FC<RegistrationTableProps> = ({
                         viewBox="0 0 20 20"
                         fill="currentColor"
                       >
-                        <path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" />
-                        <path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z" />
+                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                       </svg>
-                      {processing === "duplicate" + registration.id
-                        ? "Processing..."
-                        : "Duplicate"}
+                      Edit
                     </button>
-                  )}
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                    <button
+                      onClick={() => handleDeleteClick(registration.id)}
+                      className={`${compactView ? "hidden" : "bg-red-50 text-red-700 hover:bg-red-100"} ${
+                        compactView ? "px-4 py-2 text-sm" : "px-3 py-1 text-xs"
+                      } inline-flex items-center rounded-md font-medium`}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="mr-1 h-4 w-4"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      Delete
+                    </button>
 
-      {/* Mobile view */}
-      <div className="divide-y divide-gray-200 sm:hidden">
-        {registrations.map((registration) => (
-          <div
-            key={registration.id}
-            className={`${
-              compactView
-                ? "mb-2 rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
-                : "p-4"
-            } ${
-              lastArrivedId === registration.id
-                ? "bg-green-50 transition-colors duration-1000"
-                : ""
-            }`}
-          >
-            <div className="flex flex-col space-y-3">
-              <div className="flex justify-between">
-                <div
-                  className={`${compactView ? "text-lg font-semibold" : "font-medium"}`}
-                >
-                  {registration.user.name || "No name provided"}
-                </div>
-                <div className="flex space-x-2">
-                  {!compactView && (
-                    <>
+                    {!compactView && (
                       <button
-                        onClick={() => handleEditClick(registration)}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-blue-700"
+                        onClick={() =>
+                          handleDuplicateRegistration(registration)
+                        }
+                        disabled={processing === "duplicate" + registration.id}
+                        className="inline-flex items-center rounded-md bg-purple-50 px-3 py-1 text-xs font-medium text-purple-700 hover:bg-purple-100"
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4"
+                          className="mr-1 h-4 w-4"
                           viewBox="0 0 20 20"
                           fill="currentColor"
                         >
-                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                          <path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" />
+                          <path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z" />
                         </svg>
+                        {processing === "duplicate" + registration.id
+                          ? "Processing..."
+                          : "Duplicate"}
                       </button>
-                      <button
-                        onClick={() => handleDeleteClick(registration.id)}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-red-50 text-red-700"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Only show email and phone in non-compact view */}
-              {!compactView && (
-                <div className="text-sm text-gray-500">
-                  <div>{registration.user.email || "No email"}</div>
-                  <div>{registration.user.phone || "No phone"}</div>
-                </div>
-              )}
-
-              <div
-                className={`flex ${compactView ? "justify-between" : "flex-wrap"} gap-2`}
-              >
-                <button
-                  onClick={() => togglePaymentStatus(registration.id)}
-                  disabled={processing === "payment" + registration.id}
-                  className={`${
-                    compactView
-                      ? `flex-1 rounded-lg px-3 py-3 text-sm font-medium shadow-sm ${
-                          registration.status === "PAID"
-                            ? "bg-green-100 text-green-800 hover:bg-green-200"
-                            : "bg-red-100 text-red-800 hover:bg-red-200"
-                        }`
-                      : `mr-2 rounded-md px-2 py-1 text-xs font-medium ${
-                          registration.status === "PAID"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }`
-                  }`}
-                >
-                  {processing === "payment" + registration.id ? (
-                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
-                  ) : (
-                    <>
-                      {registration.status === "PAID" ? (
-                        <>
-                          <span className="inline-flex items-center justify-center">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="mr-1 h-4 w-4"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M5 13l4 4L19 7"
-                              />
-                            </svg>
-                            {compactView ? "Paid" : "Paid"}
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="inline-flex items-center justify-center">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="mr-1 h-4 w-4"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                              />
-                            </svg>
-                            {compactView ? "Not Paid" : "Not Paid"}
-                          </span>
-                        </>
-                      )}
-                    </>
-                  )}
-                </button>
-
-                <button
-                  onClick={() => toggleAttendance(registration.id)}
-                  disabled={processing === "attendance" + registration.id}
-                  className={`${
-                    compactView
-                      ? `flex-1 rounded-lg px-3 py-3 text-sm font-medium shadow-sm ${
-                          registration.attended
-                            ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
-                            : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                        }`
-                      : `rounded-md px-2 py-1 text-xs font-medium ${
-                          registration.attended
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`
-                  }`}
-                >
-                  {processing === "attendance" + registration.id ? (
-                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
-                  ) : (
-                    <>
-                      {registration.attended ? (
-                        <>
-                          <span className="inline-flex items-center justify-center">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="mr-1 h-4 w-4"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M5 13l4 4L19 7"
-                              />
-                            </svg>
-                            {compactView ? "Checked In" : "Attended"}
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="inline-flex items-center justify-center">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="mr-1 h-4 w-4"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                              />
-                            </svg>
-                            {compactView ? "Check In" : "Not Attended"}
-                          </span>
-                        </>
-                      )}
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -1375,7 +1171,7 @@ export default function EventRegistrationsPage({
           </div>
 
           {/* Desktop view */}
-          <div className="hidden sm:block">
+          <div className="sm:block">
             <div className="min-w-full overflow-hidden overflow-x-auto align-middle shadow sm:rounded-lg">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead>
@@ -1421,7 +1217,7 @@ export default function EventRegistrationsPage({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {registrations.map((registration) => (
+                  {filteredRegistrations.map((registration) => (
                     <tr
                       key={registration.id}
                       className={
@@ -1775,6 +1571,202 @@ export default function EventRegistrationsPage({
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          {/* Mobile view */}
+          <div className="sm:hidden">
+            <div className="space-y-3">
+              {filteredRegistrations.map((registration) => (
+                <div
+                  key={registration.id}
+                  className={`rounded-lg border bg-white p-4 shadow-sm ${
+                    lastArrivedId === registration.id
+                      ? "border-green-300 bg-green-50"
+                      : "border-gray-200"
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center">
+                      <div className="h-10 w-10 flex-shrink-0">
+                        <div className="h-10 w-10 rounded-full bg-gray-200 text-center">
+                          <span className="inline-block pt-2 text-lg font-medium text-gray-600">
+                            {registration.user.name
+                              ? registration.user.name.charAt(0)
+                              : "?"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="ml-3">
+                        <div className="font-medium text-gray-900">
+                          {registration.user.name || "No name provided"}
+                        </div>
+                        {!compactView && (
+                          <div className="mt-1 text-xs text-gray-500">
+                            <div>{registration.user.email || "No email"}</div>
+                            <div>{registration.user.phone || "No phone"}</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      onClick={() => togglePaymentStatus(registration.id)}
+                      disabled={processing === "payment" + registration.id}
+                      className={`${
+                        registration.status === "PAID"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      } flex-1 rounded-md px-3 py-2 text-sm font-medium`}
+                    >
+                      {processing === "payment" + registration.id ? (
+                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
+                      ) : (
+                        <>
+                          {registration.status === "PAID" ? (
+                            <>
+                              <span className="inline-flex items-center justify-center">
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="mr-1 h-4 w-4"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M5 13l4 4L19 7"
+                                  />
+                                </svg>
+                                Paid
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="inline-flex items-center justify-center">
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="mr-1 h-4 w-4"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                  />
+                                </svg>
+                                Not Paid
+                              </span>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => toggleAttendance(registration.id)}
+                      disabled={processing === "attendance" + registration.id}
+                      className={`${
+                        registration.attended
+                          ? "bg-blue-100 text-blue-800"
+                          : "bg-gray-100 text-gray-800"
+                      } flex-1 rounded-md px-3 py-2 text-sm font-medium`}
+                    >
+                      {processing === "attendance" + registration.id ? (
+                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
+                      ) : (
+                        <>
+                          {registration.attended ? (
+                            <>
+                              <span className="inline-flex items-center justify-center">
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="mr-1 h-4 w-4"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M5 13l4 4L19 7"
+                                  />
+                                </svg>
+                                Checked In
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="inline-flex items-center justify-center">
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="mr-1 h-4 w-4"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                  />
+                                </svg>
+                                Check In
+                              </span>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {!compactView && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        onClick={() => handleEditClick(registration)}
+                        className="flex-1 rounded-md bg-blue-50 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="mr-1 inline-block h-4 w-4"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                        </svg>
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(registration.id)}
+                        className="flex-1 rounded-md bg-red-50 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="mr-1 inline-block h-4 w-4"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
 

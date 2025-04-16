@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import prisma from "~/lib/db";
-import RegistrationForm from "~/components/RegistrationForm";
-import EventParticipantLists from "~/components/EventParticipantLists";
-import CheckRegistrationStatus from "~/components/CheckRegistrationStatus";
-import CapacityDisplay from "~/components/CapacityDisplay";
+import { RegistrationForm } from "~/features/registration";
+import {
+  EventParticipantLists,
+  CheckRegistrationStatus,
+  CapacityDisplay,
+} from "~/features/events";
 import { PrismaClient, UserRole } from "@prisma/client";
 import {
   getCurrentUser,

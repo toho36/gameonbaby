@@ -1,8 +1,7 @@
 "use server";
 // server/service/emailService.ts
 import { Resend } from "resend";
-import { EmailTemplate } from "~/components/EmailTemplate";
-import { WaitingListPromotionTemplate } from "~/components/WaitingListPromotionTemplate";
+import { EmailTemplate, WaitingListPromotionTemplate } from "~/shared";
 
 const resend = new Resend(process.env.NEXT_PUBLIC_RESEND_API_KEY);
 export async function sendRegistrationEmail(

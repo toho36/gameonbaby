@@ -10,7 +10,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Button } from "~/components/ui/button";
+import { Button } from "~/shared/components/ui/button";
 import useRegistrationStore, { Registration } from "~/stores/registrationStore";
 import {
   useRegistrations,
@@ -18,12 +18,12 @@ import {
   useDeleteRegistration,
 } from "~/api/registrations";
 import { toast } from "react-hot-toast";
-import AddParticipantButton from "~/components/AddParticipantButton";
 import {
+  AddParticipantButton,
   EditButton,
   DeleteButton,
   DuplicateButton,
-} from "~/components/ActionButtons";
+} from "~/features/admin";
 import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 
@@ -45,7 +45,7 @@ interface RegistrationSummary {
 // Lazy load some components to improve initial load time
 // Using dynamic import with next/dynamic instead of React.lazy for better Next.js compatibility
 const RegistrationFormModal = dynamic(
-  () => import("~/components/RegistrationFormModal"),
+  () => import("~/features/admin/components/RegistrationFormModal"),
   {
     loading: () => (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -80,7 +80,7 @@ const RegistrationFormModal = dynamic(
 );
 
 const DeleteConfirmationModal = dynamic(
-  () => import("~/components/DeleteConfirmationModal"),
+  () => import("~/features/admin/components/DeleteConfirmationModal"),
   {
     loading: () => (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">

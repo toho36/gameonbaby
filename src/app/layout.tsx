@@ -3,8 +3,7 @@ import "~/styles/globals.css";
 import { GeistSans } from "geist/font/sans";
 import { type Metadata } from "next";
 import { Providers } from "./providers";
-import { Navbar } from "~/components/navbar";
-import { SessionProvider } from "~/components/session-provider";
+import { Navbar, SessionProvider } from "~/shared";
 
 export const metadata: Metadata = {
   title: "GameOn Baby",

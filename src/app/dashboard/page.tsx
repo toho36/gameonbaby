@@ -2,7 +2,7 @@
 
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import { LogoutLink } from "@kinde-oss/kinde-auth-nextjs/components";
-import { Button } from "~/components/ui/button";
+import { Button } from "~/shared/components/ui/button";
 
 export default function DashboardPage() {
   const { user } = useKindeBrowserClient();

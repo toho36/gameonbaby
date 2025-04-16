@@ -90,6 +90,7 @@ export default function GuestRegistrationForm({
           qrCode = generateQRCodeURL(
             `${data.firstName} ${data.lastName}`.trim(),
             eventDate,
+            event.price,
           );
         }
 

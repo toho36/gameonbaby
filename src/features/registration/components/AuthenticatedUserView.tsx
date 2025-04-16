@@ -63,7 +63,7 @@ export default function AuthenticatedUserView({
 
         // Generate QR code regardless of payment type
         const name = user?.given_name || user?.family_name || "User";
-        const qrUrl = generateQRCodeURL(name, eventDate);
+        const qrUrl = generateQRCodeURL(name, eventDate, event.price);
 
         onRegistrationSuccess(data.registration, qrUrl);
 

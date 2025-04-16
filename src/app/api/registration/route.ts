@@ -90,6 +90,7 @@ export const POST = withErrorHandling(
             const qrCodeUrl = generateQRCodeURL(
               `${request.firstName} ${request.lastName}`,
               eventDate,
+              event.price,
             );
 
             // Send confirmation email
@@ -101,6 +102,7 @@ export const POST = withErrorHandling(
               eventTime,
               event.place || "TJ JM Chodov",
               event.title,
+              event.price,
             );
 
             console.log("Confirmation email sent to:", request.email);

@@ -8,6 +8,7 @@ interface EmailTemplateProps {
   eventTime?: string;
   eventLocation?: string;
   eventTitle?: string;
+  eventPrice?: number;
 }
 
 export default function EmailTemplate({
@@ -17,6 +18,7 @@ export default function EmailTemplate({
   eventTime = "18:00 - 20:00",
   eventLocation = "Sportovní hala TJ JM Chodov, Mírového hnutí 2137",
   eventTitle = "GameOn Volleyball",
+  eventPrice = 150,
 }: EmailTemplateProps) {
   return (
     <div
@@ -79,6 +81,9 @@ export default function EmailTemplate({
         <p style={{ marginBottom: "8px" }}>
           <strong>Location:</strong> {eventLocation}
         </p>
+        <p style={{ marginBottom: "8px" }}>
+          <strong>Price:</strong> {eventPrice} Kč
+        </p>
       </div>
 
       <div style={{ marginBottom: "30px" }}>
@@ -100,6 +105,16 @@ export default function EmailTemplate({
             boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
           }}
         />
+        <p
+          style={{
+            marginTop: "10px",
+            fontSize: "18px",
+            fontWeight: "bold",
+            color: "#5a2ca0",
+          }}
+        >
+          {eventPrice} Kč
+        </p>
       </div>
 
       <div

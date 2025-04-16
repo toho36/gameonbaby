@@ -185,6 +185,7 @@ export async function POST(request: NextRequest) {
       const qrCodeUrl = generateQRCodeURL(
         `${firstName} ${lastName}`,
         eventDate,
+        event.price,
       );
 
       // Send confirmation email
@@ -196,6 +197,7 @@ export async function POST(request: NextRequest) {
         eventTime,
         event.place || "TJ JM Chodov",
         event.title,
+        event.price,
       );
 
       console.log(

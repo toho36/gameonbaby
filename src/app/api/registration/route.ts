@@ -27,6 +27,7 @@ interface CreateRegistrationResponse {
 
 export const POST = withErrorHandling(
   async (req: Request): Promise<NextResponse> => {
+    console.log("📌 API ENTRY: /api/registration POST endpoint called");
     try {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const request: CreateRegistrationRequest = await req.json();
@@ -41,6 +42,8 @@ export const POST = withErrorHandling(
 
       // Validate payment type
       if (!Object.values(PaymentType).includes(request.paymentType)) {
+        console.error(`Invalid payment type received: ${request.paymentType}`);
+        console.log("Valid payment types are:", Object.values(PaymentType));
         throw new ApiError(
           `The payment type ${request.paymentType} cannot be processed.`,
           400,
@@ -48,17 +51,28 @@ export const POST = withErrorHandling(
         );
       }
 
-      // Proceed with registration creation
-      const registrationDto = await registrationService.createRegistration({
-        ...request,
-      });
-
-      return NextResponse.json<CreateRegistrationResponse>(
-        {
-          ...registrationDto,
-        },
-        { status: 201 },
+      console.log(
+        "Payment type validation successful, proceeding with registration...",
       );
+
+      // Proceed with registration creation
+      try {
+        const registrationDto = await registrationService.createRegistration({
+          ...request,
+        });
+
+        console.log("Registration created successfully:", registrationDto);
+
+        return NextResponse.json<CreateRegistrationResponse>(
+          {
+            ...registrationDto,
+          },
+          { status: 201 },
+        );
+      } catch (serviceError) {
+        console.error("Error in registration service:", serviceError);
+        throw serviceError;
+      }
     } catch (error) {
       console.error("Registration error with details:", error);
       throw error; // Re-throw to let the error handler handle it

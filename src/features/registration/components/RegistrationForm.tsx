@@ -41,6 +41,8 @@ export default function RegistrationForm({
   const [duplicateName, setDuplicateName] = useState("");
   const [isNameError, setIsNameError] = useState(false);
   const [duplicateEmail, setDuplicateEmail] = useState("");
+  const [paymentTypeSelected, setPaymentTypeSelected] =
+    useState<string>("CARD");
   const router = useRouter();
 
   // Initialize the store with the event registration count and capacity
@@ -112,6 +114,11 @@ export default function RegistrationForm({
     setUserRegistration(registration);
     setIsRegistered(true);
     setQrCodeUrl(qrCode);
+    console.log(
+      "Registration success with payment type:",
+      registration.paymentType,
+    );
+    setPaymentTypeSelected(registration.paymentType || "CARD");
     setShowGuestForm(false);
   };
 
@@ -125,6 +132,7 @@ export default function RegistrationForm({
     resetStatus();
     setQrCodeUrl(null);
     reset();
+    setPaymentTypeSelected("CARD");
     setShowGuestForm(false);
   };
 
@@ -140,6 +148,7 @@ export default function RegistrationForm({
         eventDate={eventDate}
         qrCodeUrl={qrCodeUrl}
         resetFormState={resetFormState}
+        paymentType={paymentTypeSelected}
       />
     );
   }

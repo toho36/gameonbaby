@@ -8,6 +8,7 @@ interface GuestRegistrationSuccessProps {
   eventDate: string;
   qrCodeUrl: string | null;
   resetFormState: () => void;
+  paymentType?: string;
 }
 
 export default function GuestRegistrationSuccess({
@@ -15,7 +16,10 @@ export default function GuestRegistrationSuccess({
   eventDate,
   qrCodeUrl,
   resetFormState,
+  paymentType = "CARD",
 }: GuestRegistrationSuccessProps) {
+  const isCashPayment = paymentType === "CASH";
+
   return (
     <div className="rounded-xl border border-white/10 bg-gradient-to-br from-purple-900/40 to-indigo-900/40 p-6 shadow-xl backdrop-blur-lg">
       <div className="mb-6 text-center">
@@ -49,9 +53,15 @@ export default function GuestRegistrationSuccess({
             <p className="text-sm text-white/90">{event.place}</p>
           )}
         </div>
+
+        {isCashPayment && (
+          <div className="mt-4 rounded-lg bg-purple-500/20 p-3 text-white/90">
+            <p>You've selected to pay with cash on site. No QR code needed.</p>
+          </div>
+        )}
       </div>
 
-      {qrCodeUrl && (
+      {qrCodeUrl && !isCashPayment && (
         <div className="mb-6 flex flex-col items-center">
           <h4 className="mb-3 text-lg font-semibold text-white">
             Your Payment QR Code

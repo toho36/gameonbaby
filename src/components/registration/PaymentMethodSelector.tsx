@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { UseFormRegister } from "react-hook-form";
 import { RegistrationFormValues } from "~/components/validations";
 
@@ -16,33 +16,50 @@ export default function PaymentMethodSelector({
   name = "paymentType",
 }: PaymentMethodSelectorProps) {
   // For react-hook-form
+  const [selectedValue, setSelectedValue] = useState("CARD");
+
+  // Update selected value when using controlled component
+  useEffect(() => {
+    if (value) {
+      setSelectedValue(value);
+    }
+  }, [value]);
+
   if (register) {
     return (
       <div className="grid grid-cols-2 gap-3">
-        <label className="flex cursor-pointer items-center rounded-lg border border-white/20 bg-white/10 p-3 transition-all hover:border-white/40 hover:bg-white/20">
+        <label
+          className={`cursor-pointer rounded-lg border p-4 text-center transition-all ${
+            selectedValue === "CARD"
+              ? "border-purple-400 bg-purple-500/40 text-white"
+              : "border-white/20 bg-white/10 text-white/80"
+          }`}
+        >
           <input
             type="radio"
             {...register(name as "paymentType")}
             value="CARD"
             defaultChecked
-            className="h-4 w-4 border-white/40 text-white focus:ring-white/20"
+            onChange={() => setSelectedValue("CARD")}
+            className="hidden"
           />
-          <div className="ml-3">
-            <span className="block font-medium">QR Code Payment</span>
-            <span className="text-xs text-white/70">Pay via bank transfer</span>
-          </div>
+          <span className="block font-medium">QR Code Payment</span>
         </label>
-        <label className="flex cursor-pointer items-center rounded-lg border border-white/20 bg-white/10 p-3 transition-all hover:border-white/40 hover:bg-white/20">
+        <label
+          className={`cursor-pointer rounded-lg border p-4 text-center transition-all ${
+            selectedValue === "CASH"
+              ? "border-purple-400 bg-purple-500/40 text-white"
+              : "border-white/20 bg-white/10 text-white/80"
+          }`}
+        >
           <input
             type="radio"
             {...register(name as "paymentType")}
             value="CASH"
-            className="h-4 w-4 border-white/40 text-white focus:ring-white/20"
+            onChange={() => setSelectedValue("CASH")}
+            className="hidden"
           />
-          <div className="ml-3">
-            <span className="block font-medium">Cash on Site</span>
-            <span className="text-xs text-white/70">Pay when you arrive</span>
-          </div>
+          <span className="block font-medium">Cash on Site</span>
         </label>
       </div>
     );
@@ -51,33 +68,39 @@ export default function PaymentMethodSelector({
   // For controlled component usage
   return (
     <div className="grid grid-cols-2 gap-3">
-      <label className="flex cursor-pointer items-center rounded-lg border border-white/20 bg-white/10 p-4 transition-all hover:border-white/40 hover:bg-white/20">
+      <label
+        className={`cursor-pointer rounded-lg border p-4 text-center transition-all ${
+          value === "CARD"
+            ? "border-purple-400 bg-purple-500/40 text-white"
+            : "border-white/20 bg-white/10 text-white/80"
+        }`}
+      >
         <input
           type="radio"
           name="payment_preference"
           value="CARD"
           checked={value === "CARD"}
           onChange={() => onChange?.("CARD")}
-          className="h-5 w-5 border-white/40 text-white focus:ring-white/20"
+          className="hidden"
         />
-        <div className="ml-3">
-          <span className="block font-medium">QR Code Payment</span>
-          <span className="text-xs text-white/70">Pay via bank transfer</span>
-        </div>
+        <span className="block font-medium">QR Code Payment</span>
       </label>
-      <label className="flex cursor-pointer items-center rounded-lg border border-white/20 bg-white/10 p-4 transition-all hover:border-white/40 hover:bg-white/20">
+      <label
+        className={`cursor-pointer rounded-lg border p-4 text-center transition-all ${
+          value === "CASH"
+            ? "border-purple-400 bg-purple-500/40 text-white"
+            : "border-white/20 bg-white/10 text-white/80"
+        }`}
+      >
         <input
           type="radio"
           name="payment_preference"
           value="CASH"
           checked={value === "CASH"}
           onChange={() => onChange?.("CASH")}
-          className="h-5 w-5 border-white/40 text-white focus:ring-white/20"
+          className="hidden"
         />
-        <div className="ml-3">
-          <span className="block font-medium">Cash on Site</span>
-          <span className="text-xs text-white/70">Pay when you arrive</span>
-        </div>
+        <span className="block font-medium">Cash on Site</span>
       </label>
     </div>
   );

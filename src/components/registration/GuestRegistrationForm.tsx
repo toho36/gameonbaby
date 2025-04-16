@@ -170,118 +170,108 @@ export default function GuestRegistrationForm({
   };
 
   return (
-    <div>
-      <div className="mb-5 flex items-center">
-        <button
-          onClick={onBack}
-          className="mr-3 rounded-full p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
-        </button>
-        <h3 className="text-xl font-bold">
-          {event._count.Registration >= event.capacity
-            ? "Join Waiting List"
-            : "Guest Registration"}
-        </h3>
-      </div>
+    <div className="mx-auto max-w-md">
       <form
         onSubmit={
           event._count.Registration >= event.capacity
             ? handleGuestWaitingList
             : handleSubmit(handleGuestRegistration)
         }
-        className="space-y-5"
+        className="rounded-xl border border-white/20 bg-gradient-to-br from-purple-900/70 to-indigo-900/70 p-6 text-white shadow-lg backdrop-blur-sm"
       >
-        <div>
-          <label className="mb-1.5 block text-sm font-medium">
-            First Name <span className="text-red-300">*</span>
-          </label>
-          <input
-            type="text"
-            {...register("firstName")}
-            className={`w-full rounded-lg border ${
-              errors.firstName ? "border-red-300" : "border-white/20"
-            } bg-white/10 p-3 text-white placeholder-white/50 focus:border-white/40 focus:ring focus:ring-white/20`}
-            placeholder="Your first name"
-          />
-          {errors.firstName && (
-            <p className="mt-1 text-sm text-red-300">
-              {errors.firstName.message}
-            </p>
-          )}
+        <div className="mb-6">
+          <h4 className="text-2xl font-bold text-white">
+            Register for This Event
+          </h4>
+          <p className="text-white/70">Secure your spot for {eventDate}</p>
         </div>
 
-        <div>
-          <label className="mb-1.5 block text-sm font-medium">Last Name</label>
-          <input
-            type="text"
-            {...register("lastName")}
-            className="w-full rounded-lg border border-white/20 bg-white/10 p-3 text-white placeholder-white/50 focus:border-white/40 focus:ring focus:ring-white/20"
-            placeholder="Your last name"
-          />
-        </div>
+        {/* Hide name, email, phone fields when showing payment options only */}
+        {event._count.Registration < event.capacity && (
+          <>
+            <div className="mb-5">
+              <label className="mb-2 block text-sm font-medium text-white">
+                First Name <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                {...register("firstName")}
+                className={`w-full rounded-lg border ${
+                  errors.firstName ? "border-red-300" : "border-purple-800"
+                } bg-purple-800/30 p-3 text-white placeholder-white/50 transition-all`}
+                placeholder="Your first name"
+              />
+              {errors.firstName && (
+                <p className="mt-1.5 text-sm font-medium text-red-300">
+                  {errors.firstName.message}
+                </p>
+              )}
+            </div>
 
-        <div>
-          <label className="mb-1.5 block text-sm font-medium">
-            Email <span className="text-red-300">*</span>
-          </label>
-          <input
-            type="email"
-            {...register("email")}
-            className={`w-full rounded-lg border ${
-              errors.email ? "border-red-300" : "border-white/20"
-            } bg-white/10 p-3 text-white placeholder-white/50 focus:border-white/40 focus:ring focus:ring-white/20`}
-            placeholder="your.email@example.com"
-          />
-          {errors.email && (
-            <p className="mt-1 text-sm text-red-300">{errors.email.message}</p>
-          )}
-        </div>
+            <div className="mb-5">
+              <label className="mb-2 block text-sm font-medium text-white">
+                Last Name
+              </label>
+              <input
+                type="text"
+                {...register("lastName")}
+                className="w-full rounded-lg border border-purple-800 bg-purple-800/30 p-3 text-white placeholder-white/50 transition-all"
+                placeholder="Your last name"
+              />
+            </div>
 
-        <div>
-          <label className="mb-1.5 block text-sm font-medium">
-            Phone Number <span className="text-red-300">*</span>
-          </label>
-          <input
-            type="tel"
-            {...register("phoneNumber")}
-            className={`w-full rounded-lg border ${
-              errors.phoneNumber ? "border-red-300" : "border-white/20"
-            } bg-white/10 p-3 text-white placeholder-white/50 focus:border-white/40 focus:ring focus:ring-white/20`}
-            placeholder="Your phone number"
-          />
-          {errors.phoneNumber && (
-            <p className="mt-1 text-sm text-red-300">
-              {errors.phoneNumber.message}
-            </p>
-          )}
-        </div>
+            <div className="mb-5">
+              <label className="mb-2 block text-sm font-medium text-white">
+                Email <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="email"
+                {...register("email")}
+                className={`w-full rounded-lg border ${
+                  errors.email ? "border-red-300" : "border-purple-800"
+                } bg-purple-800/30 p-3 text-white placeholder-white/50 transition-all`}
+                placeholder="your.email@example.com"
+              />
+              {errors.email && (
+                <p className="mt-1.5 text-sm font-medium text-red-300">
+                  {errors.email.message}
+                </p>
+              )}
+            </div>
 
-        <div>
-          <label className="mb-3 block text-sm font-medium">
-            Payment Method <span className="text-red-300">*</span>
+            <div className="mb-5">
+              <label className="mb-2 block text-sm font-medium text-white">
+                Phone Number <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="tel"
+                {...register("phoneNumber")}
+                className={`w-full rounded-lg border ${
+                  errors.phoneNumber ? "border-red-300" : "border-purple-800"
+                } bg-purple-800/30 p-3 text-white placeholder-white/50 transition-all`}
+                placeholder="Your phone number"
+              />
+              {errors.phoneNumber && (
+                <p className="mt-1.5 text-sm font-medium text-red-300">
+                  {errors.phoneNumber.message}
+                </p>
+              )}
+            </div>
+          </>
+        )}
+
+        <div className="mb-6">
+          <label className="mb-2 block text-sm font-medium text-white">
+            Payment Method <span className="text-red-400">*</span>
           </label>
           <PaymentMethodSelector register={register} />
         </div>
 
-        <div className="mt-6">
+        <div>
           <button
             type="submit"
             disabled={isUpdating}
-            className="w-full rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 px-5 py-3 text-center font-medium text-white transition-all hover:from-purple-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-70"
+            className="flex w-full items-center justify-center rounded-lg bg-purple-600 px-5 py-3 text-center font-medium text-white shadow-md transition-all hover:bg-purple-700"
           >
             {isUpdating ? (
               <span className="flex items-center justify-center">
@@ -308,8 +298,34 @@ export default function GuestRegistrationForm({
                 Processing...
               </span>
             ) : (
-              "Register for Event"
+              <>
+                <svg
+                  className="mr-2 h-5 w-5"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+                Register Now
+              </>
             )}
+          </button>
+        </div>
+
+        <div className="mt-4 text-center">
+          <button
+            type="button"
+            onClick={onBack}
+            className="text-sm text-white/50 hover:text-white"
+          >
+            Go back
           </button>
         </div>
       </form>

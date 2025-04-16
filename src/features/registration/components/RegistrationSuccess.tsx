@@ -36,6 +36,7 @@ export default function RegistrationSuccess({
   const [isNameError, setIsNameError] = useState(false);
   const [duplicateName, setDuplicateName] = useState("");
   const [friendName, setFriendName] = useState("");
+  const [friendIsWaitlisted, setFriendIsWaitlisted] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [friendQrCodeUrl, setFriendQrCodeUrl] = useState<string | null>(null);
 
@@ -107,17 +108,24 @@ export default function RegistrationSuccess({
         const fullFriendName = `${friendFirstName} ${friendLastName}`.trim();
         setFriendName(fullFriendName);
 
-        // Generate QR code with friend's name
-        import("~/utils/qrCodeUtils").then(({ generateQRCodeURL }) => {
-          const friendQrUrl = generateQRCodeURL(
-            fullFriendName,
-            event.from,
-            event.price,
-          );
-          setFriendQrCodeUrl(friendQrUrl);
-        });
+        // Check if friend was added to waiting list
+        if (data.isWaitlisted) {
+          setFriendIsWaitlisted(true);
+          toast.success(`${fullFriendName} added to the waiting list!`);
+        } else {
+          setFriendIsWaitlisted(false);
+          // Generate QR code with friend's name
+          import("~/utils/qrCodeUtils").then(({ generateQRCodeURL }) => {
+            const friendQrUrl = generateQRCodeURL(
+              fullFriendName,
+              event.from,
+              event.price,
+            );
+            setFriendQrCodeUrl(friendQrUrl);
+          });
 
-        toast.success("Friend successfully registered!");
+          toast.success("Friend successfully registered!");
+        }
 
         // Clear form inputs manually instead of using reset()
         try {
@@ -423,15 +431,20 @@ export default function RegistrationSuccess({
                     />
                   </svg>
                 </div>
-                <h4 className="font-bold text-green-300">Friend Registered!</h4>
+                <h4 className="font-bold text-green-300">
+                  {friendIsWaitlisted
+                    ? "Friend on Waiting List!"
+                    : "Friend Registered!"}
+                </h4>
               </div>
 
               <p className="mb-3 text-sm text-white/90">
-                {friendName} has been successfully registered for this event.
-                They'll be using your contact details.
+                {friendIsWaitlisted
+                  ? `${friendName} has been added to the waiting list for this event. They'll be registered when a spot becomes available.`
+                  : `${friendName} has been successfully registered for this event. They'll be using your contact details.`}
               </p>
 
-              {friendQrCodeUrl && (
+              {!friendIsWaitlisted && friendQrCodeUrl && (
                 <div className="mb-4 w-full overflow-hidden rounded-xl border border-white/20 bg-white/10 p-4 transition-all hover:bg-white/15">
                   <div className="flex flex-col items-center">
                     <h4 className="mb-3 text-sm font-bold text-white">
@@ -486,6 +499,7 @@ export default function RegistrationSuccess({
                   setIsNameError(false);
                   setDuplicateName("");
                   setFriendQrCodeUrl(null);
+                  setFriendIsWaitlisted(false);
                 }}
                 className="w-full rounded-lg bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
               >

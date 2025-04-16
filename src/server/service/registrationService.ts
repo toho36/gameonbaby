@@ -11,6 +11,13 @@ import {
 
 const prisma = new PrismaClient();
 
+// Extended Event type with count
+interface EventWithCount extends Event {
+  _count?: {
+    Registration: number;
+  };
+}
+
 interface CreateRegistrationCommand {
   firstName: string;
   lastName: string;
@@ -27,6 +34,7 @@ interface RegistragionDto {
   registrationId: string;
   paymentType: PaymentType;
   qrCodeData?: string | null;
+  isWaitlisted?: boolean;
 }
 
 export async function createRegistration(
@@ -43,9 +51,14 @@ export async function createRegistration(
 
   try {
     console.log("Looking up event with ID:", command.eventId);
-    const event: Event | null = await prisma.event.findFirst({
+    const event: EventWithCount | null = await prisma.event.findFirst({
       where: {
         id: command.eventId,
+      },
+      include: {
+        _count: {
+          select: { Registration: true },
+        },
       },
     });
 
@@ -63,6 +76,7 @@ export async function createRegistration(
       title: event.title,
       capacity: event.capacity,
       price: event.price,
+      currentRegistrations: event._count?.Registration || 0,
     });
 
     // Check for duplicate registration (same email AND same name)
@@ -105,6 +119,34 @@ export async function createRegistration(
         );
       }
 
+      // Also check waiting list for duplicates
+      const existingWaitlistEntry = await prisma.waitingList.findFirst({
+        where: {
+          event_id: command.eventId,
+          email: {
+            equals: command.email,
+            mode: "insensitive",
+          },
+          first_name: {
+            equals: command.firstName,
+            mode: "insensitive",
+          },
+          last_name: {
+            equals: command.lastName || "",
+            mode: "insensitive",
+          },
+        },
+      });
+
+      if (existingWaitlistEntry) {
+        console.log("Duplicate waiting list entry found!");
+        throw new ApiError(
+          `There already exists a waiting list entry for ${command.firstName} ${command.lastName} with email ${command.email} for this event`,
+          409,
+          getCode(Modules.REGISTRATION, ErrorCodes.REGISTRATION_ALREADY_EXISTS),
+        );
+      }
+
       console.log(
         "No duplicate registration found, proceeding with registration creation",
       );
@@ -120,7 +162,78 @@ export async function createRegistration(
       );
     }
 
-    // Create the registration
+    // Check if event is at capacity
+    const isEventFull = (event._count?.Registration || 0) >= event.capacity;
+
+    if (isEventFull) {
+      console.log(
+        `Event is at capacity (${event._count?.Registration || 0}/${event.capacity}), adding to waiting list`,
+      );
+
+      // Add to waiting list instead
+      let waitingListEntry;
+      try {
+        waitingListEntry = await prisma.waitingList.create({
+          data: {
+            email: command.email.toLowerCase(),
+            event: {
+              connect: { id: event.id },
+            },
+            first_name: command.firstName,
+            last_name: command.lastName,
+            phone_number: command.phoneNumber,
+            payment_type: command.paymentType,
+            created_at: new Date(),
+          },
+        });
+
+        console.log(
+          "Waiting list entry created successfully with ID:",
+          waitingListEntry.id,
+        );
+
+        // Record waiting list history
+        try {
+          await recordRegistrationHistory({
+            eventId: event.id,
+            waitingListId: waitingListEntry.id,
+            firstName: waitingListEntry.first_name,
+            lastName: waitingListEntry.last_name,
+            email: waitingListEntry.email,
+            phoneNumber: waitingListEntry.phone_number,
+            actionType: RegistrationAction.ADDED_TO_WAITLIST,
+            eventTitle: event.title,
+          });
+          console.log("Waiting list history recorded successfully");
+        } catch (historyError) {
+          console.warn(
+            "Warning: Failed to record waiting list history:",
+            historyError,
+          );
+        }
+
+        return {
+          firstName: waitingListEntry.first_name || "",
+          lastName: waitingListEntry.last_name ?? "",
+          email: waitingListEntry.email || "",
+          registrationId: waitingListEntry.id,
+          paymentType:
+            PaymentType[
+              waitingListEntry.payment_type as keyof typeof PaymentType
+            ],
+          isWaitlisted: true,
+        };
+      } catch (error) {
+        console.error("Failed to create waiting list entry:", error);
+        throw new ApiError(
+          "Failed to add to waiting list",
+          500,
+          getCode(Modules.REGISTRATION, ErrorCodes.DATABASE_ERROR),
+        );
+      }
+    }
+
+    // Create the registration if event is not full
     console.log("Creating new registration record...");
     let registration: Registration;
     try {
@@ -199,6 +312,7 @@ export async function createRegistration(
       paymentType:
         PaymentType[registration.payment_type as keyof typeof PaymentType],
       qrCodeData: paymentData,
+      isWaitlisted: false,
     };
   } catch (error) {
     console.error("Error in createRegistration service:", error);

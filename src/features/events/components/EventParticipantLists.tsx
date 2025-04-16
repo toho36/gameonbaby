@@ -11,6 +11,7 @@ interface Participant {
   created_at: Date;
   user_id?: string;
   email?: string;
+  payment_type?: string;
 }
 
 interface EventParticipantListsProps {
@@ -20,6 +21,57 @@ interface EventParticipantListsProps {
   initialRegCount: number;
   capacity: number;
 }
+
+// Component to display payment type with icon
+const PaymentTypeIndicator = ({ type }: { type?: string }) => {
+  if (!type) return null;
+
+  const isQR = type === "QR" || type === "CARD"; // Support both new and old values
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${isQR ? "bg-blue-100 text-blue-800" : "bg-yellow-100 text-yellow-800"}`}
+    >
+      {isQR ? (
+        <>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="mr-1 h-3 w-3"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
+            />
+          </svg>
+          QR
+        </>
+      ) : (
+        <>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="mr-1 h-3 w-3"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z"
+            />
+          </svg>
+          Cash
+        </>
+      )}
+    </span>
+  );
+};
 
 export default function EventParticipantLists({
   eventId,
@@ -119,9 +171,11 @@ export default function EventParticipantLists({
                     {reg.first_name} {reg.last_name}
                   </span>
                 </div>
-                <span className="text-sm text-white/70">
-                  {new Date(reg.created_at).toLocaleDateString("cs-CZ")}
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-white/70">
+                    {new Date(reg.created_at).toLocaleDateString("cs-CZ")}
+                  </span>
+                </div>
               </div>
             ))}
           </div>
@@ -156,9 +210,11 @@ export default function EventParticipantLists({
                     {entry.first_name} {entry.last_name}
                   </span>
                 </div>
-                <span className="text-sm text-white/70">
-                  {new Date(entry.created_at).toLocaleDateString("cs-CZ")}
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-white/70">
+                    {new Date(entry.created_at).toLocaleDateString("cs-CZ")}
+                  </span>
+                </div>
               </div>
             ))}
           </div>

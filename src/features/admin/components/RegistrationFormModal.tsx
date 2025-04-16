@@ -148,8 +148,8 @@ const RegistrationFormModal: React.FC<RegistrationFormModalProps> = ({
                 required
                 className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               >
-                <option value="CASH">Cash</option>
-                <option value="CARD">Card (QR)</option>
+                <option value="CASH">Cash on Site</option>
+                <option value="QR">QR Code Payment</option>
               </select>
             </div>
           </div>

@@ -408,9 +408,9 @@ function ProfileContent() {
                   <input
                     type="radio"
                     name="payment_preference"
-                    value="CARD"
-                    checked={paymentPreference === "CARD"}
-                    onChange={() => handlePaymentPreferenceChange("CARD")}
+                    value="QR"
+                    checked={paymentPreference === "QR"}
+                    onChange={() => handlePaymentPreferenceChange("QR")}
                     disabled={isUpdating}
                     className="mr-2 h-4 w-4 accent-purple-500"
                   />

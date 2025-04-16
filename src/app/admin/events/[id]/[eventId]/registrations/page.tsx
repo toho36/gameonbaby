@@ -188,6 +188,57 @@ interface RegistrationTableProps {
   handleDeleteClick: (id: string) => void;
 }
 
+// Component to display payment type with icon
+const PaymentTypeIndicator = ({ type }: { type?: string | null }) => {
+  if (!type) return null;
+
+  const isQR = type === "QR" || type === "CARD"; // Support both new and old values
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${isQR ? "bg-blue-100 text-blue-800" : "bg-yellow-100 text-yellow-800"}`}
+    >
+      {isQR ? (
+        <>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="mr-1 h-3 w-3"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
+            />
+          </svg>
+          QR
+        </>
+      ) : (
+        <>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="mr-1 h-3 w-3"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z"
+            />
+          </svg>
+          Cash
+        </>
+      )}
+    </span>
+  );
+};
+
 const RegistrationTable: React.FC<RegistrationTableProps> = ({
   registrations,
   compactView,
@@ -205,13 +256,20 @@ const RegistrationTable: React.FC<RegistrationTableProps> = ({
           <thead>
             <tr className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
               <th className="px-6 py-4">Participant</th>
+              {!compactView && (
+                <>
+                  <th className="px-6 py-4">Email</th>
+                  <th className="px-6 py-4">Phone</th>
+                  <th className="px-6 py-4">Payment Method</th>
+                </>
+              )}
               <th className="px-6 py-4">
                 {compactView ? "Status" : "Payment & Attendance"}
               </th>
               <th className="px-6 py-4">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-200 bg-white">
             {registrations.map((registration) => (
               <tr
                 key={registration.id}
@@ -234,24 +292,37 @@ const RegistrationTable: React.FC<RegistrationTableProps> = ({
                     </div>
                   )}
                 </td>
+                {!compactView && (
+                  <>
+                    <td className="whitespace-nowrap px-6 py-4">
+                      <div className="text-sm text-gray-900">
+                        {registration.user.email || "No email"}
+                      </div>
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4">
+                      <div className="text-sm text-gray-900">
+                        {registration.user.phone || "No phone"}
+                      </div>
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4">
+                      <div className="text-sm text-gray-900">
+                        <PaymentTypeIndicator
+                          type={registration.paymentMethod}
+                        />
+                      </div>
+                    </td>
+                  </>
+                )}
                 <td className="whitespace-nowrap px-6 py-4">
-                  <div className="flex flex-col gap-2 text-sm">
+                  <div className="flex space-x-2">
                     <button
                       onClick={() => togglePaymentStatus(registration.id)}
                       disabled={processing === "payment" + registration.id}
                       className={`${
-                        compactView
-                          ? `mr-2 rounded-md px-3 py-2 text-sm font-medium ${
-                              registration.status === "PAID"
-                                ? "bg-green-100 text-green-800 hover:bg-green-200"
-                                : "bg-red-100 text-red-800 hover:bg-red-200"
-                            }`
-                          : `mr-2 rounded-md px-2 py-1 text-xs font-medium ${
-                              registration.status === "PAID"
-                                ? "bg-green-100 text-green-800"
-                                : "bg-red-100 text-red-800"
-                            }`
-                      }`}
+                        registration.status === "PAID"
+                          ? "bg-green-100 text-green-800 hover:bg-green-200"
+                          : "bg-red-100 text-red-800 hover:bg-red-200"
+                      } inline-flex items-center rounded-md px-3 py-1 text-xs font-medium`}
                     >
                       {processing === "payment" + registration.id ? (
                         <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
@@ -259,43 +330,49 @@ const RegistrationTable: React.FC<RegistrationTableProps> = ({
                         <>
                           {registration.status === "PAID" ? (
                             <>
-                              <span className="inline-flex items-center">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="mr-1 h-4 w-4"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M5 13l4 4L19 7"
-                                  />
-                                </svg>
-                                {compactView ? "Paid" : "Paid"}
-                              </span>
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="mr-1 h-4 w-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M5 13l4 4L19 7"
+                                />
+                              </svg>
+                              Paid
                             </>
                           ) : (
                             <>
-                              <span className="inline-flex items-center">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="mr-1 h-4 w-4"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                  />
-                                </svg>
-                                {compactView ? "Not Paid" : "Not Paid"}
-                              </span>
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="mr-1 h-4 w-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
+                              </svg>
+                              Not Paid
+                              {compactView && registration.paymentMethod && (
+                                <span className="ml-1">
+                                  (
+                                  {registration.paymentMethod === "CARD" ||
+                                  registration.paymentMethod === "QR"
+                                    ? "QR"
+                                    : "Cash"}
+                                  )
+                                </span>
+                              )}
                             </>
                           )}
                         </>
@@ -306,18 +383,10 @@ const RegistrationTable: React.FC<RegistrationTableProps> = ({
                       onClick={() => toggleAttendance(registration.id)}
                       disabled={processing === "attendance" + registration.id}
                       className={`${
-                        compactView
-                          ? `rounded-md px-3 py-2 text-sm font-medium ${
-                              registration.attended
-                                ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
-                                : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                            }`
-                          : `rounded-md px-2 py-1 text-xs font-medium ${
-                              registration.attended
-                                ? "bg-blue-100 text-blue-800"
-                                : "bg-gray-100 text-gray-800"
-                            }`
-                      }`}
+                        registration.attended
+                          ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                          : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                      } inline-flex items-center rounded-md px-3 py-1 text-xs font-medium`}
                     >
                       {processing === "attendance" + registration.id ? (
                         <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
@@ -325,43 +394,39 @@ const RegistrationTable: React.FC<RegistrationTableProps> = ({
                         <>
                           {registration.attended ? (
                             <>
-                              <span className="inline-flex items-center">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="mr-1 h-4 w-4"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M5 13l4 4L19 7"
-                                  />
-                                </svg>
-                                {compactView ? "Checked In" : "Attended"}
-                              </span>
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="mr-1 h-4 w-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M5 13l4 4L19 7"
+                                />
+                              </svg>
+                              Attended
                             </>
                           ) : (
                             <>
-                              <span className="inline-flex items-center">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="mr-1 h-4 w-4"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                  />
-                                </svg>
-                                {compactView ? "Check In" : "Not Attended"}
-                              </span>
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="mr-1 h-4 w-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                />
+                              </svg>
+                              Check In
                             </>
                           )}
                         </>
@@ -372,10 +437,27 @@ const RegistrationTable: React.FC<RegistrationTableProps> = ({
                 <td className="whitespace-nowrap px-6 py-4">
                   <div className="flex space-x-2">
                     <button
+                      onClick={() => handleDuplicateRegistration(registration)}
+                      disabled={processing === "duplicate" + registration.id}
+                      className="inline-flex items-center rounded-md bg-purple-50 px-3 py-1 text-xs font-medium text-purple-700 hover:bg-purple-100"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="mr-1 h-4 w-4"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" />
+                        <path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z" />
+                      </svg>
+                      {processing === "duplicate" + registration.id
+                        ? "Processing..."
+                        : "Duplicate"}
+                    </button>
+
+                    <button
                       onClick={() => handleDeleteClick(registration.id)}
-                      className={`${compactView ? "hidden" : "bg-red-50 text-red-700 hover:bg-red-100"} ${
-                        compactView ? "px-4 py-2 text-sm" : "px-3 py-1 text-xs"
-                      } inline-flex items-center rounded-md font-medium`}
+                      className="inline-flex items-center rounded-md bg-red-50 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -391,29 +473,6 @@ const RegistrationTable: React.FC<RegistrationTableProps> = ({
                       </svg>
                       Delete
                     </button>
-
-                    {!compactView && (
-                      <button
-                        onClick={() =>
-                          handleDuplicateRegistration(registration)
-                        }
-                        disabled={processing === "duplicate" + registration.id}
-                        className="inline-flex items-center rounded-md bg-purple-50 px-3 py-1 text-xs font-medium text-purple-700 hover:bg-purple-100"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="mr-1 h-4 w-4"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" />
-                          <path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z" />
-                        </svg>
-                        {processing === "duplicate" + registration.id
-                          ? "Processing..."
-                          : "Duplicate"}
-                      </button>
-                    )}
                   </div>
                 </td>
               </tr>
@@ -1174,49 +1233,23 @@ export default function EventRegistrationsPage({
           </div>
 
           {/* Desktop view */}
-          <div className="sm:block">
+          <div className="hidden sm:block">
             <div className="min-w-full overflow-hidden overflow-x-auto align-middle shadow sm:rounded-lg">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead>
-                  <tr>
-                    <th
-                      scope="col"
-                      className={`${
-                        compactView ? "w-1/2" : "w-1/4"
-                      } bg-gray-50 px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500`}
-                    >
-                      Name
-                    </th>
+                  <tr className="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                    <th className="px-6 py-4">Participant</th>
                     {!compactView && (
                       <>
-                        <th
-                          scope="col"
-                          className="w-1/4 bg-gray-50 px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
-                        >
-                          Email
-                        </th>
-                        <th
-                          scope="col"
-                          className="w-1/4 bg-gray-50 px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
-                        >
-                          Phone
-                        </th>
-                        <th
-                          scope="col"
-                          className="w-1/4 bg-gray-50 px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500"
-                        >
-                          Status
-                        </th>
+                        <th className="px-6 py-4">Email</th>
+                        <th className="px-6 py-4">Phone</th>
+                        <th className="px-6 py-4">Payment Method</th>
                       </>
                     )}
-                    <th
-                      scope="col"
-                      className={`${
-                        compactView ? "w-1/2" : "w-1/4"
-                      } bg-gray-50 px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500`}
-                    >
-                      Actions
+                    <th className="px-6 py-4">
+                      {compactView ? "Status" : "Payment & Attendance"}
                     </th>
+                    <th className="px-6 py-4">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
@@ -1261,298 +1294,185 @@ export default function EventRegistrationsPage({
                               {registration.user.phone || "No phone"}
                             </div>
                           </td>
-                          <td className="whitespace-nowrap px-6 py-4 text-center">
-                            <div className="flex flex-col items-center justify-center gap-2">
-                              <button
-                                onClick={() =>
-                                  togglePaymentStatus(registration.id)
-                                }
-                                disabled={
-                                  processing === "payment" + registration.id
-                                }
-                                className={`${
-                                  registration.status === "PAID"
-                                    ? "bg-green-100 text-green-800 hover:bg-green-200"
-                                    : "bg-red-100 text-red-800 hover:bg-red-200"
-                                } inline-flex items-center rounded-md px-3 py-1 text-xs font-medium`}
-                              >
-                                {processing === "payment" + registration.id ? (
-                                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
-                                ) : (
-                                  <>
-                                    {registration.status === "PAID" ? (
-                                      <>
-                                        <svg
-                                          xmlns="http://www.w3.org/2000/svg"
-                                          className="mr-1 h-4 w-4"
-                                          fill="none"
-                                          viewBox="0 0 24 24"
-                                          stroke="currentColor"
-                                        >
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M5 13l4 4L19 7"
-                                          />
-                                        </svg>
-                                        Paid
-                                      </>
-                                    ) : (
-                                      <>
-                                        <svg
-                                          xmlns="http://www.w3.org/2000/svg"
-                                          className="mr-1 h-4 w-4"
-                                          fill="none"
-                                          viewBox="0 0 24 24"
-                                          stroke="currentColor"
-                                        >
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                          />
-                                        </svg>
-                                        Not Paid
-                                      </>
-                                    )}
-                                  </>
-                                )}
-                              </button>
-
-                              <button
-                                onClick={() =>
-                                  toggleAttendance(registration.id)
-                                }
-                                disabled={
-                                  processing === "attendance" + registration.id
-                                }
-                                className={`${
-                                  registration.attended
-                                    ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
-                                    : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                                } inline-flex items-center rounded-md px-3 py-1 text-xs font-medium`}
-                              >
-                                {processing ===
-                                "attendance" + registration.id ? (
-                                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
-                                ) : (
-                                  <>
-                                    {registration.attended ? (
-                                      <>
-                                        <svg
-                                          xmlns="http://www.w3.org/2000/svg"
-                                          className="mr-1 h-4 w-4"
-                                          fill="none"
-                                          viewBox="0 0 24 24"
-                                          stroke="currentColor"
-                                        >
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M5 13l4 4L19 7"
-                                          />
-                                        </svg>
-                                        Attended
-                                      </>
-                                    ) : (
-                                      <>
-                                        <svg
-                                          xmlns="http://www.w3.org/2000/svg"
-                                          className="mr-1 h-4 w-4"
-                                          fill="none"
-                                          viewBox="0 0 24 24"
-                                          stroke="currentColor"
-                                        >
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                          />
-                                        </svg>
-                                        Check In
-                                      </>
-                                    )}
-                                  </>
-                                )}
-                              </button>
+                          <td className="whitespace-nowrap px-6 py-4">
+                            <div className="text-sm text-gray-900">
+                              <PaymentTypeIndicator
+                                type={registration.paymentMethod}
+                              />
                             </div>
                           </td>
                         </>
                       )}
-                      <td className="flex-wrap whitespace-nowrap px-6 py-4 text-center text-sm font-medium">
-                        <div className="flex flex-wrap justify-center gap-2">
-                          {compactView && (
-                            <>
-                              <button
-                                onClick={() =>
-                                  togglePaymentStatus(registration.id)
-                                }
-                                disabled={
-                                  processing === "payment" + registration.id
-                                }
-                                className={`${
-                                  registration.status === "PAID"
-                                    ? "bg-green-100 text-green-800 hover:bg-green-200"
-                                    : "bg-red-100 text-red-800 hover:bg-red-200"
-                                } inline-flex items-center rounded-md px-4 py-2 text-sm font-medium`}
-                              >
-                                {processing === "payment" + registration.id ? (
-                                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
+                      <td className="whitespace-nowrap px-6 py-4 text-center">
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <button
+                            onClick={() => togglePaymentStatus(registration.id)}
+                            disabled={
+                              processing === "payment" + registration.id
+                            }
+                            className={`${
+                              registration.status === "PAID"
+                                ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                : "bg-red-100 text-red-800 hover:bg-red-200"
+                            } inline-flex items-center rounded-md px-3 py-1 text-xs font-medium`}
+                          >
+                            {processing === "payment" + registration.id ? (
+                              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
+                            ) : (
+                              <>
+                                {registration.status === "PAID" ? (
+                                  <>
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      className="mr-1 h-4 w-4"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      stroke="currentColor"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M5 13l4 4L19 7"
+                                      />
+                                    </svg>
+                                    Paid
+                                  </>
                                 ) : (
                                   <>
-                                    {registration.status === "PAID" ? (
-                                      <>
-                                        <svg
-                                          xmlns="http://www.w3.org/2000/svg"
-                                          className="mr-1 h-4 w-4"
-                                          fill="none"
-                                          viewBox="0 0 24 24"
-                                          stroke="currentColor"
-                                        >
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M5 13l4 4L19 7"
-                                          />
-                                        </svg>
-                                        Paid
-                                      </>
-                                    ) : (
-                                      <>
-                                        <svg
-                                          xmlns="http://www.w3.org/2000/svg"
-                                          className="mr-1 h-4 w-4"
-                                          fill="none"
-                                          viewBox="0 0 24 24"
-                                          stroke="currentColor"
-                                        >
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                          />
-                                        </svg>
-                                        Not Paid
-                                      </>
-                                    )}
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      className="mr-1 h-4 w-4"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      stroke="currentColor"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                      />
+                                    </svg>
+                                    Not Paid
+                                    {compactView &&
+                                      registration.paymentMethod && (
+                                        <span className="ml-1">
+                                          (
+                                          {registration.paymentMethod ===
+                                            "CARD" ||
+                                          registration.paymentMethod === "QR"
+                                            ? "QR"
+                                            : "Cash"}
+                                          )
+                                        </span>
+                                      )}
                                   </>
                                 )}
-                              </button>
+                              </>
+                            )}
+                          </button>
 
-                              <button
-                                onClick={() =>
-                                  toggleAttendance(registration.id)
-                                }
-                                disabled={
-                                  processing === "attendance" + registration.id
-                                }
-                                className={`${
-                                  registration.attended
-                                    ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
-                                    : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                                } inline-flex items-center rounded-md px-4 py-2 text-sm font-medium`}
-                              >
-                                {processing ===
-                                "attendance" + registration.id ? (
-                                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
+                          <button
+                            onClick={() => toggleAttendance(registration.id)}
+                            disabled={
+                              processing === "attendance" + registration.id
+                            }
+                            className={`${
+                              registration.attended
+                                ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                                : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                            } inline-flex items-center rounded-md px-3 py-1 text-xs font-medium`}
+                          >
+                            {processing === "attendance" + registration.id ? (
+                              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
+                            ) : (
+                              <>
+                                {registration.attended ? (
+                                  <>
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      className="mr-1 h-4 w-4"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      stroke="currentColor"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M5 13l4 4L19 7"
+                                      />
+                                    </svg>
+                                    Attended
+                                  </>
                                 ) : (
                                   <>
-                                    {registration.attended ? (
-                                      <>
-                                        <svg
-                                          xmlns="http://www.w3.org/2000/svg"
-                                          className="mr-1 h-4 w-4"
-                                          fill="none"
-                                          viewBox="0 0 24 24"
-                                          stroke="currentColor"
-                                        >
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M5 13l4 4L19 7"
-                                          />
-                                        </svg>
-                                        Attended
-                                      </>
-                                    ) : (
-                                      <>
-                                        <svg
-                                          xmlns="http://www.w3.org/2000/svg"
-                                          className="mr-1 h-4 w-4"
-                                          fill="none"
-                                          viewBox="0 0 24 24"
-                                          stroke="currentColor"
-                                        >
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                          />
-                                        </svg>
-                                        Check In
-                                      </>
-                                    )}
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      className="mr-1 h-4 w-4"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      stroke="currentColor"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                      />
+                                    </svg>
+                                    Check In
                                   </>
                                 )}
-                              </button>
-                            </>
-                          )}
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4">
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() =>
+                              handleDuplicateRegistration(registration)
+                            }
+                            disabled={
+                              processing === "duplicate" + registration.id
+                            }
+                            className="inline-flex items-center rounded-md bg-purple-50 px-3 py-1 text-xs font-medium text-purple-700 hover:bg-purple-100"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="mr-1 h-4 w-4"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" />
+                              <path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z" />
+                            </svg>
+                            {processing === "duplicate" + registration.id
+                              ? "Processing..."
+                              : "Duplicate"}
+                          </button>
 
-                          {!compactView && (
-                            <>
-                              <button
-                                onClick={() =>
-                                  handleDeleteClick(registration.id)
-                                }
-                                className="inline-flex items-center rounded-md bg-red-50 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
-                              >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="mr-1 h-4 w-4"
-                                  viewBox="0 0 20 20"
-                                  fill="currentColor"
-                                >
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                                Delete
-                              </button>
-
-                              <button
-                                onClick={() =>
-                                  handleDuplicateRegistration(registration)
-                                }
-                                disabled={
-                                  processing === "duplicate" + registration.id
-                                }
-                                className="inline-flex items-center rounded-md bg-purple-50 px-3 py-1 text-xs font-medium text-purple-700 hover:bg-purple-100"
-                              >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="mr-1 h-4 w-4"
-                                  viewBox="0 0 20 20"
-                                  fill="currentColor"
-                                >
-                                  <path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" />
-                                  <path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z" />
-                                </svg>
-                                {processing === "duplicate" + registration.id
-                                  ? "Processing..."
-                                  : "Duplicate"}
-                              </button>
-                            </>
-                          )}
+                          <button
+                            onClick={() => handleDeleteClick(registration.id)}
+                            className="inline-flex items-center rounded-md bg-red-50 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-100"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="mr-1 h-4 w-4"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                            Delete
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1563,7 +1483,7 @@ export default function EventRegistrationsPage({
           </div>
 
           {/* Mobile view */}
-          <div className="sm:hidden">
+          <div className="block sm:hidden">
             <div className="space-y-3">
               {filteredRegistrations.map((registration) => (
                 <div
@@ -1593,6 +1513,11 @@ export default function EventRegistrationsPage({
                           <div className="mt-1 text-xs text-gray-500">
                             <div>{registration.user.email || "No email"}</div>
                             <div>{registration.user.phone || "No phone"}</div>
+                            <div className="mt-1">
+                              <PaymentTypeIndicator
+                                type={registration.paymentMethod}
+                              />
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1651,6 +1576,16 @@ export default function EventRegistrationsPage({
                                   />
                                 </svg>
                                 Not Paid
+                                {compactView && registration.paymentMethod && (
+                                  <span className="ml-1">
+                                    (
+                                    {registration.paymentMethod === "CARD" ||
+                                    registration.paymentMethod === "QR"
+                                      ? "QR"
+                                      : "Cash"}
+                                    )
+                                  </span>
+                                )}
                               </span>
                             </>
                           )}
@@ -1688,7 +1623,7 @@ export default function EventRegistrationsPage({
                                     d="M5 13l4 4L19 7"
                                   />
                                 </svg>
-                                Checked In
+                                Attended
                               </span>
                             </>
                           ) : (

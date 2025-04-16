@@ -9,6 +9,7 @@ interface WaitingListEntry {
   last_name: string | null;
   created_at: Date;
   email?: string;
+  payment_type?: string;
 }
 
 // Create a separate client for raw queries
@@ -101,7 +102,7 @@ export async function GET(
     // For admins and moderators, fetch full participant data
     // Fetch registrations with email for identification
     const registrationsRaw = await prismaRaw.$queryRaw`
-      SELECT first_name, last_name, created_at, email
+      SELECT first_name, last_name, created_at, email, payment_type
       FROM "Registration"
       WHERE event_id = ${eventId} AND deleted = false
       ORDER BY created_at ASC
@@ -112,13 +113,14 @@ export async function GET(
       last_name: string | null;
       created_at: Date;
       email: string;
+      payment_type: string;
     }[];
 
     // Fetch waiting list entries with raw query
     let waitingList: WaitingListEntry[] = [];
     try {
       waitingList = await prismaRaw.$queryRaw<WaitingListEntry[]>`
-        SELECT first_name, last_name, created_at, email 
+        SELECT first_name, last_name, created_at, email, payment_type 
         FROM "WaitingList"
         WHERE event_id = ${eventId}
         ORDER BY created_at ASC

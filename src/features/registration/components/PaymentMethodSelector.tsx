@@ -12,13 +12,13 @@ interface PaymentMethodSelectorProps {
 }
 
 export default function PaymentMethodSelector({
-  value = "CARD",
+  value = "QR",
   onChange,
   register,
   name = "paymentType",
 }: PaymentMethodSelectorProps) {
   // For react-hook-form
-  const [selectedValue, setSelectedValue] = useState("CARD");
+  const [selectedValue, setSelectedValue] = useState("QR");
 
   // Update selected value when using controlled component
   useEffect(() => {
@@ -32,7 +32,7 @@ export default function PaymentMethodSelector({
       <div className="grid grid-cols-2 gap-3">
         <label
           className={`cursor-pointer rounded-lg border p-4 text-center transition-all ${
-            selectedValue === "CARD"
+            selectedValue === "QR"
               ? "border-purple-400 bg-purple-500/40 text-white"
               : "border-white/20 bg-white/10 text-white/80"
           }`}
@@ -40,9 +40,9 @@ export default function PaymentMethodSelector({
           <input
             type="radio"
             {...register(name as "paymentType")}
-            value="CARD"
+            value="QR"
             defaultChecked
-            onChange={() => setSelectedValue("CARD")}
+            onChange={() => setSelectedValue("QR")}
             className="hidden"
           />
           <span className="block font-medium">QR Code Payment</span>
@@ -72,7 +72,7 @@ export default function PaymentMethodSelector({
     <div className="grid grid-cols-2 gap-3">
       <label
         className={`cursor-pointer rounded-lg border p-4 text-center transition-all ${
-          value === "CARD"
+          value === "QR"
             ? "border-purple-400 bg-purple-500/40 text-white"
             : "border-white/20 bg-white/10 text-white/80"
         }`}
@@ -80,9 +80,9 @@ export default function PaymentMethodSelector({
         <input
           type="radio"
           name="payment_preference"
-          value="CARD"
-          checked={value === "CARD"}
-          onChange={() => onChange?.("CARD")}
+          value="QR"
+          checked={value === "QR"}
+          onChange={() => onChange?.("QR")}
           className="hidden"
         />
         <span className="block font-medium">QR Code Payment</span>

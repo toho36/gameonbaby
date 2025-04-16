@@ -11,7 +11,7 @@ import { useEventRegistrationStore } from "~/stores/eventRegistrationStore";
 import useRegistrationStatus from "~/features/registration/hooks/useRegistrationStatus";
 
 // Custom hooks
-import usePaymentPreference from "~/hooks/usePaymentPreference";
+import usePaymentPreference from "~/features/registration/hooks/usePaymentPreference";
 import useUserProfile from "~/shared/hooks/useUserProfile";
 
 // Components

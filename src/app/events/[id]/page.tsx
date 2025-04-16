@@ -446,16 +446,14 @@ export default async function EventPage({
               </>
             )}
 
-            {/* Only show participant lists to administrators and moderators */}
-            {userCanViewParticipants && (
-              <EventParticipantLists
-                eventId={event.id}
-                initialRegistrations={registrationsForComponent}
-                initialWaitingList={waitingListForComponent}
-                initialRegCount={event._count.Registration}
-                capacity={event.capacity}
-              />
-            )}
+            {/* Show participant lists to everyone */}
+            <EventParticipantLists
+              eventId={event.id}
+              initialRegistrations={event.registrations}
+              initialWaitingList={event.waitingList}
+              initialRegCount={event._count.Registration}
+              capacity={event.capacity}
+            />
           </div>
         </div>
       </div>

@@ -109,7 +109,11 @@ export default function RegistrationSuccess({
 
         // Generate QR code with friend's name
         import("~/utils/qrCodeUtils").then(({ generateQRCodeURL }) => {
-          const friendQrUrl = generateQRCodeURL(fullFriendName, event.from);
+          const friendQrUrl = generateQRCodeURL(
+            fullFriendName,
+            event.from,
+            event.price,
+          );
           setFriendQrCodeUrl(friendQrUrl);
         });
 

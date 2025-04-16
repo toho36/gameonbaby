@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import prisma from "~/lib/db";
 import { PaymentType } from "~/app/constant/paymentType";
+import { sendRegistrationEmail } from "~/server/service/emailService";
+import { generateQRCodeURL } from "~/utils/qrCodeUtils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -166,6 +168,43 @@ export async function POST(request: NextRequest) {
           ${new Date()}
         );
       `;
+    }
+
+    // Send confirmation email
+    try {
+      // Format date and time for email
+      const eventDate = new Date(event.from).toLocaleDateString("cs-CZ");
+      const eventTime = `${new Date(event.from).toLocaleTimeString("cs-CZ", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })} - ${new Date(event.to).toLocaleTimeString("cs-CZ", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`;
+
+      // Generate QR code for the email
+      const qrCodeUrl = generateQRCodeURL(
+        `${firstName} ${lastName}`,
+        eventDate,
+        event.price,
+      );
+
+      // Send confirmation email
+      await sendRegistrationEmail(
+        userEmail,
+        firstName,
+        qrCodeUrl,
+        eventDate,
+        eventTime,
+        event.place || "TJ JM Chodov",
+        event.title,
+        event.price,
+      );
+
+      console.log("Confirmation email sent to:", userEmail);
+    } catch (emailError) {
+      console.error("Failed to send confirmation email:", emailError);
+      // Continue with the response even if email fails
     }
 
     return NextResponse.json({

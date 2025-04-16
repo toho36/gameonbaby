@@ -12,6 +12,7 @@ export async function sendRegistrationEmail(
   eventTime?: string,
   eventLocation?: string,
   eventTitle?: string,
+  eventPrice?: number,
 ) {
   try {
     const { data, error } = await resend.emails.send({
@@ -25,6 +26,7 @@ export async function sendRegistrationEmail(
         eventTime,
         eventLocation,
         eventTitle,
+        eventPrice,
       }),
     });
 

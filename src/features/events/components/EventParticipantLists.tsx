@@ -89,6 +89,7 @@ export default function EventParticipantLists({
     initialWaitingList.length,
   );
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isModerator, setIsModerator] = useState<boolean>(false);
 
   // Get registration count from the global store
   const { registrationCount, setRegistrationCount, initialize } =
@@ -117,6 +118,11 @@ export default function EventParticipantLists({
           setWaitingList(data.waitingList);
           setRegistrationCount(data.registrationCount);
           setWaitingListCount(data.waitingListCount);
+          // Check if user is moderator based on returned data
+          setIsModerator(
+            data.registrations.length > 0 &&
+              data.registrations[0].email !== undefined,
+          );
         }
       }
     } catch (error) {
@@ -126,24 +132,17 @@ export default function EventParticipantLists({
     }
   };
 
-  // Set up polling for updates
+  // Set up polling for updates - don't check for authentication
   useEffect(() => {
-    if (isAuthenticated) {
-      // Initial fetch
-      fetchParticipantData();
+    // Initial fetch
+    fetchParticipantData();
 
-      // Set up polling interval (every 10 seconds)
-      const intervalId = setInterval(fetchParticipantData, 10000);
+    // Set up polling interval (every 10 seconds)
+    const intervalId = setInterval(fetchParticipantData, 10000);
 
-      // Clean up interval on component unmount
-      return () => clearInterval(intervalId);
-    }
-  }, [eventId, isAuthenticated]);
-
-  // If user is not authenticated, don't render anything
-  if (!isAuthenticated) {
-    return null;
-  }
+    // Clean up interval on component unmount
+    return () => clearInterval(intervalId);
+  }, [eventId]);
 
   return (
     <>
@@ -172,12 +171,40 @@ export default function EventParticipantLists({
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
+                  {isModerator && reg.payment_type && (
+                    <PaymentTypeIndicator type={reg.payment_type} />
+                  )}
                   <span className="text-sm text-white/70">
                     {new Date(reg.created_at).toLocaleDateString("cs-CZ")}
                   </span>
                 </div>
               </div>
             ))}
+          </div>
+        ) : registrationCount > 0 ? (
+          <div className="grid gap-3">
+            {Array.from({ length: Math.min(registrationCount, 10) }).map(
+              (_, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between rounded-lg bg-white/10 p-3"
+                >
+                  <div className="flex items-center">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-600 text-white">
+                      <span>P</span>
+                    </div>
+                    <span className="ml-3 text-white">
+                      Participant {index + 1}
+                    </span>
+                  </div>
+                </div>
+              ),
+            )}
+            {registrationCount > 10 && (
+              <div className="py-2 text-center text-white/70">
+                ... and {registrationCount - 10} more participants
+              </div>
+            )}
           </div>
         ) : (
           <div className="py-4 text-center text-white/70">
@@ -211,12 +238,38 @@ export default function EventParticipantLists({
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
+                  {isModerator && entry.payment_type && (
+                    <PaymentTypeIndicator type={entry.payment_type} />
+                  )}
                   <span className="text-sm text-white/70">
                     {new Date(entry.created_at).toLocaleDateString("cs-CZ")}
                   </span>
                 </div>
               </div>
             ))}
+          </div>
+        ) : waitingListCount > 0 ? (
+          <div className="grid gap-3">
+            {Array.from({ length: Math.min(waitingListCount, 10) }).map(
+              (_, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between rounded-lg bg-white/10 p-3"
+                >
+                  <div className="flex items-center">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-500 text-white">
+                      <span>W</span>
+                    </div>
+                    <span className="ml-3 text-white">Waiting {index + 1}</span>
+                  </div>
+                </div>
+              ),
+            )}
+            {waitingListCount > 10 && (
+              <div className="py-2 text-center text-white/70">
+                ... and {waitingListCount - 10} more on waiting list
+              </div>
+            )}
           </div>
         ) : (
           <div className="py-4 text-center text-white/70">

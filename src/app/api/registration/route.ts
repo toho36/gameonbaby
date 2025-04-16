@@ -6,6 +6,9 @@ import getCode, { ErrorCodes, Modules } from "~/app/api/error/error-codes";
 import * as registrationService from "~/server/service/registrationService";
 import { ApiError } from "~/utils/ApiError";
 import { withErrorHandling } from "~/utils/errorHandler";
+import { sendRegistrationEmail } from "~/server/service/emailService";
+import { generateQRCodeURL } from "~/utils/qrCodeUtils";
+import prisma from "~/lib/db";
 
 interface CreateRegistrationRequest {
   firstName: string;
@@ -27,6 +30,7 @@ interface CreateRegistrationResponse {
 
 export const POST = withErrorHandling(
   async (req: Request): Promise<NextResponse> => {
+    console.log("📌 API ENTRY: /api/registration POST endpoint called");
     try {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const request: CreateRegistrationRequest = await req.json();
@@ -41,6 +45,8 @@ export const POST = withErrorHandling(
 
       // Validate payment type
       if (!Object.values(PaymentType).includes(request.paymentType)) {
+        console.error(`Invalid payment type received: ${request.paymentType}`);
+        console.log("Valid payment types are:", Object.values(PaymentType));
         throw new ApiError(
           `The payment type ${request.paymentType} cannot be processed.`,
           400,
@@ -48,17 +54,76 @@ export const POST = withErrorHandling(
         );
       }
 
-      // Proceed with registration creation
-      const registrationDto = await registrationService.createRegistration({
-        ...request,
-      });
-
-      return NextResponse.json<CreateRegistrationResponse>(
-        {
-          ...registrationDto,
-        },
-        { status: 201 },
+      console.log(
+        "Payment type validation successful, proceeding with registration...",
       );
+
+      // Proceed with registration creation
+      try {
+        const registrationDto = await registrationService.createRegistration({
+          ...request,
+        });
+
+        console.log("Registration created successfully:", registrationDto);
+
+        // Get event details for the email
+        try {
+          const event = await prisma.event.findUnique({
+            where: { id: request.eventId },
+          });
+
+          if (event) {
+            // Format date and time for email
+            const eventDate = new Date(event.from).toLocaleDateString("cs-CZ");
+            const eventTime = `${new Date(event.from).toLocaleTimeString(
+              "cs-CZ",
+              {
+                hour: "2-digit",
+                minute: "2-digit",
+              },
+            )} - ${new Date(event.to).toLocaleTimeString("cs-CZ", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}`;
+
+            // Generate QR code for the email
+            const qrCodeUrl = generateQRCodeURL(
+              `${request.firstName} ${request.lastName}`,
+              eventDate,
+              event.price,
+            );
+
+            // Send confirmation email
+            await sendRegistrationEmail(
+              request.email,
+              request.firstName,
+              qrCodeUrl,
+              eventDate,
+              eventTime,
+              event.place || "TJ JM Chodov",
+              event.title,
+              event.price,
+            );
+
+            console.log("Confirmation email sent to:", request.email);
+          } else {
+            console.error("Could not find event details for email");
+          }
+        } catch (emailError) {
+          console.error("Failed to send confirmation email:", emailError);
+          // Continue with the response even if email fails
+        }
+
+        return NextResponse.json<CreateRegistrationResponse>(
+          {
+            ...registrationDto,
+          },
+          { status: 201 },
+        );
+      } catch (serviceError) {
+        console.error("Error in registration service:", serviceError);
+        throw serviceError;
+      }
     } catch (error) {
       console.error("Registration error with details:", error);
       throw error; // Re-throw to let the error handler handle it

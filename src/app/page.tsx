@@ -1,7 +1,7 @@
 import Link from "next/link";
 import prisma from "~/lib/db";
-import { Button } from "~/components/ui/button";
-import EventList from "~/components/EventList";
+import { Button } from "~/shared";
+import { EventList } from "~/features/events";
 import { hasSpecialAccess } from "~/server/service/userService";
 
 export default async function HomePage() {

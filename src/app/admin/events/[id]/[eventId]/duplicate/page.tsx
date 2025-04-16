@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Button } from "~/components/ui/button";
+import { Button } from "~/shared/components/ui/button";
 import { createEvent } from "~/actions/actions";
 
 interface EventData {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "~/components/ui/button";
+import { Button } from "~/shared/components/ui/button";
 
 interface Event {
   id: string;

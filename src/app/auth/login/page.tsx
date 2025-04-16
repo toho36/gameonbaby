@@ -4,7 +4,7 @@ import {
   LoginLink,
   RegisterLink,
 } from "@kinde-oss/kinde-auth-nextjs/components";
-import { Button } from "~/components/ui/button";
+import { Button } from "~/shared/components/ui/button";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {

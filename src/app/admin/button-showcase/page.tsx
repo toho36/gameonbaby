@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import AddParticipantButton from "~/components/AddParticipantButton";
 import {
+  AddParticipantButton,
   EditButton,
   DeleteButton,
   DuplicateButton,
-} from "~/components/ActionButtons";
+} from "~/features/admin";
 
 export default function ButtonShowcasePage() {
   const [processing, setProcessing] = useState<string | null>(null);

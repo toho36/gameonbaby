@@ -3,6 +3,10 @@ import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import prisma from "~/lib/db";
 import { PrismaClient } from "@prisma/client";
 import { sendWaitingListPromotionEmail } from "~/server/service/emailService";
+import {
+  recordRegistrationHistory,
+  RegistrationAction,
+} from "~/utils/registrationHistory";
 
 // Create a separate client for raw queries
 const prismaRaw = new PrismaClient();
@@ -273,6 +277,19 @@ export async function POST(
       DELETE FROM "WaitingList"
       WHERE id = ${entryId}
     `;
+
+    // Record in registration history
+    await recordRegistrationHistory({
+      eventId: params.id,
+      registrationId: registration.id,
+      waitingListId: entryId,
+      firstName: waitingListEntry.first_name,
+      lastName: waitingListEntry.last_name,
+      email: waitingListEntry.email,
+      phoneNumber: waitingListEntry.phone_number,
+      actionType: RegistrationAction.MOVED_FROM_WAITLIST,
+      eventTitle: event.title,
+    });
 
     // Send notification email
     try {

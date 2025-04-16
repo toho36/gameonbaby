@@ -23,6 +23,57 @@ interface Event {
   price: number;
 }
 
+// Component to display payment type with icon
+const PaymentTypeIndicator = ({ type }: { type?: string | null }) => {
+  if (!type) return null;
+
+  const isQR = type === "QR" || type === "CARD"; // Support both new and old values
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${isQR ? "bg-blue-100 text-blue-800" : "bg-yellow-100 text-yellow-800"}`}
+    >
+      {isQR ? (
+        <>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="mr-1 h-3 w-3"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
+            />
+          </svg>
+          QR
+        </>
+      ) : (
+        <>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="mr-1 h-3 w-3"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z"
+            />
+          </svg>
+          Cash
+        </>
+      )}
+    </span>
+  );
+};
+
 export default function WaitingListPage({
   params,
 }: {
@@ -408,9 +459,7 @@ export default function WaitingListPage({
                           </div>
                         </td>
                         <td className="whitespace-nowrap px-6 py-4">
-                          <span className="inline-flex rounded-full bg-green-100 px-2 text-xs font-semibold uppercase leading-5 text-green-800">
-                            {entry.paymentType}
-                          </span>
+                          <PaymentTypeIndicator type={entry.paymentType} />
                         </td>
                         <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                           {formatDateTime(entry.createdAt)}
@@ -554,7 +603,7 @@ export default function WaitingListPage({
                                   id="card"
                                   name="paymentType"
                                   type="radio"
-                                  value="CARD"
+                                  value="QR"
                                   defaultChecked
                                   className="h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                 />
@@ -562,7 +611,7 @@ export default function WaitingListPage({
                                   htmlFor="card"
                                   className="ml-3 text-sm text-gray-700"
                                 >
-                                  Card / Bank Transfer
+                                  QR Code Payment
                                 </label>
                               </div>
                               <div className="flex items-center">
@@ -577,7 +626,7 @@ export default function WaitingListPage({
                                   htmlFor="cash"
                                   className="ml-3 text-sm text-gray-700"
                                 >
-                                  Cash
+                                  Cash on Site
                                 </label>
                               </div>
                             </div>

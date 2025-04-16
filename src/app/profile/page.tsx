@@ -3,12 +3,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import { LogoutLink, LoginLink } from "@kinde-oss/kinde-auth-nextjs/components";
-import { Button } from "~/components/ui/button";
+import { Button } from "~/shared/components/ui/button";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ProfileFormSchema, ProfileFormValues } from "./validations";
 import toast from "react-hot-toast";
-import { AuthCheck } from "~/components/AuthCheck";
+import { AuthCheck } from "~/shared";
 
 interface UserProfile {
   id: string;
@@ -408,9 +408,9 @@ function ProfileContent() {
                   <input
                     type="radio"
                     name="payment_preference"
-                    value="CARD"
-                    checked={paymentPreference === "CARD"}
-                    onChange={() => handlePaymentPreferenceChange("CARD")}
+                    value="QR"
+                    checked={paymentPreference === "QR"}
+                    onChange={() => handlePaymentPreferenceChange("QR")}
                     disabled={isUpdating}
                     className="mr-2 h-4 w-4 accent-purple-500"
                   />

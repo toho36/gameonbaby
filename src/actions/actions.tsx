@@ -10,6 +10,18 @@ import {
 
 export async function createEvent(formData: FormData) {
   try {
+    // Get date values from form data
+    const fromString = formData.get("from") as string;
+    const toString = formData.get("to") as string;
+
+    // Create Date objects
+    const fromDate = new Date(fromString);
+    const toDate = new Date(toString);
+
+    // Adjust for 2-hour difference on server
+    fromDate.setHours(fromDate.getHours() - 2);
+    toDate.setHours(toDate.getHours() - 2);
+
     const event = await prisma.event.create({
       data: {
         title: formData.get("title") as string,
@@ -17,8 +29,8 @@ export async function createEvent(formData: FormData) {
         price: Number(formData.get("price")),
         place: formData.get("place") as string,
         capacity: Number(formData.get("capacity")),
-        from: new Date(formData.get("from") as string),
-        to: new Date(formData.get("to") as string),
+        from: fromDate,
+        to: toDate,
         created_at: new Date(),
       },
     });
@@ -103,6 +115,14 @@ export async function duplicateEvent(id: string) {
       return { error: "Event not found" };
     }
 
+    // Create Date objects from existing event dates
+    const fromDate = new Date(existingEvent.from);
+    const toDate = new Date(existingEvent.to);
+
+    // Adjust for 2-hour difference on server
+    fromDate.setHours(fromDate.getHours() - 2);
+    toDate.setHours(toDate.getHours() - 2);
+
     const newEvent = await prisma.event.create({
       data: {
         title: `${existingEvent.title} (Copy)`,
@@ -110,8 +130,8 @@ export async function duplicateEvent(id: string) {
         price: existingEvent.price,
         place: existingEvent.place,
         capacity: existingEvent.capacity,
-        from: existingEvent.from,
-        to: existingEvent.to,
+        from: fromDate,
+        to: toDate,
         created_at: new Date(),
         visible: existingEvent.visible,
       },

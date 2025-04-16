@@ -94,6 +94,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get date values and adjust for timezone difference
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+
+    // Adjust for 2-hour difference on server
+    fromDate.setHours(fromDate.getHours() - 2);
+    toDate.setHours(toDate.getHours() - 2);
+
     // Create new event based on the source
     const newEvent = await prisma.event.create({
       data: {
@@ -102,8 +110,8 @@ export async function POST(request: NextRequest) {
         price: Number(price) || 0,
         place: place || null,
         capacity: Number(capacity) || 0,
-        from: new Date(from),
-        to: new Date(to),
+        from: fromDate,
+        to: toDate,
         created_at: new Date(),
         visible: visible === "true",
       },

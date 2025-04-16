@@ -122,6 +122,18 @@ export async function POST(request: NextRequest) {
     // Parse the FormData
     const formData = await request.formData();
 
+    // Get date values from form data
+    const fromString = formData.get("from") as string;
+    const toString = formData.get("to") as string;
+
+    // Create Date objects
+    const fromDate = new Date(fromString);
+    const toDate = new Date(toString);
+
+    // Adjust for 2-hour difference on server
+    fromDate.setHours(fromDate.getHours() - 2);
+    toDate.setHours(toDate.getHours() - 2);
+
     // Create the event
     const newEvent = await prisma.event.create({
       data: {
@@ -130,8 +142,8 @@ export async function POST(request: NextRequest) {
         price: Number(formData.get("price") || 0),
         place: (formData.get("place") as string) || null,
         capacity: Number(formData.get("capacity") || 0),
-        from: new Date(formData.get("from") as string),
-        to: new Date(formData.get("to") as string),
+        from: fromDate,
+        to: toDate,
         created_at: new Date(),
         visible: formData.get("visible") === "true",
       },

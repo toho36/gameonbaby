@@ -197,84 +197,86 @@ export default function GuestRegistrationForm({
         >
           <div className="mb-6">
             <h4 className="text-2xl font-bold text-white">
-              Register for This Event
+              {event._count.Registration >= event.capacity
+                ? "Join Waiting List"
+                : "Register for This Event"}
             </h4>
-            <p className="text-white/70">Secure your spot for {eventDate}</p>
+            <p className="text-white/70">
+              {event._count.Registration >= event.capacity
+                ? "We'll notify you when a spot becomes available"
+                : `Secure your spot for ${eventDate}`}
+            </p>
           </div>
 
-          {/* Hide name, email, phone fields when showing payment options only */}
-          {event._count.Registration < event.capacity && (
-            <>
-              <div className="mb-5">
-                <label className="mb-2 block text-sm font-medium text-white">
-                  First Name <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  {...register("firstName")}
-                  className={`w-full rounded-lg border ${
-                    errors.firstName ? "border-red-300" : "border-purple-800"
-                  } bg-purple-800/30 p-3 text-white placeholder-white/50 transition-all`}
-                  placeholder="Your first name"
-                />
-                {errors.firstName && (
-                  <p className="mt-1.5 text-sm font-medium text-red-300">
-                    {errors.firstName.message}
-                  </p>
-                )}
-              </div>
+          {/* Show name, email, phone fields for both registration and waiting list */}
+          <div className="mb-5">
+            <label className="mb-2 block text-sm font-medium text-white">
+              First Name <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="text"
+              {...register("firstName")}
+              className={`w-full rounded-lg border ${
+                errors.firstName ? "border-red-300" : "border-purple-800"
+              } bg-purple-800/30 p-3 text-white placeholder-white/50 transition-all`}
+              placeholder="Your first name"
+            />
+            {errors.firstName && (
+              <p className="mt-1.5 text-sm font-medium text-red-300">
+                {errors.firstName.message}
+              </p>
+            )}
+          </div>
 
-              <div className="mb-5">
-                <label className="mb-2 block text-sm font-medium text-white">
-                  Last Name
-                </label>
-                <input
-                  type="text"
-                  {...register("lastName")}
-                  className="w-full rounded-lg border border-purple-800 bg-purple-800/30 p-3 text-white placeholder-white/50 transition-all"
-                  placeholder="Your last name"
-                />
-              </div>
+          <div className="mb-5">
+            <label className="mb-2 block text-sm font-medium text-white">
+              Last Name
+            </label>
+            <input
+              type="text"
+              {...register("lastName")}
+              className="w-full rounded-lg border border-purple-800 bg-purple-800/30 p-3 text-white placeholder-white/50 transition-all"
+              placeholder="Your last name"
+            />
+          </div>
 
-              <div className="mb-5">
-                <label className="mb-2 block text-sm font-medium text-white">
-                  Email <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="email"
-                  {...register("email")}
-                  className={`w-full rounded-lg border ${
-                    errors.email ? "border-red-300" : "border-purple-800"
-                  } bg-purple-800/30 p-3 text-white placeholder-white/50 transition-all`}
-                  placeholder="your.email@example.com"
-                />
-                {errors.email && (
-                  <p className="mt-1.5 text-sm font-medium text-red-300">
-                    {errors.email.message}
-                  </p>
-                )}
-              </div>
+          <div className="mb-5">
+            <label className="mb-2 block text-sm font-medium text-white">
+              Email <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="email"
+              {...register("email")}
+              className={`w-full rounded-lg border ${
+                errors.email ? "border-red-300" : "border-purple-800"
+              } bg-purple-800/30 p-3 text-white placeholder-white/50 transition-all`}
+              placeholder="your.email@example.com"
+            />
+            {errors.email && (
+              <p className="mt-1.5 text-sm font-medium text-red-300">
+                {errors.email.message}
+              </p>
+            )}
+          </div>
 
-              <div className="mb-5">
-                <label className="mb-2 block text-sm font-medium text-white">
-                  Phone Number <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="tel"
-                  {...register("phoneNumber")}
-                  className={`w-full rounded-lg border ${
-                    errors.phoneNumber ? "border-red-300" : "border-purple-800"
-                  } bg-purple-800/30 p-3 text-white placeholder-white/50 transition-all`}
-                  placeholder="Your phone number"
-                />
-                {errors.phoneNumber && (
-                  <p className="mt-1.5 text-sm font-medium text-red-300">
-                    {errors.phoneNumber.message}
-                  </p>
-                )}
-              </div>
-            </>
-          )}
+          <div className="mb-5">
+            <label className="mb-2 block text-sm font-medium text-white">
+              Phone Number <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="tel"
+              {...register("phoneNumber")}
+              className={`w-full rounded-lg border ${
+                errors.phoneNumber ? "border-red-300" : "border-purple-800"
+              } bg-purple-800/30 p-3 text-white placeholder-white/50 transition-all`}
+              placeholder="Your phone number"
+            />
+            {errors.phoneNumber && (
+              <p className="mt-1.5 text-sm font-medium text-red-300">
+                {errors.phoneNumber.message}
+              </p>
+            )}
+          </div>
 
           <div className="mb-6">
             <label className="mb-2 block text-sm font-medium text-white">
@@ -329,7 +331,9 @@ export default function GuestRegistrationForm({
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
-                  Register Now
+                  {event._count.Registration >= event.capacity
+                    ? "Join Waiting List"
+                    : "Register Now"}
                 </>
               )}
             </button>

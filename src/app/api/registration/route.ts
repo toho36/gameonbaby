@@ -6,6 +6,9 @@ import getCode, { ErrorCodes, Modules } from "~/app/api/error/error-codes";
 import * as registrationService from "~/server/service/registrationService";
 import { ApiError } from "~/utils/ApiError";
 import { withErrorHandling } from "~/utils/errorHandler";
+import { sendRegistrationEmail } from "~/server/service/emailService";
+import { generateQRCodeURL } from "~/utils/qrCodeUtils";
+import prisma from "~/lib/db";
 
 interface CreateRegistrationRequest {
   firstName: string;
@@ -62,6 +65,52 @@ export const POST = withErrorHandling(
         });
 
         console.log("Registration created successfully:", registrationDto);
+
+        // Get event details for the email
+        try {
+          const event = await prisma.event.findUnique({
+            where: { id: request.eventId },
+          });
+
+          if (event) {
+            // Format date and time for email
+            const eventDate = new Date(event.from).toLocaleDateString("cs-CZ");
+            const eventTime = `${new Date(event.from).toLocaleTimeString(
+              "cs-CZ",
+              {
+                hour: "2-digit",
+                minute: "2-digit",
+              },
+            )} - ${new Date(event.to).toLocaleTimeString("cs-CZ", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}`;
+
+            // Generate QR code for the email
+            const qrCodeUrl = generateQRCodeURL(
+              `${request.firstName} ${request.lastName}`,
+              eventDate,
+            );
+
+            // Send confirmation email
+            await sendRegistrationEmail(
+              request.email,
+              request.firstName,
+              qrCodeUrl,
+              eventDate,
+              eventTime,
+              event.place || "TJ JM Chodov",
+              event.title,
+            );
+
+            console.log("Confirmation email sent to:", request.email);
+          } else {
+            console.error("Could not find event details for email");
+          }
+        } catch (emailError) {
+          console.error("Failed to send confirmation email:", emailError);
+          // Continue with the response even if email fails
+        }
 
         return NextResponse.json<CreateRegistrationResponse>(
           {

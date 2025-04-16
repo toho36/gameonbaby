@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { sendRegistrationEmail } from "~/server/service/emailService";
+import { generateQRCodeURL } from "~/utils/qrCodeUtils";
 
 const prisma = new PrismaClient();
 
@@ -166,6 +168,47 @@ export async function POST(request: NextRequest) {
 
       return registration;
     });
+
+    // Send confirmation email after successful registration
+    try {
+      // Format date and time for email
+      const eventDate = new Date(event.from).toLocaleDateString("cs-CZ");
+      const eventTime = `${new Date(event.from).toLocaleTimeString("cs-CZ", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })} - ${new Date(event.to).toLocaleTimeString("cs-CZ", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`;
+
+      // Generate QR code for the email
+      const qrCodeUrl = generateQRCodeURL(
+        `${firstName} ${lastName}`,
+        eventDate,
+      );
+
+      // Send confirmation email
+      await sendRegistrationEmail(
+        email,
+        firstName,
+        qrCodeUrl,
+        eventDate,
+        eventTime,
+        event.place || "TJ JM Chodov",
+        event.title,
+      );
+
+      console.log(
+        "Admin-added registration: Confirmation email sent to:",
+        email,
+      );
+    } catch (emailError) {
+      console.error(
+        "Failed to send confirmation email for admin-added registration:",
+        emailError,
+      );
+      // Continue with the response even if email fails
+    }
 
     return NextResponse.json({
       success: true,

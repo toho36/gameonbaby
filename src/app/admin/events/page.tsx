@@ -209,7 +209,12 @@ export default function EventManagement() {
 
     setFormData({
       ...formData,
-      [name]: type === "checkbox" ? checked : value,
+      [name]:
+        type === "checkbox"
+          ? checked
+          : name === "visible"
+            ? value === "true"
+            : value,
     });
   }
 

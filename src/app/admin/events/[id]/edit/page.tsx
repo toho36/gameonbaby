@@ -401,20 +401,22 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
                 </div>
               </div>
 
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  name="visible"
-                  id="visible"
-                  defaultChecked={formData.visible}
-                  className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                />
+              <div>
                 <label
                   htmlFor="visible"
-                  className="ml-2 block text-sm text-gray-900"
+                  className="block text-sm font-medium text-gray-700"
                 >
-                  Visible to users
+                  Visibility
                 </label>
+                <select
+                  name="visible"
+                  id="visible"
+                  defaultValue={formData.visible ? "true" : "false"}
+                  className="mt-1 block w-full rounded-md border border-gray-300 p-2 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                >
+                  <option value="true">Visible</option>
+                  <option value="false">Hidden</option>
+                </select>
               </div>
 
               <div className="flex justify-end space-x-3">

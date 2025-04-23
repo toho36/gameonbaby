@@ -80,7 +80,11 @@ export default function RegistrationSuccess({
         phoneNumber: userRegistration?.phoneNumber || null,
         eventId: event.id,
         paymentType:
-          paymentPreference === "CARD" ? PaymentType.CARD : PaymentType.CASH,
+          paymentPreference === "QR"
+            ? PaymentType.QR
+            : paymentPreference === "CARD"
+              ? PaymentType.CARD
+              : PaymentType.CASH,
       };
 
       const response = await fetch("/api/registration", {

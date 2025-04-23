@@ -5,7 +5,7 @@ export interface RegistrationFormValues {
   lastName?: string;
   email: string;
   phoneNumber: string;
-  paymentType: "CARD" | "CASH";
+  paymentType: "CARD" | "CASH" | "QR";
   eventId: string;
 }
 

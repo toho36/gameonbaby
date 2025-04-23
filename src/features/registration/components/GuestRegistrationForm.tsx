@@ -41,7 +41,7 @@ export default function GuestRegistrationForm({
       lastName: "",
       email: "",
       phoneNumber: "",
-      paymentType: "CARD",
+      paymentType: "QR",
       eventId: event.id,
     },
   });
@@ -86,7 +86,7 @@ export default function GuestRegistrationForm({
 
       if (response.status === 201) {
         let qrCode = null;
-        if (data.paymentType === "CARD") {
+        if (data.paymentType === "QR" || data.paymentType === "CARD") {
           qrCode = generateQRCodeURL(
             `${data.firstName} ${data.lastName}`.trim(),
             eventDate,

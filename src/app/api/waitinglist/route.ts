@@ -93,7 +93,11 @@ export async function POST(request: NextRequest) {
 
     // Get payment type from payment preference
     const paymentType =
-      paymentPreference === "CARD" ? PaymentType.CARD : PaymentType.CASH;
+      paymentPreference === "QR"
+        ? PaymentType.QR
+        : paymentPreference === "CARD"
+          ? PaymentType.CARD
+          : PaymentType.CASH;
 
     // Add to waiting list using raw query
     const waitingListEntry = await prismaRaw.$executeRaw`

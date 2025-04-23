@@ -9,7 +9,7 @@ let cachedPaymentPreference: string | null = null;
 let cacheTimestamp: number | null = null;
 
 export default function usePaymentPreference() {
-  const [paymentPreference, setPaymentPreference] = useState<string>("CARD");
+  const [paymentPreference, setPaymentPreference] = useState<string>("QR");
   const [isLoading, setIsLoading] = useState(true);
   const { isAuthenticated, isLoading: authLoading } = useKindeBrowserClient();
 

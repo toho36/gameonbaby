@@ -125,7 +125,7 @@ export async function hasSpecialAccess() {
   try {
     const user = await getCurrentUser();
     return (
-      user?.role === UserRole.USER ||
+      user?.role === UserRole.REGULAR ||
       user?.role === UserRole.MODERATOR ||
       user?.role === UserRole.ADMIN
     );

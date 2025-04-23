@@ -322,11 +322,11 @@ export default function EventManagement() {
         </div>
 
         {/* Mobile skeleton loader */}
-        <div className="space-y-4 sm:hidden">
+        <div className="space-y-2 sm:hidden">
           {[...Array(3)].map((_, i) => (
             <div
               key={i}
-              className="rounded-lg border border-gray-200 bg-white p-4 shadow"
+              className="rounded-lg border border-gray-200 bg-white p-2 shadow"
             >
               <div className="mb-2">
                 <div className="flex items-center justify-between">
@@ -439,13 +439,12 @@ export default function EventManagement() {
                     new Date(event.to) < new Date() ? "bg-gray-100" : ""
                   }`}
                 >
-                  <td className="px-6 py-4">
-                    <div className="font-medium">{event.title}</div>
-                    {event.description && (
-                      <div className="mt-1 max-w-xs truncate text-sm text-gray-500">
-                        {event.description}
-                      </div>
-                    )}
+                  <td className="px-4 py-2 sm:px-6 sm:py-4">
+                    <div className="flex flex-col">
+                      <span className="whitespace-nowrap font-medium text-gray-900">
+                        {event.title}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     {formatDateTime(new Date(event.from))}
@@ -506,17 +505,17 @@ export default function EventManagement() {
         </div>
 
         {/* Mobile view - Cards */}
-        <div className="space-y-4 sm:hidden">
+        <div className="space-y-2 sm:hidden">
           {sortedEvents.map((event) => (
             <div
               key={event.id}
-              className={`rounded-lg border border-gray-200 bg-white p-4 shadow ${
+              className={`rounded-lg border border-gray-200 bg-white p-2 shadow sm:p-4 ${
                 new Date(event.to) < new Date() ? "bg-gray-50" : ""
               }`}
             >
               <div className="mb-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-medium">{event.title}</h3>
+                <div className="flex min-w-0 items-center justify-between">
+                  <h3 className="truncate font-medium">{event.title}</h3>
                   <span
                     className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
                       event.visible
@@ -527,11 +526,6 @@ export default function EventManagement() {
                     {event.visible ? "Visible" : "Hidden"}
                   </span>
                 </div>
-                {event.description && (
-                  <p className="mt-1 text-sm text-gray-600">
-                    {event.description}
-                  </p>
-                )}
               </div>
 
               <div className="mb-3 grid grid-cols-1 gap-2 text-sm">
@@ -672,35 +666,38 @@ export default function EventManagement() {
                 <tr>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+                    className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-6 sm:py-3"
                   >
                     Event
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+                    className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-6 sm:py-3"
                   >
                     Date
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+                    className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-6 sm:py-3"
                   >
                     Time
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+                    className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-6 sm:py-3"
                   >
                     Price
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+                    className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-6 sm:py-3"
                   >
                     Registrations
                   </th>
-                  <th scope="col" className="relative px-6 py-3">
+                  <th
+                    scope="col"
+                    className="relative px-3 py-2 sm:px-6 sm:py-3"
+                  >
                     <span className="sr-only">Actions</span>
                   </th>
                 </tr>
@@ -708,29 +705,23 @@ export default function EventManagement() {
               <tbody className="divide-y divide-gray-200 bg-white">
                 {sortedEvents.map((event) => (
                   <tr key={event.id}>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-2 sm:px-6 sm:py-4">
                       <div className="flex flex-col">
-                        <span className="font-medium text-gray-900">
+                        <span className="whitespace-nowrap font-medium text-gray-900">
                           {event.title}
-                        </span>
-                        <span className="mt-1 text-sm text-gray-500">
-                          {event.description
-                            ? event.description.substring(0, 50) +
-                              (event.description.length > 50 ? "..." : "")
-                            : "No description"}
                         </span>
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                    <td className="whitespace-nowrap px-3 py-2 text-sm text-gray-500 sm:px-6 sm:py-4">
                       {formatDateTime(new Date(event.from))}
                     </td>
-                    <td className="px-6 py-4 text-sm">
+                    <td className="px-3 py-2 text-sm sm:px-6 sm:py-4">
                       {formatDateTime(new Date(event.from)).split(" - ")[1]}
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                    <td className="whitespace-nowrap px-3 py-2 text-sm text-gray-500 sm:px-6 sm:py-4">
                       {event.price ? `CZK ${event.price}` : "Free"}
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                    <td className="whitespace-nowrap px-3 py-2 text-sm text-gray-500 sm:px-6 sm:py-4">
                       <Link
                         href={`/admin/events/${event.id}/${event.id}/registrations`}
                         className="font-medium text-blue-600 hover:text-blue-900"
@@ -738,7 +729,7 @@ export default function EventManagement() {
                         {event._count?.Registration || 0}
                       </Link>
                     </td>
-                    <td className="flex space-x-2 px-6 py-4 text-right text-sm font-medium">
+                    <td className="flex space-x-2 px-3 py-2 text-right text-sm font-medium sm:px-6 sm:py-4">
                       <Link
                         href={`/admin/events/${event.id}/${event.id}/registrations`}
                         className="inline-flex items-center rounded-md bg-purple-600 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"

@@ -94,7 +94,7 @@ export default function RegistrationForm({
   // Update the payment type based on user preference immediately when it's fetched
   useEffect(() => {
     if (paymentPreference) {
-      setValue("paymentType", paymentPreference);
+      setValue("paymentType", paymentPreference as "QR" | "CARD" | "CASH");
       console.log(
         "Setting payment type from user preference:",
         paymentPreference,

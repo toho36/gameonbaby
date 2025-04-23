@@ -81,7 +81,7 @@ export default function RegistrationForm({
       lastName: "",
       email: "",
       phoneNumber: "",
-      paymentType: "CARD",
+      paymentType: "QR",
       eventId,
     },
   });
@@ -90,6 +90,17 @@ export default function RegistrationForm({
   useEffect(() => {
     initialize(event._count.Registration, event.capacity);
   }, [initialize, event._count.Registration, event.capacity]);
+
+  // Update the payment type based on user preference immediately when it's fetched
+  useEffect(() => {
+    if (paymentPreference) {
+      setValue("paymentType", paymentPreference);
+      console.log(
+        "Setting payment type from user preference:",
+        paymentPreference,
+      );
+    }
+  }, [paymentPreference, setValue]);
 
   // Load user profile data into form
   useEffect(() => {
@@ -118,7 +129,7 @@ export default function RegistrationForm({
       "Registration success with payment type:",
       registration.paymentType,
     );
-    setPaymentTypeSelected(registration.paymentType || "CARD");
+    setPaymentTypeSelected(registration.paymentType || "QR");
     setShowGuestForm(false);
   };
 
@@ -132,7 +143,7 @@ export default function RegistrationForm({
     resetStatus();
     setQrCodeUrl(null);
     reset();
-    setPaymentTypeSelected("CARD");
+    setPaymentTypeSelected("QR");
     setShowGuestForm(false);
   };
 

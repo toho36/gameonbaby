@@ -91,7 +91,11 @@ export async function POST(request: NextRequest) {
 
     // Get payment type from payment preference
     const paymentType =
-      paymentPreference === "CARD" ? PaymentType.CARD : PaymentType.CASH;
+      paymentPreference === "QR"
+        ? PaymentType.QR
+        : paymentPreference === "CARD"
+          ? PaymentType.CARD
+          : PaymentType.CASH;
 
     // Get user's phone number from profile if available using direct database access
     type UserRecord = { phoneNumber: string | null };

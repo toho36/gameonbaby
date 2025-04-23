@@ -16,9 +16,10 @@ export default function GuestRegistrationSuccess({
   eventDate,
   qrCodeUrl,
   resetFormState,
-  paymentType = "CARD",
+  paymentType = "QR",
 }: GuestRegistrationSuccessProps) {
   const isCashPayment = paymentType === "CASH";
+  const isQrPayment = paymentType === "QR" || paymentType === "CARD";
 
   return (
     <div className="rounded-xl border border-white/10 bg-gradient-to-br from-purple-900/40 to-indigo-900/40 p-6 shadow-xl backdrop-blur-lg">

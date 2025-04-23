@@ -18,14 +18,14 @@ interface PaymentMethodSelectorProps {
 }
 
 export default function PaymentMethodSelector({
-  value = "CARD",
+  value = "QR",
   onChange,
   register,
   name = "paymentType",
   setValue,
 }: PaymentMethodSelectorProps) {
   // For react-hook-form
-  const [selectedValue, setSelectedValue] = useState("CARD");
+  const [selectedValue, setSelectedValue] = useState("QR");
   const formContext = useFormContext();
 
   // Update selected value when using controlled component
@@ -34,6 +34,17 @@ export default function PaymentMethodSelector({
       setSelectedValue(value);
     }
   }, [value]);
+
+  const handleQrClick = () => {
+    setSelectedValue("QR");
+
+    // Ensure form value is updated properly
+    if (formContext) {
+      formContext.setValue("paymentType", "QR");
+    } else if (setValue) {
+      setValue("paymentType", "QR");
+    }
+  };
 
   const handleCashClick = () => {
     setSelectedValue("CASH");
@@ -46,34 +57,23 @@ export default function PaymentMethodSelector({
     }
   };
 
-  const handleCardClick = () => {
-    setSelectedValue("CARD");
-
-    // Ensure form value is updated properly
-    if (formContext) {
-      formContext.setValue("paymentType", "CARD");
-    } else if (setValue) {
-      setValue("paymentType", "CARD");
-    }
-  };
-
   if (register) {
     return (
       <div className="grid grid-cols-2 gap-3">
         <label
           className={`cursor-pointer rounded-lg border p-4 text-center transition-all ${
-            selectedValue === "CARD"
+            selectedValue === "QR"
               ? "border-purple-400 bg-purple-500/40 text-white"
               : "border-white/20 bg-white/10 text-white/80"
           }`}
-          onClick={handleCardClick}
+          onClick={handleQrClick}
         >
           <input
             type="radio"
             {...register(name as "paymentType")}
-            value="CARD"
-            checked={selectedValue === "CARD"}
-            onChange={handleCardClick}
+            value="QR"
+            checked={selectedValue === "QR"}
+            onChange={handleQrClick}
             className="hidden"
           />
           <span className="block font-medium">QR Code Payment</span>
@@ -105,18 +105,18 @@ export default function PaymentMethodSelector({
     <div className="grid grid-cols-2 gap-3">
       <label
         className={`cursor-pointer rounded-lg border p-4 text-center transition-all ${
-          value === "CARD"
+          value === "QR"
             ? "border-purple-400 bg-purple-500/40 text-white"
             : "border-white/20 bg-white/10 text-white/80"
         }`}
-        onClick={() => onChange?.("CARD")}
+        onClick={() => onChange?.("QR")}
       >
         <input
           type="radio"
           name="payment_preference"
-          value="CARD"
-          checked={value === "CARD"}
-          onChange={() => onChange?.("CARD")}
+          value="QR"
+          checked={value === "QR"}
+          onChange={() => onChange?.("QR")}
           className="hidden"
         />
         <span className="block font-medium">QR Code Payment</span>

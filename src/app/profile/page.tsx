@@ -32,7 +32,7 @@ function ProfileContent() {
   const { user } = useKindeBrowserClient();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [paymentPreference, setPaymentPreference] = useState<string>("CARD");
+  const [paymentPreference, setPaymentPreference] = useState<string>("CASH");
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Edit mode states
@@ -69,7 +69,7 @@ function ProfileContent() {
 
         if (data.success) {
           setProfile(data.user);
-          setPaymentPreference(data.user.paymentPreference || "CARD");
+          setPaymentPreference(data.user.paymentPreference || "CASH");
           const name =
             data.user.name ||
             `${user?.given_name || ""} ${user?.family_name || ""}`.trim();
@@ -99,7 +99,9 @@ function ProfileContent() {
   };
 
   const handlePaymentPreferenceChange = async (preference: string) => {
+    console.log("Changing payment preference to:", preference);
     setIsUpdating(true);
+    setPaymentPreference(preference); // Immediately update UI state for better UX
     try {
       const response = await fetch("/api/user/payment-preference", {
         method: "PUT",
@@ -119,9 +121,17 @@ function ProfileContent() {
         if (profile) {
           setProfile({ ...profile, paymentPreference: data.paymentPreference });
         }
+        console.log(
+          "Payment preference updated successfully:",
+          data.paymentPreference,
+        );
       }
     } catch (error) {
       console.error("Error updating payment preference:", error);
+      // Revert to previous state if there was an error
+      if (profile) {
+        setPaymentPreference(profile.paymentPreference);
+      }
     } finally {
       setIsUpdating(false);
     }
@@ -404,25 +414,43 @@ function ProfileContent() {
             </h3>
             <div className="mt-4 space-y-4">
               <div className="flex flex-wrap gap-3">
-                <label className="flex flex-1 cursor-pointer items-center rounded-md border border-gray-300 bg-white px-4 py-3 hover:border-gray-400">
+                <label
+                  className="flex flex-1 cursor-pointer items-center rounded-md border border-gray-300 bg-white px-4 py-3 hover:border-gray-400"
+                  onClick={() =>
+                    !isUpdating && handlePaymentPreferenceChange("QR")
+                  }
+                >
                   <input
                     type="radio"
                     name="payment_preference"
                     value="QR"
                     checked={paymentPreference === "QR"}
                     onChange={() => handlePaymentPreferenceChange("QR")}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log("QR radio clicked");
+                    }}
                     disabled={isUpdating}
                     className="mr-2 h-4 w-4 accent-purple-500"
                   />
                   <span className="text-sm text-gray-700">QR Code Payment</span>
                 </label>
-                <label className="flex flex-1 cursor-pointer items-center rounded-md border border-gray-300 bg-white px-4 py-3 hover:border-gray-400">
+                <label
+                  className="flex flex-1 cursor-pointer items-center rounded-md border border-gray-300 bg-white px-4 py-3 hover:border-gray-400"
+                  onClick={() =>
+                    !isUpdating && handlePaymentPreferenceChange("CASH")
+                  }
+                >
                   <input
                     type="radio"
                     name="payment_preference"
                     value="CASH"
                     checked={paymentPreference === "CASH"}
                     onChange={() => handlePaymentPreferenceChange("CASH")}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log("CASH radio clicked");
+                    }}
                     disabled={isUpdating}
                     className="mr-2 h-4 w-4 accent-purple-500"
                   />

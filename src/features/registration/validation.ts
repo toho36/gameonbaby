@@ -44,7 +44,7 @@ export const RegistrationFormSchema = z.object({
     .min(9, "Czech phone numbers must be at least 9 digits")
     .max(20, "Phone number must be 20 characters or less")
     .regex(phoneRegex, "Please enter a valid phone number format"),
-  paymentType: z.enum(["CARD", "CASH"]),
+  paymentType: z.enum(["CARD", "CASH", "QR"]),
   eventId: z.string().min(1, "Event ID is required"),
 });
 

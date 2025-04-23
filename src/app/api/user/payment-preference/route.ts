@@ -19,7 +19,7 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      paymentPreference: sessionResult.user.paymentPreference || "CARD",
+      paymentPreference: sessionResult.user.paymentPreference || "CASH",
     });
   } catch (error) {
     console.error("Error fetching payment preference:", error);
@@ -44,7 +44,7 @@ export async function PUT(request: NextRequest) {
 
     const { paymentPreference } = await request.json();
 
-    if (!["CARD", "CASH"].includes(paymentPreference)) {
+    if (!["CARD", "CASH", "QR"].includes(paymentPreference)) {
       return NextResponse.json(
         { success: false, message: "Invalid payment preference" },
         { status: 400 },

@@ -1519,7 +1519,23 @@ export default function EventRegistrationsPage({
                           <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
                         ) : (
                           <>
-                            {registration.status === "PAID" ? "Paid" : "Unpaid"}
+                            {registration.status === "PAID" ? (
+                              "Paid"
+                            ) : (
+                              <>
+                                Unpaid
+                                {registration.paymentMethod && (
+                                  <span className="ml-1">
+                                    (
+                                    {registration.paymentMethod === "CARD" ||
+                                    registration.paymentMethod === "QR"
+                                      ? "QR"
+                                      : "Cash"}
+                                    )
+                                  </span>
+                                )}
+                              </>
+                            )}
                           </>
                         )}
                       </button>

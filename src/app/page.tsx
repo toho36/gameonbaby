@@ -64,6 +64,28 @@ export default async function HomePage() {
 
           <EventList events={upcomingEvents} />
         </section>
+
+        <footer className="mt-16 border-t border-white/10 pt-8 pb-6 text-center text-white/70">
+          <p className="mb-4">Follow us on social media</p>
+          <div className="flex justify-center space-x-6">
+            <a
+              href="https://www.facebook.com/groups/1181887420384375"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[hsl(280,100%,70%)] transition-colors"
+            >
+              Facebook
+            </a>
+            <a
+              href="https://www.instagram.com/gameon.vb/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[hsl(280,100%,70%)] transition-colors"
+            >
+              Instagram
+            </a>
+          </div>
+        </footer>
       </div>
     </main>
   );

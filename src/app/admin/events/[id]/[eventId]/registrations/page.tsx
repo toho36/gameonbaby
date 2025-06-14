@@ -699,6 +699,7 @@ export default function EventRegistrationsPage({
     phoneNumber: "",
     paymentType: "CASH",
   });
+  const [isActive, setIsActive] = useState(false);
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [registrationToDelete, setRegistrationToDelete] = useState<
@@ -808,12 +809,7 @@ export default function EventRegistrationsPage({
       const newStatus = registration.status === "PAID" ? "UNPAID" : "PAID";
 
       updateRegistration(
-        {
-          registrationId,
-          updates: {
-            status: newStatus,
-          },
-        },
+        { registrationId, updates: { status: newStatus } },
         {
           onSuccess: () =>
             handleStatusUpdate(registrationId, { status: newStatus }),
@@ -844,12 +840,7 @@ export default function EventRegistrationsPage({
       const newAttendedStatus = !registration.attended;
 
       updateRegistration(
-        {
-          registrationId,
-          updates: {
-            attended: newAttendedStatus,
-          },
-        },
+        { registrationId, updates: { attended: newAttendedStatus } },
         {
           onSuccess: () =>
             handleStatusUpdate(registrationId, { attended: newAttendedStatus }),
@@ -957,14 +948,32 @@ export default function EventRegistrationsPage({
   // Add a new state for search functionality
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Add filtered registrations based on search query
-  const filteredRegistrations = useMemo(() => {
-    if (!searchQuery.trim()) return sortedRegistrations;
+  // Add a helper function to toggle the "filter attended" flag
+  const toggleActive = () => setIsActive((prev) => !prev);
 
-    return sortedRegistrations.filter((registration) =>
-      registration.user.name?.toLowerCase().includes(searchQuery.toLowerCase()),
-    );
-  }, [sortedRegistrations, searchQuery]);
+  // Add filtered registrations based on search query and attended filter
+  const filteredRegistrations = useMemo(() => {
+    // Start with the base, already date-sorted list
+    let list = [...sortedRegistrations];
+
+    // Apply the text search first (if any)
+    if (searchQuery.trim()) {
+      list = list.filter((registration) =>
+        registration.user.name
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase()),
+      );
+    }
+
+    // If the filter is active, move attended users to the bottom
+    if (isActive) {
+      const unattended = list.filter((r) => !r.attended);
+      const attended = list.filter((r) => r.attended);
+      list = [...unattended, ...attended];
+    }
+
+    return list;
+  }, [sortedRegistrations, searchQuery, isActive]);
 
   // Handle form submission
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -978,9 +987,7 @@ export default function EventRegistrationsPage({
         // Call API to add new participant
         const response = await fetch(`/api/admin/registrations/add`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             eventId: params.eventId,
             firstName: formData.firstName,
@@ -1012,9 +1019,7 @@ export default function EventRegistrationsPage({
         // Call API to duplicate the registration with modified data
         const response = await fetch("/api/admin/registrations/duplicate", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             eventId: params.eventId,
             firstName: formData.firstName,
@@ -1041,9 +1046,7 @@ export default function EventRegistrationsPage({
         // First update the user information
         const response = await fetch(`/api/admin/users/update-user`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             userId: currentRegistration.userId,
             name: fullName,
@@ -1060,9 +1063,7 @@ export default function EventRegistrationsPage({
         updateRegistration(
           {
             registrationId: currentRegistration.id,
-            updates: {
-              paymentMethod: formData.paymentType,
-            },
+            updates: { paymentMethod: formData.paymentType },
           },
           {
             onSuccess: () => {
@@ -1193,35 +1194,46 @@ export default function EventRegistrationsPage({
             </div>
           </div>
 
-          {/* Add a search filter at the top of the table for quickly finding participants in compact mode */}
+          {/* Search / filter controls */}
           <div className="mb-4">
-            {compactView && (
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Quick search by name..."
-                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 pr-10 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5 text-gray-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
+            <div className="relative">
+              {compactView ? (
+                /* Event-mode: quick search input + filter button */
+                <div className="flex items-center justify-between gap-2">
+                  <input
+                    type="text"
+                    placeholder="Quick search by name..."
+                    className="w-1/2 rounded-lg border border-gray-300 bg-white px-4 py-2"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  <button
+                    className={`w-1/2 rounded-lg border border-gray-300 px-4 py-2.5 pr-10 text-sm focus:outline-none ${
+                      isActive
+                        ? "bg-blue-500 text-white"
+                        : "bg-white text-black"
+                    }`}
+                    onClick={toggleActive}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
+                    {isActive ? "filtered" : "filter attended"}
+                  </button>
                 </div>
-              </div>
-            )}
+              ) : (
+                /* Non-event mode: only the filter button, aligned right */
+                <div className="flex justify-end">
+                  <button
+                    className={`rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none ${
+                      isActive
+                        ? "bg-blue-500 text-white"
+                        : "bg-white text-black"
+                    }`}
+                    onClick={toggleActive}
+                  >
+                    {isActive ? "filtered" : "filter attended"}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Desktop view */}
@@ -1633,6 +1645,7 @@ export default function EventRegistrationsPage({
     formData,
     showDeleteModal,
     searchQuery,
+    isActive,
   ]);
 
   return memoizedRender();

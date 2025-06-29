@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
     const from = formData.get("from") as string;
     const to = formData.get("to") as string;
     const visible = formData.get("visible") as string;
+    const bankAccountId = formData.get("bankAccountId") as string | null;
 
     if (!sourceEventId || !title || !from || !to) {
       return NextResponse.json(
@@ -114,6 +115,7 @@ export async function POST(request: NextRequest) {
         to: toDate,
         created_at: new Date(),
         visible: visible === "true",
+        bankAccountId: bankAccountId !== undefined && bankAccountId !== null && bankAccountId !== "" ? bankAccountId : sourceEvent.bankAccountId || null,
       },
     });
 

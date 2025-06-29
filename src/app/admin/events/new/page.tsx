@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "~/shared/components/ui/button";
 import { useCreateEvent } from "~/api/events";
+import BankAccountSelector from "~/components/admin/BankAccountSelector";
 
 export default function CreateEventPage() {
   const [loading, setLoading] = useState(true);
@@ -25,6 +26,8 @@ export default function CreateEventPage() {
     visible: true,
     manualDateInput: false,
   });
+
+  const [selectedBankAccountId, setSelectedBankAccountId] = useState<string>("");
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -63,6 +66,11 @@ export default function CreateEventPage() {
 
     try {
       const formData = new FormData(e.currentTarget);
+      
+      // Add bank account ID to form data if selected
+      if (selectedBankAccountId) {
+        formData.append("bankAccountId", selectedBankAccountId);
+      }
 
       // Use the mutation instead of server action
       createEventMutation(formData, {
@@ -212,6 +220,13 @@ export default function CreateEventPage() {
               />
             </div>
           </div>
+
+          {/* Bank Account Selection */}
+          <BankAccountSelector
+            selectedAccountId={selectedBankAccountId}
+            onAccountChange={setSelectedBankAccountId}
+            disabled={submitting}
+          />
 
           <div>
             <label

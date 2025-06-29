@@ -11,6 +11,7 @@ import {
   useUpdateEvent,
   useDuplicateEvent,
 } from "~/api/events";
+import BankAccountSelector from "~/components/admin/BankAccountSelector";
 
 export default function EventManagement() {
   const events = useEventStore((state) => state.events);
@@ -36,8 +37,9 @@ export default function EventManagement() {
     place: "",
     from: "",
     to: "",
-    visible: true,
+    visible: "true",
     capacity: 0,
+    bankAccountId: "",
   });
   const [editFormData, setEditFormData] = useState({
     title: "",
@@ -46,8 +48,9 @@ export default function EventManagement() {
     place: "",
     from: "",
     to: "",
-    visible: true,
+    visible: "true",
     capacity: 0,
+    bankAccountId: "",
   });
   const router = useRouter();
 
@@ -126,7 +129,8 @@ export default function EventManagement() {
       capacity: eventToModify.capacity || 0,
       from: toISODateTimeString(eventToModify.from),
       to: toISODateTimeString(eventToModify.to),
-      visible: eventToModify.visible,
+      visible: eventToModify.visible ? "true" : "false",
+      bankAccountId: eventToModify.bankAccountId || "",
     });
     setShowEditModal(true);
   }
@@ -144,7 +148,8 @@ export default function EventManagement() {
       formData.append("capacity", editFormData.capacity.toString());
       formData.append("from", new Date(editFormData.from).toISOString());
       formData.append("to", new Date(editFormData.to).toISOString());
-      formData.append("visible", editFormData.visible ? "true" : "false");
+      formData.append("visible", editFormData.visible);
+      formData.append("bankAccountId", editFormData.bankAccountId || "");
 
       updateEventMutation({ eventId: eventToEdit.id, formData });
       setShowEditModal(false);
@@ -166,7 +171,8 @@ export default function EventManagement() {
       capacity: eventToClone.capacity || 0,
       from: toISODateTimeString(eventToClone.from),
       to: toISODateTimeString(eventToClone.to),
-      visible: eventToClone.visible,
+      visible: eventToClone.visible ? "true" : "false",
+      bankAccountId: eventToClone.bankAccountId || "",
     });
     setShowDuplicateModal(true);
   }
@@ -184,7 +190,8 @@ export default function EventManagement() {
       formData.append("capacity", duplicateFormData.capacity.toString());
       formData.append("from", new Date(duplicateFormData.from).toISOString());
       formData.append("to", new Date(duplicateFormData.to).toISOString());
-      formData.append("visible", duplicateFormData.visible ? "true" : "false");
+      formData.append("visible", duplicateFormData.visible);
+      formData.append("bankAccountId", duplicateFormData.bankAccountId || "");
 
       duplicateEventMutation(formData);
       setShowDuplicateModal(false);
@@ -196,26 +203,15 @@ export default function EventManagement() {
   function handleFormChange(
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >,
+    > | { target: { name: string; value: string } },
     formType: "duplicate" | "edit",
   ) {
-    const { name, value, type } = e.target;
-    const checked = (e.target as HTMLInputElement).checked;
-
-    const formData =
-      formType === "duplicate" ? duplicateFormData : editFormData;
-    const setFormData =
-      formType === "duplicate" ? setDuplicateFormData : setEditFormData;
-
-    setFormData({
-      ...formData,
-      [name]:
-        type === "checkbox"
-          ? checked
-          : name === "visible"
-            ? value === "true"
-            : value,
-    });
+    const { name, value } = e.target;
+    if (formType === "duplicate") {
+      setDuplicateFormData((prev) => ({ ...prev, [name]: name === "visible" ? value : value }));
+    } else {
+      setEditFormData((prev) => ({ ...prev, [name]: name === "visible" ? value : value }));
+    }
   }
 
   async function handleDelete(id: string) {
@@ -899,7 +895,7 @@ export default function EventManagement() {
                   </label>
                   <select
                     name="visible"
-                    value={duplicateFormData.visible ? "true" : "false"}
+                    value={duplicateFormData.visible}
                     onChange={(e) => handleFormChange(e, "duplicate")}
                     className="w-full rounded-md border border-gray-300 p-2"
                   >
@@ -937,6 +933,20 @@ export default function EventManagement() {
                     required
                   />
                 </div>
+              </div>
+
+              {/* Bank Account Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Bank Account for Payment QR Code
+                  <span className="block text-xs text-gray-500 font-normal">
+                    This account will be used for generating the payment QR code for this event.
+                  </span>
+                </label>
+                <BankAccountSelector
+                  selectedAccountId={duplicateFormData.bankAccountId || ""}
+                  onAccountChange={(id) => handleFormChange({ target: { name: "bankAccountId", value: id } }, "duplicate")}
+                />
               </div>
             </div>
 
@@ -1052,7 +1062,7 @@ export default function EventManagement() {
                   </label>
                   <select
                     name="visible"
-                    value={editFormData.visible ? "true" : "false"}
+                    value={editFormData.visible}
                     onChange={(e) => handleFormChange(e, "edit")}
                     className="w-full rounded-md border border-gray-300 p-2"
                   >
@@ -1076,7 +1086,6 @@ export default function EventManagement() {
                     required
                   />
                 </div>
-
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">
                     End Date & Time
@@ -1090,6 +1099,20 @@ export default function EventManagement() {
                     required
                   />
                 </div>
+              </div>
+
+              {/* Bank Account Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Bank Account for Payment QR Code
+                  <span className="block text-xs text-gray-500 font-normal">
+                    This account will be used for generating the payment QR code for this event.
+                  </span>
+                </label>
+                <BankAccountSelector
+                  selectedAccountId={editFormData.bankAccountId || ""}
+                  onAccountChange={(id) => handleFormChange({ target: { name: "bankAccountId", value: id } }, "edit")}
+                />
               </div>
             </div>
 

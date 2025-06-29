@@ -1,5 +1,6 @@
 import QRCode from "qrcode";
 import { format } from "date-fns";
+import { getDefaultBankAccount, getBankAccountById, type BankAccount } from "~/app/constant/bankAccounts";
 
 enum QrParamType {
   ACCOUNT = "ACC",
@@ -13,6 +14,7 @@ export interface CreatePaymentCommand {
   firstName: string;
   // lastName: string;
   price: number;
+  bankAccountId?: string; // Optional bank account ID to use specific account
 }
 
 export async function createPayment(
@@ -26,9 +28,22 @@ export async function createPayment(
     format(currentDate, variableSymbolFormat),
   );
   const formattedAmount = command.price.toFixed(2);
+  
+  // Get bank account - use specified ID, environment variable, or default
+  let bankAccount: string;
+  if (command.bankAccountId) {
+    const account = getBankAccountById(command.bankAccountId);
+    if (!account) {
+      throw new Error(`Bank account with ID '${command.bankAccountId}' not found`);
+    }
+    bankAccount = account.accountNumber;
+  } else {
+    bankAccount = process.env.NEXT_PUBLIC_BANK_ACCOUNT || getDefaultBankAccount().accountNumber;
+  }
+  
   const text =
     "SPD*1.0" +
-    `*${QrParamType.ACCOUNT}:${process.env.NEXT_PUBLIC_BANK_ACCOUNT}` +
+    `*${QrParamType.ACCOUNT}:${bankAccount}` +
     `*${QrParamType.AMOUNT}:${formattedAmount}` +
     `*${QrParamType.CURRENCY}:CZK` +
     `*${QrParamType.MESSAGE}:Game On Baby! (${format(currentDate, messageFormat)}) - ${command.firstName} ` +
@@ -36,6 +51,14 @@ export async function createPayment(
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-call
   return await QRCode.toDataURL(text);
+}
+
+// Helper function to create payment with specific bank account
+export async function createPaymentWithAccount(
+  command: Omit<CreatePaymentCommand, 'bankAccountId'>,
+  bankAccount: BankAccount
+): Promise<string> {
+  return createPayment({ ...command, bankAccountId: bankAccount.id });
 }
 
 function generateVariableSymbol(prefix: string): string {

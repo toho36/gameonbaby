@@ -91,6 +91,12 @@ export async function updateEvent(id: string, formData: FormData) {
       }
     }
 
+    // Add bankAccountId if present
+    if (formData.has("bankAccountId")) {
+      const bankAccountId = formData.get("bankAccountId") as string;
+      updateData.bankAccountId = bankAccountId || null;
+    }
+
     await prisma.event.update({
       where: { id },
       data: updateData,
@@ -105,7 +111,7 @@ export async function updateEvent(id: string, formData: FormData) {
   }
 }
 
-export async function duplicateEvent(id: string) {
+export async function duplicateEvent(id: string, bankAccountId?: string) {
   try {
     const existingEvent = await prisma.event.findUnique({
       where: { id },
@@ -134,6 +140,7 @@ export async function duplicateEvent(id: string) {
         to: toDate,
         created_at: new Date(),
         visible: existingEvent.visible,
+        bankAccountId: typeof bankAccountId !== 'undefined' ? bankAccountId : existingEvent.bankAccountId || null,
       },
     });
 

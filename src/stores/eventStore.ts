@@ -14,6 +14,7 @@ export interface Event {
   _count: {
     Registration: number;
   };
+  bankAccountId?: string | null;
 }
 
 interface EventStore {

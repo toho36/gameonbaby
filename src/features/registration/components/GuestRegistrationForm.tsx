@@ -10,7 +10,7 @@ import { RegistrationFormSchema } from "~/features/registration/validation";
 import { RegistrationFormValues } from "~/features/registration/types";
 import { Event } from "~/features/events/types";
 import { useEventRegistrationStore } from "~/stores/eventRegistrationStore";
-import { generateQRCodeURL } from "~/utils/qrCodeUtils";
+import { generateQRCodeURL, generateQRCodeURLWithAccountId } from "~/utils/qrCodeUtils";
 
 interface GuestRegistrationFormProps {
   event: Event;
@@ -87,11 +87,18 @@ export default function GuestRegistrationForm({
       if (response.status === 201) {
         let qrCode = null;
         if (data.paymentType === "QR" || data.paymentType === "CARD") {
-          qrCode = generateQRCodeURL(
-            `${data.firstName} ${data.lastName}`.trim(),
-            eventDate,
-            event.price,
-          );
+          qrCode = event.bankAccountId
+            ? generateQRCodeURLWithAccountId(
+                `${data.firstName} ${data.lastName}`.trim(),
+                eventDate,
+                event.price,
+                event.bankAccountId
+              )
+            : generateQRCodeURL(
+                `${data.firstName} ${data.lastName}`.trim(),
+                eventDate,
+                event.price
+              );
         }
 
         reset();

@@ -29,6 +29,7 @@ interface EventData {
   created_at: Date;
   visible: boolean;
   capacity: number;
+  bankAccountId?: string | null;
   Registration: Array<{
     first_name: string;
     last_name: string | null;
@@ -59,6 +60,7 @@ interface EventWithLists {
   created_at: Date;
   visible: boolean;
   capacity: number;
+  bankAccountId?: string | null;
   _count: {
     Registration: number;
     WaitingList: number;
@@ -82,6 +84,7 @@ interface RegistrationFormEvent {
   from: string;
   to: string;
   visible: boolean;
+  bankAccountId?: string | null;
   _count: {
     Registration: number;
   };
@@ -120,7 +123,17 @@ export default async function EventPage({
     where: {
       id: params.id,
     },
-    include: {
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      price: true,
+      place: true,
+      capacity: true,
+      from: true,
+      to: true,
+      visible: true,
+      bankAccountId: true,
       Registration: {
         orderBy: {
           created_at: "asc",
@@ -435,6 +448,7 @@ export default async function EventPage({
                       from: event.from.toISOString(),
                       to: event.to.toISOString(),
                       visible: event.visible,
+                      bankAccountId: event.bankAccountId,
                       _count: {
                         Registration: event._count.Registration,
                       },

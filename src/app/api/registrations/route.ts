@@ -3,7 +3,7 @@ import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import prisma from "~/lib/db";
 import { PaymentType } from "~/app/constant/paymentType";
 import { sendRegistrationEmail } from "~/server/service/emailService";
-import { generateQRCodeURL } from "~/utils/qrCodeUtils";
+import { generateQRCodeURL, generateQRCodeURLWithAccountId } from "~/utils/qrCodeUtils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -194,11 +194,18 @@ export async function POST(request: NextRequest) {
       })}`;
 
       // Generate QR code for the email
-      const qrCodeUrl = generateQRCodeURL(
-        `${firstName} ${lastName}`,
-        eventDate,
-        event.price,
-      );
+      const qrCodeUrl = event.bankAccountId
+        ? generateQRCodeURLWithAccountId(
+            `${firstName} ${lastName}`,
+            eventDate,
+            event.price,
+            event.bankAccountId
+          )
+        : generateQRCodeURL(
+            `${firstName} ${lastName}`,
+            eventDate,
+            event.price
+          );
 
       // Send confirmation email
       await sendRegistrationEmail(

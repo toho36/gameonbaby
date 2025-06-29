@@ -8,6 +8,7 @@ export interface Event {
   from: string;
   to: string;
   visible: boolean;
+  bankAccountId?: string | null;
   _count: {
     Registration: number;
   };

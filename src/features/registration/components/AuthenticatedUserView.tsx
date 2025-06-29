@@ -8,7 +8,7 @@ import { useEventRegistrationStore } from "~/stores/eventRegistrationStore";
 import { RegistrationFormValues } from "~/features/registration/types";
 import { RegistrationFormSchema } from "~/features/registration/validation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { generateQRCodeURL } from "~/utils/qrCodeUtils";
+import { generateQRCodeURL, generateQRCodeURLWithAccountId } from "~/utils/qrCodeUtils";
 import PaymentMethodSelector from "./PaymentMethodSelector";
 
 interface AuthenticatedUserViewProps {
@@ -66,7 +66,9 @@ export default function AuthenticatedUserView({
         // Only generate QR if the payment type is QR or CARD
         const qrUrl =
           paymentPreference === "QR" || paymentPreference === "CARD"
-            ? generateQRCodeURL(name, eventDate, event.price)
+            ? (event.bankAccountId
+                ? generateQRCodeURLWithAccountId(name, eventDate, event.price, event.bankAccountId)
+                : generateQRCodeURL(name, eventDate, event.price))
             : null;
 
         onRegistrationSuccess(data.registration, qrUrl);

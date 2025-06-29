@@ -77,6 +77,7 @@ export async function GET(
         to: event.to.toISOString(),
         visible: event.visible,
         capacity: event.capacity || 0,
+        bankAccountId: event.bankAccountId,
       },
     });
   } catch (error) {
@@ -125,7 +126,7 @@ export async function PUT(
 
     // Parse the request body
     const data = await request.json();
-    const { title, description, price, place, from, to, visible, capacity } =
+    const { title, description, price, place, from, to, visible, capacity, bankAccountId } =
       data;
 
     // Validate required fields
@@ -160,6 +161,7 @@ export async function PUT(
         to: new Date(to),
         visible: Boolean(visible),
         capacity: Number(capacity) || 0,
+        bankAccountId: bankAccountId || null,
       },
     });
 
@@ -175,6 +177,7 @@ export async function PUT(
         to: updatedEvent.to.toISOString(),
         visible: updatedEvent.visible,
         capacity: updatedEvent.capacity || 0,
+        bankAccountId: updatedEvent.bankAccountId,
       },
     });
   } catch (error) {

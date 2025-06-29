@@ -7,7 +7,7 @@ import * as registrationService from "~/server/service/registrationService";
 import { ApiError } from "~/utils/ApiError";
 import { withErrorHandling } from "~/utils/errorHandler";
 import { sendRegistrationEmail } from "~/server/service/emailService";
-import { generateQRCodeURL } from "~/utils/qrCodeUtils";
+import { generateQRCodeURL, generateQRCodeURLWithAccountId } from "~/utils/qrCodeUtils";
 import prisma from "~/lib/db";
 
 interface CreateRegistrationRequest {
@@ -72,6 +72,7 @@ export const POST = withErrorHandling(
             where: { id: request.eventId },
           });
 
+          let qrCodeUrl: string | null = null;
           if (event) {
             // Format date and time for email
             const eventDate = new Date(event.from).toLocaleDateString("cs-CZ");
@@ -90,12 +91,23 @@ export const POST = withErrorHandling(
               minute: "2-digit",
             })}`;
 
-            // Generate QR code for the email
-            const qrCodeUrl = generateQRCodeURL(
-              `${request.firstName} ${request.lastName}`,
-              eventDate,
-              event.price,
-            );
+            // Generate QR code for the email and response
+            if (event.bankAccountId) {
+              // Use event-specific bank account
+              qrCodeUrl = generateQRCodeURLWithAccountId(
+                `${request.firstName} ${request.lastName}`,
+                eventDate,
+                event.price,
+                event.bankAccountId,
+              );
+            } else {
+              // Use default bank account
+              qrCodeUrl = generateQRCodeURL(
+                `${request.firstName} ${request.lastName}`,
+                eventDate,
+                event.price,
+              );
+            }
 
             // Send confirmation email
             await sendRegistrationEmail(
@@ -112,18 +124,23 @@ export const POST = withErrorHandling(
             console.log("Confirmation email sent to:", request.email);
           } else {
             console.error("Could not find event details for email");
+            return NextResponse.json(
+              { success: false, message: "Event not found" },
+              { status: 404 }
+            );
           }
+
+          return NextResponse.json<CreateRegistrationResponse>(
+            {
+              ...registrationDto,
+              qrCodeData: qrCodeUrl,
+            },
+            { status: 201 },
+          );
         } catch (emailError) {
           console.error("Failed to send confirmation email:", emailError);
           // Continue with the response even if email fails
         }
-
-        return NextResponse.json<CreateRegistrationResponse>(
-          {
-            ...registrationDto,
-          },
-          { status: 201 },
-        );
       } catch (serviceError) {
         console.error("Error in registration service:", serviceError);
         throw serviceError;
@@ -132,5 +149,7 @@ export const POST = withErrorHandling(
       console.error("Registration error with details:", error);
       throw error; // Re-throw to let the error handler handle it
     }
+    // Fallback: should never reach here, but return a 500 if it does
+    return NextResponse.json({ success: false, message: "Unknown error" }, { status: 500 });
   },
 );

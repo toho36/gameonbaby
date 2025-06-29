@@ -23,7 +23,17 @@ export default async function HomePage() {
     orderBy: {
       from: "asc",
     },
-    include: {
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      price: true,
+      place: true,
+      capacity: true,
+      from: true,
+      to: true,
+      visible: true,
+      bankAccountId: true,
       _count: {
         select: {
           Registration: true,

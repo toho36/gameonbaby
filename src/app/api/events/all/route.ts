@@ -15,6 +15,10 @@ type EventResponse = {
   place: string | null;
   from: Date;
   to: Date;
+  bankAccountId: string | null;
+  capacity: number;
+  created_at: Date;
+  visible: boolean;
 }[];
 
 export const GET = withErrorHandling(
@@ -40,6 +44,19 @@ export const GET = withErrorHandling(
       orderBy: {
         from: "asc",
       },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        price: true,
+        place: true,
+        from: true,
+        to: true,
+        bankAccountId: true,
+        capacity: true,
+        created_at: true,
+        visible: true,
+      },
     });
 
     if (events.length === 0) {
@@ -58,6 +75,10 @@ export const GET = withErrorHandling(
       place: event.place,
       from: event.from,
       to: event.to,
+      bankAccountId: event.bankAccountId,
+      capacity: event.capacity,
+      created_at: event.created_at,
+      visible: event.visible,
     }));
 
     return NextResponse.json(response);

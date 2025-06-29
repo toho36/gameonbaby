@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         title: true,
+        bankAccountId: true,
       },
       orderBy: {
         from: "desc",

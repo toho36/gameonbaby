@@ -146,6 +146,7 @@ export async function POST(request: NextRequest) {
         to: toDate,
         created_at: new Date(),
         visible: formData.get("visible") === "true",
+        bankAccountId: (formData.get("bankAccountId") as string) || null,
       },
     });
 

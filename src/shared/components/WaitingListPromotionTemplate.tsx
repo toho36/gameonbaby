@@ -116,18 +116,18 @@ const WaitingListPromotionTemplate = ({
 
           <Text style={text}>We're looking forward to seeing you there!</Text>
 
-          <Button href="https://gameon.baby/dashboard" style={button}>
-            View Your Dashboard
+          <Button href="https://www.gameonvb.cz/events" style={button}>
+            Check other events
           </Button>
 
           <Text style={footer}>
-            If you have any questions, feel free to reply to this email.
+            If you have any questions, message us on Instagram.
           </Text>
 
           <Text style={footer}>
             Best regards,
             <br />
-            The Game On Baby Team
+            The Game On Team
           </Text>
         </Container>
       </Body>

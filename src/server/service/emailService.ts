@@ -16,7 +16,7 @@ export async function sendRegistrationEmail(
 ) {
   try {
     const { data, error } = await resend.emails.send({
-      from: "info@gameon.baby",
+      from: "info@gameonvb.cz",
       to: [toEmail],
       subject: "Your Registration Confirmation - GameOn Event",
       react: EmailTemplate({
@@ -51,7 +51,7 @@ export async function sendWaitingListPromotionEmail(
 ) {
   try {
     const { data, error } = await resend.emails.send({
-      from: "info@gameon.baby",
+      from: "info@gameonvb.cz",
       to: [toEmail],
       subject: "Good News! You're Now Registered for the Event",
       react: WaitingListPromotionTemplate({

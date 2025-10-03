@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     }
 
     const { data, error } = await resend.emails.send({
-      from: "info@gameon.baby",
+      from: "info@gameonvb.cz",
       to: [email],
       subject: "GameOn Event Registration Confirmation",
       html: `

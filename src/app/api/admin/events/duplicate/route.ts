@@ -95,13 +95,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get date values and adjust for timezone difference
-    const fromDate = new Date(from);
-    const toDate = new Date(to);
-
-    // Adjust for 2-hour difference on server
-    fromDate.setHours(fromDate.getHours() - 2);
-    toDate.setHours(toDate.getHours() - 2);
+    // Convert datetime-local strings (interpreted as Prague time) to UTC
+    const { convertPragueTimeStringToUTC } = await import("~/utils/timezoneUtils");
+    const fromDate = from.includes("Z") || from.includes("+") || (from.includes("-") && from.length > 19)
+      ? new Date(from)
+      : convertPragueTimeStringToUTC(from);
+    const toDate = to.includes("Z") || to.includes("+") || (to.includes("-") && to.length > 19)
+      ? new Date(to)
+      : convertPragueTimeStringToUTC(to);
 
     // Create new event based on the source
     const newEvent = await prisma.event.create({

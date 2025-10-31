@@ -7,6 +7,7 @@ import {
   recordRegistrationHistory,
   RegistrationAction,
 } from "~/utils/registrationHistory";
+import { convertPragueTimeStringToUTC } from "~/utils/timezoneUtils";
 
 export async function createEvent(formData: FormData) {
   try {
@@ -14,13 +15,15 @@ export async function createEvent(formData: FormData) {
     const fromString = formData.get("from") as string;
     const toString = formData.get("to") as string;
 
-    // Create Date objects
-    const fromDate = new Date(fromString);
-    const toDate = new Date(toString);
-
-    // Adjust for 2-hour difference on server
-    fromDate.setHours(fromDate.getHours() - 2);
-    toDate.setHours(toDate.getHours() - 2);
+    // Convert datetime-local strings (interpreted as Prague time) to UTC
+    // If the string is already an ISO string (has 'Z' or timezone), use it directly
+    // Otherwise, treat it as datetime-local in Prague timezone
+    const fromDate = fromString.includes("Z") || fromString.includes("+") || fromString.includes("-", 10)
+      ? new Date(fromString)
+      : convertPragueTimeStringToUTC(fromString);
+    const toDate = toString.includes("Z") || toString.includes("+") || toString.includes("-", 10)
+      ? new Date(toString)
+      : convertPragueTimeStringToUTC(toString);
 
     const event = await prisma.event.create({
       data: {
@@ -78,14 +81,21 @@ export async function updateEvent(id: string, formData: FormData) {
     const toString = formData.get("to") as string | null;
 
     if (fromString) {
-      const fromDate = new Date(fromString);
+      // Convert datetime-local strings (interpreted as Prague time) to UTC
+      // If the string is already an ISO string (has 'Z' or timezone), use it directly
+      const fromDate = fromString.includes("Z") || fromString.includes("+") || (fromString.includes("-") && fromString.length > 19)
+        ? new Date(fromString)
+        : convertPragueTimeStringToUTC(fromString);
       if (!isNaN(fromDate.getTime())) {
         updateData.from = fromDate;
       }
     }
 
     if (toString) {
-      const toDate = new Date(toString);
+      // Convert datetime-local strings (interpreted as Prague time) to UTC
+      const toDate = toString.includes("Z") || toString.includes("+") || (toString.includes("-") && toString.length > 19)
+        ? new Date(toString)
+        : convertPragueTimeStringToUTC(toString);
       if (!isNaN(toDate.getTime())) {
         updateData.to = toDate;
       }
@@ -121,13 +131,9 @@ export async function duplicateEvent(id: string, bankAccountId?: string) {
       return { error: "Event not found" };
     }
 
-    // Create Date objects from existing event dates
+    // Dates from database are already in UTC, use them directly
     const fromDate = new Date(existingEvent.from);
     const toDate = new Date(existingEvent.to);
-
-    // Adjust for 2-hour difference on server
-    fromDate.setHours(fromDate.getHours() - 2);
-    toDate.setHours(toDate.getHours() - 2);
 
     const newEvent = await prisma.event.create({
       data: {

@@ -126,13 +126,14 @@ export async function POST(request: NextRequest) {
     const fromString = formData.get("from") as string;
     const toString = formData.get("to") as string;
 
-    // Create Date objects
-    const fromDate = new Date(fromString);
-    const toDate = new Date(toString);
-
-    // Adjust for 2-hour difference on server
-    fromDate.setHours(fromDate.getHours() - 2);
-    toDate.setHours(toDate.getHours() - 2);
+    // Convert datetime-local strings (interpreted as Prague time) to UTC
+    const { convertPragueTimeStringToUTC } = await import("~/utils/timezoneUtils");
+    const fromDate = fromString.includes("Z") || fromString.includes("+") || (fromString.includes("-") && fromString.length > 19)
+      ? new Date(fromString)
+      : convertPragueTimeStringToUTC(fromString);
+    const toDate = toString.includes("Z") || toString.includes("+") || (toString.includes("-") && toString.length > 19)
+      ? new Date(toString)
+      : convertPragueTimeStringToUTC(toString);
 
     // Create the event
     const newEvent = await prisma.event.create({

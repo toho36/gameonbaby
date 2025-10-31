@@ -75,20 +75,19 @@ export const POST = withErrorHandling(
           let qrCodeUrl: string | null = null;
           if (event) {
             // Format date and time for email
-            const eventDate = new Date(event.from).toLocaleDateString("cs-CZ");
+            const eventDate = new Date(event.from).toLocaleDateString("cs-CZ", {
+              timeZone: "Europe/Prague",
+            });
 
-            // Create adjusted dates for display (add 2 hours to match the correction in event creation)
-            const fromDate = new Date(event.from);
-            const toDate = new Date(event.to);
-            fromDate.setHours(fromDate.getHours() + 2);
-            toDate.setHours(toDate.getHours() + 2);
-
-            const eventTime = `${fromDate.toLocaleTimeString("cs-CZ", {
+            // Format time directly in Prague timezone (handles DST automatically)
+            const eventTime = `${new Date(event.from).toLocaleTimeString("cs-CZ", {
               hour: "2-digit",
               minute: "2-digit",
-            })} - ${toDate.toLocaleTimeString("cs-CZ", {
+              timeZone: "Europe/Prague",
+            })} - ${new Date(event.to).toLocaleTimeString("cs-CZ", {
               hour: "2-digit",
               minute: "2-digit",
+              timeZone: "Europe/Prague",
             })}`;
 
             // Generate QR code for the email and response

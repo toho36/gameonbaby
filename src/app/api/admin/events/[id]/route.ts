@@ -149,6 +149,16 @@ export async function PUT(
       );
     }
 
+    // Convert datetime-local strings (interpreted as Prague time) to UTC
+    // If the string is already an ISO string, use it directly
+    const { convertPragueTimeStringToUTC } = await import("~/utils/timezoneUtils");
+    const fromDate = from.includes("Z") || from.includes("+") || (from.includes("-") && from.length > 19)
+      ? new Date(from)
+      : convertPragueTimeStringToUTC(from);
+    const toDate = to.includes("Z") || to.includes("+") || (to.includes("-") && to.length > 19)
+      ? new Date(to)
+      : convertPragueTimeStringToUTC(to);
+
     // Update the event
     const updatedEvent = await prisma.event.update({
       where: { id: params.id },
@@ -157,8 +167,8 @@ export async function PUT(
         description: description || null,
         price: Number(price),
         place: place || null,
-        from: new Date(from),
-        to: new Date(to),
+        from: fromDate,
+        to: toDate,
         visible: Boolean(visible),
         capacity: Number(capacity) || 0,
         bankAccountId: bankAccountId || null,

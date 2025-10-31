@@ -293,21 +293,20 @@ export async function POST(
 
     // Send notification email
     try {
-      const formattedDate = new Date(event.from).toLocaleDateString("cs-CZ");
-
-      // Create adjusted dates for display (add 2 hours to match the correction in event creation)
-      const fromDate = new Date(event.from);
-      const toDate = new Date(event.to);
-      fromDate.setHours(fromDate.getHours() + 2);
-      toDate.setHours(toDate.getHours() + 2);
-
-      const startTime = fromDate.toLocaleTimeString("cs-CZ", {
-        hour: "2-digit",
-        minute: "2-digit",
+      const formattedDate = new Date(event.from).toLocaleDateString("cs-CZ", {
+        timeZone: "Europe/Prague",
       });
-      const endTime = toDate.toLocaleTimeString("cs-CZ", {
+
+      // Format time directly in Prague timezone (handles DST automatically)
+      const startTime = new Date(event.from).toLocaleTimeString("cs-CZ", {
         hour: "2-digit",
         minute: "2-digit",
+        timeZone: "Europe/Prague",
+      });
+      const endTime = new Date(event.to).toLocaleTimeString("cs-CZ", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZone: "Europe/Prague",
       });
 
       await sendWaitingListPromotionEmail(

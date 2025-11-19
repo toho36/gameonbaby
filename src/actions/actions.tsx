@@ -8,6 +8,8 @@ import {
   RegistrationAction,
 } from "~/utils/registrationHistory";
 import { convertPragueTimeStringToUTC } from "~/utils/timezoneUtils";
+import { sendWaitingListPromotionEmail } from "~/server/service/emailService";
+import { generateQRCodeURL } from "~/utils/qrCodeUtils";
 
 export async function createEvent(formData: FormData) {
   try {
@@ -111,6 +113,117 @@ export async function updateEvent(id: string, formData: FormData) {
       where: { id },
       data: updateData,
     });
+
+    // Check if we have available spots and people on waiting list
+    const currentCapacity = updateData.capacity;
+    if (currentCapacity > 0) {
+      const registrationCount = await prisma.registration.count({
+        where: { event_id: id },
+      });
+
+      const availableSpots = currentCapacity - registrationCount;
+
+      if (availableSpots > 0) {
+        // Get people from waiting list
+        const waitingListCandidates = await prisma.waitingList.findMany({
+          where: { event_id: id },
+          orderBy: { created_at: "asc" },
+          take: availableSpots,
+        });
+
+        for (const candidate of waitingListCandidates) {
+          // Move to registration
+          const newRegistration = await prisma.registration.create({
+            data: {
+              event_id: id,
+              first_name: candidate.first_name,
+              last_name: candidate.last_name,
+              email: candidate.email,
+              phone_number: candidate.phone_number,
+              payment_type: candidate.payment_type,
+              created_at: new Date(),
+            },
+          });
+
+          // Delete from waiting list
+          await prisma.waitingList.delete({
+            where: { id: candidate.id },
+          });
+
+          // Record history
+          await recordRegistrationHistory({
+            eventId: id,
+            registrationId: newRegistration.id,
+            waitingListId: candidate.id,
+            firstName: candidate.first_name,
+            lastName: candidate.last_name,
+            email: candidate.email,
+            phoneNumber: candidate.phone_number,
+            actionType: RegistrationAction.MOVED_FROM_WAITLIST,
+            eventTitle: existingEvent.title,
+          });
+
+          // Send email
+          try {
+            // We need to get the event again to have the correct dates if they were updated
+            // or use the existing ones if not.
+            // To be safe and simple, let's use the values we have.
+            // If dates were updated, they are in updateData (as Date objects), else in existingEvent (as Date objects)
+
+            const finalFrom = updateData.from || existingEvent.from;
+            const finalTo = updateData.to || existingEvent.to;
+            const finalPlace = updateData.place || existingEvent.place;
+            const finalTitle = updateData.title || existingEvent.title;
+
+            const formattedDate = new Date(finalFrom).toLocaleDateString(
+              "cs-CZ",
+              {
+                timeZone: "Europe/Prague",
+              },
+            );
+
+            const startTime = new Date(finalFrom).toLocaleTimeString("cs-CZ", {
+              hour: "2-digit",
+              minute: "2-digit",
+              timeZone: "Europe/Prague",
+            });
+            const endTime = new Date(finalTo).toLocaleTimeString("cs-CZ", {
+              hour: "2-digit",
+              minute: "2-digit",
+              timeZone: "Europe/Prague",
+            });
+
+            let qrCodeUrl = undefined;
+            const price = updateData.price || existingEvent.price;
+
+            // Generate QR code if payment type is QR or CARD (assuming these map to online payment)
+            // We use the event title and date for the QR code message
+            if (candidate.payment_type === "QR" || candidate.payment_type === "CARD") {
+              qrCodeUrl = generateQRCodeURL(
+                finalTitle,
+                formattedDate,
+                price,
+                existingEvent.bankAccountId || undefined
+              );
+            }
+
+            await sendWaitingListPromotionEmail(
+              candidate.email,
+              candidate.first_name,
+              finalTitle,
+              formattedDate,
+              `${startTime} - ${endTime}`,
+              finalPlace || "See event details online",
+              candidate.payment_type,
+              qrCodeUrl,
+              price
+            );
+          } catch (emailError) {
+            console.error("Failed to send promotion email:", emailError);
+          }
+        }
+      }
+    }
 
     revalidatePath("/events");
     revalidatePath("/admin/events");

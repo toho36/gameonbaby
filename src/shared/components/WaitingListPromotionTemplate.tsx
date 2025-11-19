@@ -20,6 +20,8 @@ interface WaitingListPromotionTemplateProps {
   eventTime: string;
   eventLocation: string;
   paymentType: string;
+  qrCodeUrl?: string;
+  eventPrice?: number;
 }
 
 const WaitingListPromotionTemplate = ({
@@ -29,6 +31,8 @@ const WaitingListPromotionTemplate = ({
   eventTime,
   eventLocation,
   paymentType,
+  qrCodeUrl,
+  eventPrice,
 }: WaitingListPromotionTemplateProps) => {
   return (
     <Html>
@@ -104,13 +108,50 @@ const WaitingListPromotionTemplate = ({
               }}
             >
               Payment Method:{" "}
-              {paymentType === "CARD" ? "Card/QR Payment" : "Cash on arrival"}
+              {paymentType === "QR" || paymentType === "CARD"
+                ? "QR Payment"
+                : "Cash on arrival"}
             </Text>
           </Section>
 
+          {qrCodeUrl && (paymentType === "QR" || paymentType === "CARD") && (
+            <Section
+              style={{
+                textAlign: "center",
+                margin: "24px 0",
+              }}
+            >
+              <Text style={text}>
+                Please scan the QR code below to complete your payment:
+              </Text>
+              <Img
+                src={qrCodeUrl}
+                width="200"
+                height="200"
+                alt="Payment QR Code"
+                style={{
+                  margin: "0 auto",
+                  display: "block",
+                }}
+              />
+              {eventPrice && (
+                <Text
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: "bold",
+                    color: "#6d28d9",
+                    marginTop: "12px",
+                  }}
+                >
+                  Amount: {eventPrice} CZK
+                </Text>
+              )}
+            </Section>
+          )}
+
           <Text style={text}>
-            {paymentType === "CARD"
-              ? "Please check your original registration email for payment details, or log in to your account to see your registration status."
+            {paymentType === "QR" || paymentType === "CARD"
+              ? "If you have already paid, please ignore this message."
               : "Please remember to bring cash for payment on arrival."}
           </Text>
 

@@ -8,6 +8,7 @@ import {
   recordRegistrationHistory,
   RegistrationAction,
 } from "~/utils/registrationHistory";
+import { generateQRCodeURL } from "~/utils/qrCodeUtils";
 
 export async function POST(
   request: NextRequest,
@@ -69,6 +70,41 @@ export async function POST(
     });
 
     if (!registration) {
+      // Check if the user is on the waiting list
+      const waitingListEntry = await prisma.waitingList.findFirst({
+        where: {
+          event_id: eventId,
+          email: user.email,
+        },
+      });
+
+      if (waitingListEntry) {
+        // Delete the waiting list entry
+        await prisma.waitingList.delete({
+          where: {
+            id: waitingListEntry.id,
+          },
+        });
+
+        // Record unregistration history
+        await recordRegistrationHistory({
+          eventId: eventId,
+          waitingListId: waitingListEntry.id,
+          firstName: waitingListEntry.first_name,
+          lastName: waitingListEntry.last_name,
+          email: waitingListEntry.email,
+          phoneNumber: waitingListEntry.phone_number,
+          actionType: RegistrationAction.UNREGISTERED,
+          userId: user.id,
+          eventTitle: event.title,
+        });
+
+        return NextResponse.json({
+          success: true,
+          message: "Successfully unregistered from waiting list",
+        });
+      }
+
       return NextResponse.json(
         { success: false, error: "You are not registered for this event" },
         { status: 400 },
@@ -166,6 +202,18 @@ export async function POST(
             timeZone: "Europe/Prague",
           });
 
+          let qrCodeUrl = undefined;
+
+          // Generate QR code if payment type is QR or CARD
+          if (waitingListEntry.payment_type === "QR" || waitingListEntry.payment_type === "CARD") {
+            qrCodeUrl = generateQRCodeURL(
+              event.title,
+              formattedDate,
+              event.price,
+              event.bankAccountId || undefined
+            );
+          }
+
           await sendWaitingListPromotionEmail(
             waitingListEntry.email,
             waitingListEntry.first_name,
@@ -174,6 +222,8 @@ export async function POST(
             `${startTime} - ${endTime}`,
             event.place || "See event details online",
             waitingListEntry.payment_type,
+            qrCodeUrl,
+            event.price
           );
         } catch (emailError) {
           console.error(

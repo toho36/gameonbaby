@@ -48,6 +48,8 @@ export async function sendWaitingListPromotionEmail(
   eventTime: string,
   eventLocation: string,
   paymentType: string,
+  qrCodeUrl?: string,
+  eventPrice?: number,
 ) {
   try {
     const { data, error } = await resend.emails.send({
@@ -61,6 +63,8 @@ export async function sendWaitingListPromotionEmail(
         eventTime,
         eventLocation,
         paymentType,
+        qrCodeUrl,
+        eventPrice,
       }),
     });
 

@@ -21,30 +21,30 @@ export function getPragueTimezoneOffset(date: Date): number {
     hour: "2-digit",
     hour12: false,
   });
-  
+
   const pragueFormatter = new Intl.DateTimeFormat("en", {
     timeZone: "Europe/Prague",
     hour: "2-digit",
     hour12: false,
   });
-  
+
   // Format the same timestamp in both timezones
   const utcParts = utcFormatter.formatToParts(date);
   const pragueParts = pragueFormatter.formatToParts(date);
-  
-  const utcHour = parseInt(utcParts.find((p) => p.type === "hour")?.value || "0", 10);
-  const pragueHour = parseInt(pragueParts.find((p) => p.type === "hour")?.value || "0", 10);
-  
+
+  const utcHour = parseInt(utcParts.find((p) => p.type === "hour")?.value ?? "0", 10);
+  const pragueHour = parseInt(pragueParts.find((p) => p.type === "hour")?.value ?? "0", 10);
+
   // Calculate the difference
   let offset = pragueHour - utcHour;
-  
+
   // Normalize to -12 to +12 range (Prague is always UTC+1 or UTC+2)
   if (offset > 12) {
     offset -= 24;
   } else if (offset < -12) {
     offset += 24;
   }
-  
+
   return offset;
 }
 
@@ -126,14 +126,14 @@ export function convertPragueTimeStringToUTC(dateTimeString: string): Date {
 
   // Parse the Prague time to see if it matches what user entered
   const pragueParts = pragueTimeString.split(", ");
-  const pragueDateParts = pragueParts[0]?.split("/") || [];
-  const pragueTimeParts = pragueParts[1]?.split(":") || [];
+  const pragueDateParts = pragueParts[0]?.split("/") ?? [];
+  const pragueTimeParts = pragueParts[1]?.split(":") ?? [];
 
-  const pragueMonth = parseInt(pragueDateParts[0] || "1", 10);
-  const pragueDay = parseInt(pragueDateParts[1] || "1", 10);
-  const pragueYear = parseInt(pragueDateParts[2] || "2000", 10);
-  const pragueHour = parseInt(pragueTimeParts[0] || "0", 10);
-  const pragueMinute = parseInt(pragueTimeParts[1] || "0", 10);
+  const pragueMonth = parseInt(pragueDateParts[0] ?? "1", 10);
+  const pragueDay = parseInt(pragueDateParts[1] ?? "1", 10);
+  const pragueYear = parseInt(pragueDateParts[2] ?? "2000", 10);
+  const pragueHour = parseInt(pragueTimeParts[0] ?? "0", 10);
+  const pragueMinute = parseInt(pragueTimeParts[1] ?? "0", 10);
 
   // Calculate the difference between what user entered and what this UTC time represents in Prague
   // If they match, we're done. Otherwise, adjust.

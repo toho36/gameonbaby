@@ -37,19 +37,31 @@ export const useRegistrations = (eventId: string) => {
 
         if (data.success) {
           // Map the API response to the Registration interface format
-          const mappedRegistrations = data.registrations.map((reg: any) => ({
+          interface ApiRegistration {
+            id: string;
+            userId?: string;
+            email: string;
+            firstName?: string;
+            lastName?: string;
+            phoneNumber?: string;
+            paymentType: string;
+            paid: boolean;
+            attended?: boolean;
+            createdAt: string;
+          }
+          const mappedRegistrations = (data.registrations as ApiRegistration[]).map((reg) => ({
             id: reg.id,
             eventId: eventId,
-            userId: reg.userId || reg.email, // Use email as userId if not provided
+            userId: reg.userId ?? reg.email, // Use email as userId if not provided
             status: reg.paid ? "PAID" : "UNPAID",
             paymentMethod: reg.paymentType,
-            attended: reg.attended || false,
+            attended: reg.attended ?? false,
             createdAt: reg.createdAt,
             user: {
               name:
-                `${reg.firstName || ""} ${reg.lastName || ""}`.trim() || null,
-              email: reg.email || null,
-              phone: reg.phoneNumber || null,
+                `${reg.firstName ?? ""} ${reg.lastName ?? ""}`.trim() || null,
+              email: reg.email ?? null,
+              phone: reg.phoneNumber ?? null,
             },
           }));
 
@@ -98,7 +110,7 @@ export const useUpdateRegistration = () => {
     }) => {
       let endpoint = "";
       let method = "POST";
-      const body: any = {};
+      const body: Record<string, unknown> = {};
 
       // Determine the correct endpoint to use based on what's being updated
       if (updates.status !== undefined) {
@@ -174,7 +186,7 @@ export const useUpdateRegistration = () => {
       // On error, revert the optimistic update
       if (context && currentEventId) {
         const { registrationId, updates } = context;
-        const invertedUpdates: any = {};
+        const invertedUpdates: { status?: string; attended?: boolean } = {};
 
         if (updates.status !== undefined) {
           invertedUpdates.status =
@@ -250,8 +262,19 @@ export const useDeleteRegistration = () => {
 };
 
 // New function to duplicate a registration with direct store update
+interface RegistrationForDuplication {
+  id: string;
+  userId?: string;
+  paymentMethod?: string;
+  user?: {
+    name?: string | null;
+    email?: string | null;
+    phone?: string | null;
+  };
+}
+
 export async function duplicateRegistrationWithDirectUpdate(
-  registration: any,
+  registration: RegistrationForDuplication,
   eventId: string,
   setProcessing: (id: string | null) => void,
 ) {
@@ -262,9 +285,9 @@ export async function duplicateRegistrationWithDirectUpdate(
     const store = useRegistrationStore.getState();
 
     // Split name into first name and last name
-    const nameParts = registration.user?.name?.split(" ") || [];
-    const firstName = nameParts[0] || "";
-    const lastName = nameParts.slice(1).join(" ") || "";
+    const nameParts = registration.user?.name?.split(" ") ?? [];
+    const firstName = nameParts[0] ?? "";
+    const lastName = nameParts.slice(1).join(" ") ?? "";
 
     // Call API to duplicate the registration
     const response = await fetch("/api/admin/registrations/duplicate", {
@@ -276,9 +299,9 @@ export async function duplicateRegistrationWithDirectUpdate(
         eventId,
         firstName: `${firstName} (Copy)`,
         lastName,
-        email: registration.user?.email || "",
-        phoneNumber: registration.user?.phone || "",
-        paymentType: registration.paymentMethod || "CASH",
+        email: registration.user?.email ?? "",
+        phoneNumber: registration.user?.phone ?? "",
+        paymentType: registration.paymentMethod ?? "CASH",
       }),
     });
 
@@ -289,7 +312,7 @@ export async function duplicateRegistrationWithDirectUpdate(
       const newRegistration = {
         id: data.registration.id,
         eventId,
-        userId: registration.userId || "",
+        userId: registration.userId ?? "",
         status: "UNPAID",
         attended: false,
         createdAt: data.registration.createdAt,

@@ -1,3 +1,4 @@
+// @ts-check
 // Script for directly deleting participants from the database
 import { PrismaClient } from "@prisma/client";
 
@@ -17,12 +18,14 @@ Options:
 `;
 
 // Parse command line arguments
+/** @type {Record<string, string | boolean>} */
 const options = {};
 for (let i = 0; i < args.length; i++) {
-  if (args[i].startsWith("--")) {
-    const option = args[i].substring(2);
-    const value =
-      args[i + 1] && !args[i + 1].startsWith("--") ? args[i + 1] : true;
+  const arg = args[i];
+  if (arg && arg.startsWith("--")) {
+    const option = arg.substring(2);
+    const nextArg = args[i + 1];
+    const value = nextArg && !nextArg.startsWith("--") ? nextArg : true;
     options[option] = value;
     if (value !== true) i++;
   }
@@ -65,14 +68,15 @@ async function main() {
     }
 
     // Delete by ID
-    if (options.id) {
+    if (options.id && typeof options.id === "string") {
+      const registrationId = options.id;
       const registration = await prisma.registration.findUnique({
-        where: { id: options.id },
+        where: { id: registrationId },
         include: { event: true },
       });
 
       if (!registration) {
-        console.log(`No participant found with ID: ${options.id}`);
+        console.log(`No participant found with ID: ${registrationId}`);
         return;
       }
 
@@ -100,24 +104,26 @@ async function main() {
     }
 
     // Delete by email (requires event ID)
-    if (options.email) {
-      if (!options.event) {
+    if (options.email && typeof options.email === "string") {
+      if (!options.event || typeof options.event !== "string") {
         console.log("Error: Event ID is required when deleting by email.");
         console.log(usage);
         return;
       }
 
+      const emailValue = options.email;
+      const eventValue = options.event;
       const registration = await prisma.registration.findFirst({
         where: {
-          email: options.email,
-          event_id: options.event,
+          email: emailValue,
+          event_id: eventValue,
         },
         include: { event: true },
       });
 
       if (!registration) {
         console.log(
-          `No participant found with email ${options.email} in the specified event.`,
+          `No participant found with email ${emailValue} in the specified event.`,
         );
         return;
       }

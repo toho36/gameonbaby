@@ -185,6 +185,7 @@ export default function RegistrationForm({
     return (
       <WaitingListSuccess
         eventId={eventId}
+        eventFromDate={event.from}
         profileImage={profileImage}
         resetFormState={resetFormState}
       />

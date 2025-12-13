@@ -153,3 +153,21 @@ enum RegistrationAction {
   EVENT_UPDATED
   REACTIVATED
 }
+
+model NoShow {
+  id         String    @id @default(cuid())
+  email      String
+  eventId    String
+  eventTitle String
+  eventDate  DateTime
+  firstName  String
+  lastName   String?
+  createdAt  DateTime  @default(now())
+  feePaid    Boolean   @default(false)
+  paidAt     DateTime?
+  notes      String?
+
+  @@index([email])
+  @@index([feePaid])
+}
+

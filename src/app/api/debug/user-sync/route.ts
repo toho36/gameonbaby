@@ -34,11 +34,23 @@ export async function GET() {
     }
 
     // Debug info to return
-    const debugInfo = {
+    const debugInfo: {
+      kindeUser: { id: string; email: string | null; name: string };
+      databaseLookup: { found: boolean; byId: boolean; byEmail: boolean } | null;
+      userCreated: boolean;
+      finalUser: {
+        id: string;
+        kindeId: string | null;
+        email: string | null;
+        name: string | null;
+        role: string;
+        createdAt: Date;
+      } | null;
+    } = {
       kindeUser: {
         id: kindeUser.id,
         email: kindeUser.email,
-        name: `${kindeUser.given_name || ""} ${kindeUser.family_name || ""}`.trim(),
+        name: `${kindeUser.given_name ?? ""} ${kindeUser.family_name ?? ""}`.trim(),
       },
       databaseLookup: null,
       userCreated: false,
@@ -54,8 +66,8 @@ export async function GET() {
 
     debugInfo.databaseLookup = {
       found: !!user,
-      byId: user?.kindeId === kindeUser.id ? true : false,
-      byEmail: user?.email === kindeUser.email ? true : false,
+      byId: user?.kindeId === kindeUser.id,
+      byEmail: user?.email === kindeUser.email,
     };
 
     // If user doesn't exist, create them
@@ -65,8 +77,7 @@ export async function GET() {
           data: {
             kindeId: kindeUser.id,
             email: kindeUser.email ?? "",
-            name: `${kindeUser.given_name || ""} ${kindeUser.family_name || ""}`.trim(),
-            // @ts-ignore: Property 'role' does not exist
+            name: `${kindeUser.given_name ?? ""} ${kindeUser.family_name ?? ""}`.trim(),
             role: "USER",
           },
         })) as unknown as DbUser;
@@ -89,7 +100,6 @@ export async function GET() {
       user = (await prisma.user.update({
         where: { id: user.id },
         data: {
-          // @ts-ignore: Property 'kindeId' does not exist
           kindeId: kindeUser.id,
         },
       })) as unknown as DbUser;

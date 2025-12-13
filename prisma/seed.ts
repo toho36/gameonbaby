@@ -1,8 +1,8 @@
-import { type Prisma, PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const initialRegistrations: Prisma.RegistrationCreateInput[] = [
+const initialRegistrations = [
   {
     id: "1",
     first_name: "John",
@@ -15,6 +15,7 @@ const initialRegistrations: Prisma.RegistrationCreateInput[] = [
       connectOrCreate: {
         where: { id: "1" },
         create: {
+          title: "Sample Event",
           price: 100,
           from: new Date(),
           to: new Date(),

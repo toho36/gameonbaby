@@ -7,10 +7,12 @@ import Link from "next/link";
 
 interface CheckRegistrationStatusProps {
   eventId: string;
+  eventFromDate?: string;
 }
 
 export default function CheckRegistrationStatus({
   eventId,
+  eventFromDate,
 }: CheckRegistrationStatusProps) {
   const { user, isAuthenticated } = useKindeBrowserClient();
   const [isRegistered, setIsRegistered] = useState<boolean>(false);
@@ -30,7 +32,7 @@ export default function CheckRegistrationStatus({
           if (data.success) {
             // Check if user's email is in registrations
             const isUserRegistered = data.registrations.some(
-              (reg: any) => reg.email === user.email,
+              (reg: { email: string }) => reg.email === user.email,
             );
             setIsRegistered(isUserRegistered);
           }
@@ -55,7 +57,7 @@ export default function CheckRegistrationStatus({
   }
 
   if (isRegistered) {
-    return <UnregisterButton eventId={eventId} />;
+    return <UnregisterButton eventId={eventId} eventFromDate={eventFromDate} />;
   }
 
   return (
@@ -81,3 +83,4 @@ export default function CheckRegistrationStatus({
     </Link>
   );
 }
+

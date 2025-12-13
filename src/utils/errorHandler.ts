@@ -9,8 +9,7 @@ export function withErrorHandling(
     try {
       // Call the actual route handler
       return await handler(req);
-      /* eslint-disable @typescript-eslint/no-explicit-any */
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("API Error:", error);
 
       // If the error is an instance of HTTPError, return a custom response
@@ -25,16 +24,18 @@ export function withErrorHandling(
       }
 
       // Generic error handling
+      const errorMessage = error instanceof Error ? error.message : "Internal Server Error";
+      const errorStack = error instanceof Error ? error.stack : undefined;
+
       return NextResponse.json<ErrorResponse>(
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-assignment
         {
-          message: error.message || "Internal Server Error",
+          message: errorMessage,
           code: "0",
-          stack:
-            process.env.NODE_ENV === "development" ? error.stack : undefined,
+          stack: process.env.NODE_ENV === "development" ? errorStack : undefined,
         },
         { status: 500 },
       );
     }
   };
 }
+

@@ -69,13 +69,13 @@ export async function updateEvent(id: string, formData: FormData) {
     }
 
     // Prepare update data with basic fields
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       title: formData.get("title") as string,
       description: formData.get("description") as string,
-      price: Number(formData.get("price") || 0),
-      place: (formData.get("place") as string) || null,
+      price: Number(formData.get("price") ?? 0),
+      place: (formData.get("place") as string) ?? null,
       visible: formData.get("visible") === "true",
-      capacity: Number(formData.get("capacity") || 0),
+      capacity: Number(formData.get("capacity") ?? 0),
     };
 
     // Only update dates if they are provided in the form
@@ -106,7 +106,7 @@ export async function updateEvent(id: string, formData: FormData) {
     // Add bankAccountId if present
     if (formData.has("bankAccountId")) {
       const bankAccountId = formData.get("bankAccountId") as string;
-      updateData.bankAccountId = bankAccountId || null;
+      updateData.bankAccountId = bankAccountId ?? null;
     }
 
     await prisma.event.update({
@@ -115,7 +115,7 @@ export async function updateEvent(id: string, formData: FormData) {
     });
 
     // Check if we have available spots and people on waiting list
-    const currentCapacity = updateData.capacity;
+    const currentCapacity = updateData.capacity as number;
     if (currentCapacity > 0) {
       const registrationCount = await prisma.registration.count({
         where: { event_id: id },
@@ -170,10 +170,10 @@ export async function updateEvent(id: string, formData: FormData) {
             // To be safe and simple, let's use the values we have.
             // If dates were updated, they are in updateData (as Date objects), else in existingEvent (as Date objects)
 
-            const finalFrom = updateData.from || existingEvent.from;
-            const finalTo = updateData.to || existingEvent.to;
-            const finalPlace = updateData.place || existingEvent.place;
-            const finalTitle = updateData.title || existingEvent.title;
+            const finalFrom = (updateData.from as Date) ?? existingEvent.from;
+            const finalTo = (updateData.to as Date) ?? existingEvent.to;
+            const finalPlace = (updateData.place as string) ?? existingEvent.place;
+            const finalTitle = (updateData.title as string) ?? existingEvent.title;
 
             const formattedDate = new Date(finalFrom).toLocaleDateString(
               "cs-CZ",
@@ -194,7 +194,7 @@ export async function updateEvent(id: string, formData: FormData) {
             });
 
             let qrCodeUrl = undefined;
-            const price = updateData.price || existingEvent.price;
+            const price = (updateData.price as number) ?? existingEvent.price;
 
             // Generate QR code if payment type is QR or CARD (assuming these map to online payment)
             // We use the event title and date for the QR code message
@@ -203,7 +203,7 @@ export async function updateEvent(id: string, formData: FormData) {
                 finalTitle,
                 formattedDate,
                 price,
-                existingEvent.bankAccountId || undefined
+                existingEvent.bankAccountId ?? undefined
               );
             }
 
@@ -213,7 +213,7 @@ export async function updateEvent(id: string, formData: FormData) {
               finalTitle,
               formattedDate,
               `${startTime} - ${endTime}`,
-              finalPlace || "See event details online",
+              finalPlace ?? "See event details online",
               candidate.payment_type,
               qrCodeUrl,
               price
@@ -259,7 +259,7 @@ export async function duplicateEvent(id: string, bankAccountId?: string) {
         to: toDate,
         created_at: new Date(),
         visible: existingEvent.visible,
-        bankAccountId: typeof bankAccountId !== 'undefined' ? bankAccountId : existingEvent.bankAccountId || null,
+        bankAccountId: typeof bankAccountId !== 'undefined' ? bankAccountId : existingEvent.bankAccountId ?? null,
       },
     });
 
@@ -353,9 +353,9 @@ export async function createRegistration(
       eventId: event.id,
       registrationId: registration.id,
       firstName: registration.first_name,
-      lastName: registration.last_name || null,
+      lastName: registration.last_name ?? null,
       email: registration.email,
-      phoneNumber: registration.phone_number || null,
+      phoneNumber: registration.phone_number ?? null,
       actionType: RegistrationAction.REGISTERED,
       eventTitle: event.title,
     });

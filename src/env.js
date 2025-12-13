@@ -86,21 +86,21 @@ export const env = createEnv({
     KINDE_ISSUER_URL: process.env.KINDE_ISSUER_URL,
     KINDE_SITE_URL: isBuildEnv
       ? prodUrl
-      : process.env.KINDE_SITE_URL || localUrl,
+      : process.env.KINDE_SITE_URL ?? localUrl,
     KINDE_POST_LOGOUT_REDIRECT_URL: isBuildEnv
       ? prodUrl
-      : process.env.KINDE_POST_LOGOUT_REDIRECT_URL || localUrl,
+      : process.env.KINDE_POST_LOGOUT_REDIRECT_URL ?? localUrl,
     KINDE_POST_LOGIN_REDIRECT_URL: isBuildEnv
       ? prodDashboardUrl
-      : process.env.KINDE_POST_LOGIN_REDIRECT_URL || dashboardUrl,
+      : process.env.KINDE_POST_LOGIN_REDIRECT_URL ?? dashboardUrl,
     NEXT_PUBLIC_KINDE_AUTH_URL: process.env.NEXT_PUBLIC_KINDE_AUTH_URL,
     NEXT_PUBLIC_KINDE_CLIENT_ID: process.env.NEXT_PUBLIC_KINDE_CLIENT_ID,
     NEXT_PUBLIC_KINDE_LOGOUT_URL: isBuildEnv
       ? prodUrl
-      : process.env.NEXT_PUBLIC_KINDE_LOGOUT_URL || localUrl,
+      : process.env.NEXT_PUBLIC_KINDE_LOGOUT_URL ?? localUrl,
     NEXT_PUBLIC_KINDE_REDIRECT_URL: isBuildEnv
       ? prodDashboardUrl
-      : process.env.NEXT_PUBLIC_KINDE_REDIRECT_URL || dashboardUrl,
+      : process.env.NEXT_PUBLIC_KINDE_REDIRECT_URL ?? dashboardUrl,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation.

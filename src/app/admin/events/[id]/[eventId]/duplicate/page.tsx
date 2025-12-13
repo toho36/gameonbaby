@@ -59,10 +59,10 @@ export default function DuplicateEventPage({
 
       const result = await createEvent(formData);
 
-      if (result.success) {
+      if ("id" in result) {
         router.push("/admin/events");
       } else {
-        setError(result.error || "Failed to create event");
+        setError(result.error ?? "Failed to create event");
       }
     } catch (error) {
       console.error("Error creating event:", error);

@@ -3,14 +3,14 @@ import { getDefaultBankAccount, getBankAccountById, type BankAccount } from "~/a
 export function generateQRCodeURL(
   name: string,
   eventDate: string,
-  price: number = 150,
+  price = 150,
   bankAccount?: string
 ) {
   // Use provided bank account, or fall back to environment variable, or default from config
-  const account = bankAccount 
-    || process.env.NEXT_PUBLIC_BANK_ACCOUNT 
-    || getDefaultBankAccount().accountNumber;
-    
+  const account = bankAccount
+    ?? process.env.NEXT_PUBLIC_BANK_ACCOUNT
+    ?? getDefaultBankAccount().accountNumber;
+
   const paymentString = `SPD*1.0*ACC:${account}*RN:VU LOAN TIKOVSKA*AM:${price}*CC:CZK*MSG:GameOn ${name} for event on ${eventDate}`;
   const encodedPaymentString = encodeURIComponent(paymentString);
   return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodedPaymentString}`;

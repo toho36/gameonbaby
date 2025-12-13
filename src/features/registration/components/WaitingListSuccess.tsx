@@ -5,12 +5,14 @@ import UnregisterButton from "./UnregisterButton";
 
 interface WaitingListSuccessProps {
   eventId: string;
+  eventFromDate?: string;
   profileImage: string | null;
   resetFormState: () => void;
 }
 
 export default function WaitingListSuccess({
   eventId,
+  eventFromDate,
   profileImage,
   resetFormState,
 }: WaitingListSuccessProps) {
@@ -79,7 +81,7 @@ export default function WaitingListSuccess({
 
         <div className="mt-6 w-full">
           <div className="flex items-center justify-center">
-            <UnregisterButton eventId={eventId} refreshForm={resetFormState} />
+            <UnregisterButton eventId={eventId} eventFromDate={eventFromDate} refreshForm={resetFormState} />
           </div>
         </div>
       </div>

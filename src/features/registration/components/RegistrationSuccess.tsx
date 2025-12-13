@@ -515,7 +515,7 @@ export default function RegistrationSuccess({
 
         <div className="w-full">
           <div className="flex items-center justify-center">
-            <UnregisterButton eventId={eventId} refreshForm={resetFormState} />
+            <UnregisterButton eventId={eventId} eventFromDate={event.from} refreshForm={resetFormState} />
           </div>
         </div>
       </div>

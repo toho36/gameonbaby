@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import { RegistrationHistoryEntry } from "~/utils/registrationHistory";
+import Link from "next/link";
 
 export default function RegistrationHistoryPage() {
   const [history, setHistory] = useState<RegistrationHistoryEntry[]>([]);
@@ -246,7 +247,12 @@ export default function RegistrationHistoryPage() {
                   </td>
                   <td className="px-6 py-4">{entry.email}</td>
                   <td className="px-6 py-4">
-                    {entry.event_title || entry.event_id}
+                    <Link
+                      href={`/admin/events/${entry.event_id}/${entry.event_id}/registrations`}
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      {entry.event_title || entry.event_id}
+                    </Link>
                   </td>
                 </tr>
               ))}

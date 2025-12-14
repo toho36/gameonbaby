@@ -110,6 +110,12 @@ export default function Navbar() {
                       >
                         No Shows
                       </Link>
+                      <Link
+                        href="/admin/event-stats"
+                        className="rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                      >
+                        Event Statistics
+                      </Link>
                       {isAdmin && (
                         <>
                           <Link
@@ -221,6 +227,13 @@ export default function Navbar() {
                                 onClick={() => setMenuOpen(false)}
                               >
                                 No Shows
+                              </Link>
+                              <Link
+                                href="/admin/event-stats"
+                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                onClick={() => setMenuOpen(false)}
+                              >
+                                Event Statistics
                               </Link>
                               {isAdmin && (
                                 <>

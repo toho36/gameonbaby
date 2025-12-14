@@ -35,11 +35,13 @@ interface Candidate {
 }
 
 type FilterType = "all" | "paid" | "unpaid";
+type ViewMode = "events" | "players";
 
 export default function NoShowsPage() {
     const [noShows, setNoShows] = useState<NoShow[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filter, setFilter] = useState<FilterType>("all");
+    const [viewMode, setViewMode] = useState<ViewMode>("events");
     const [searchEmail, setSearchEmail] = useState("");
 
     // Bulk Import State
@@ -248,6 +250,42 @@ export default function NoShowsPage() {
         });
     };
 
+    // Aggregate stats by email
+    const playerStats = noShows.reduce((acc, curr) => {
+        const email = curr.email;
+        if (!acc[email]) {
+            acc[email] = {
+                email: email,
+                lastKnownName: `${curr.firstName} ${curr.lastName || ""}`.trim(),
+                totalNoShows: 0,
+                unpaidCount: 0,
+                paidCount: 0,
+                lastNoShowDate: curr.eventDate,
+            };
+        }
+
+        const player = acc[email];
+        // Check if player exists to satisfy TS, though logic guarantees it
+        if (player) {
+            player.totalNoShows++;
+            if (curr.feePaid) {
+                player.paidCount++;
+            } else {
+                player.unpaidCount++;
+            }
+
+            // Keep the most recent name and date
+            if (new Date(curr.eventDate) > new Date(player.lastNoShowDate)) {
+                player.lastNoShowDate = curr.eventDate;
+                player.lastKnownName = `${curr.firstName} ${curr.lastName || ""}`.trim();
+            }
+        }
+
+        return acc;
+    }, {} as Record<string, { email: string; lastKnownName: string; totalNoShows: number; unpaidCount: number; paidCount: number; lastNoShowDate: string }>);
+
+    const sortedPlayers = Object.values(playerStats).sort((a, b) => b.unpaidCount - a.unpaidCount);
+
     if (authLoading || isLoading) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c]">
@@ -277,114 +315,211 @@ export default function NoShowsPage() {
                     </div>
                 </div>
 
-                {/* Filters */}
-                <div className="mb-6 flex flex-wrap gap-4">
-                    <div className="flex rounded-lg bg-white/10 p-1">
-                        {(["all", "unpaid", "paid"] as const).map((f) => (
+                {/* View Mode Toggle & Filters */}
+                <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex gap-4">
+                        {/* View Switcher */}
+                        <div className="flex rounded-lg bg-white/10 p-1">
                             <button
-                                key={f}
-                                onClick={() => setFilter(f)}
-                                className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${filter === f
+                                onClick={() => setViewMode("events")}
+                                className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${viewMode === "events"
                                     ? "bg-purple-600 text-white"
                                     : "text-white/70 hover:text-white"
                                     }`}
                             >
-                                {f === "all" ? "All" : f === "paid" ? "✅ Paid" : "❌ Not Paid"}
+                                By Event
                             </button>
-                        ))}
+                            <button
+                                onClick={() => setViewMode("players")}
+                                className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${viewMode === "players"
+                                    ? "bg-purple-600 text-white"
+                                    : "text-white/70 hover:text-white"
+                                    }`}
+                            >
+                                By Player
+                            </button>
+                        </div>
+
+                        {/* Status Filter (only for events view) */}
+                        {viewMode === "events" && (
+                            <div className="flex rounded-lg bg-white/10 p-1">
+                                {(["all", "unpaid", "paid"] as const).map((f) => (
+                                    <button
+                                        key={f}
+                                        onClick={() => setFilter(f)}
+                                        className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${filter === f
+                                            ? "bg-purple-600 text-white"
+                                            : "text-white/70 hover:text-white"
+                                            }`}
+                                    >
+                                        {f === "all" ? "All" : f === "paid" ? "✅ Paid" : "❌ Not Paid"}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
-                    <input
-                        type="text"
-                        placeholder="Search by email..."
-                        value={searchEmail}
-                        onChange={(e) => setSearchEmail(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && fetchNoShows()}
-                        className="rounded-lg bg-white/10 px-4 py-2 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                    <button
-                        onClick={fetchNoShows}
-                        className="rounded-lg bg-purple-600 px-4 py-2 text-white hover:bg-purple-700"
-                    >
-                        Search
-                    </button>
+
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            placeholder="Search by email..."
+                            value={searchEmail}
+                            onChange={(e) => setSearchEmail(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && fetchNoShows()}
+                            className="rounded-lg bg-white/10 px-4 py-2 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
+                        <button
+                            onClick={fetchNoShows}
+                            className="rounded-lg bg-purple-600 px-4 py-2 text-white hover:bg-purple-700"
+                        >
+                            Search
+                        </button>
+                    </div>
                 </div>
 
                 {/* Table */}
                 <div className="overflow-x-auto rounded-xl bg-white/10 backdrop-blur-sm">
-                    <table className="w-full text-left text-white">
-                        <thead className="border-b border-white/20 bg-white/5">
-                            <tr>
-                                <th className="px-4 py-3 font-medium">Event Date</th>
-                                <th className="px-4 py-3 font-medium">Event</th>
-                                <th className="px-4 py-3 font-medium">Name</th>
-                                <th className="px-4 py-3 font-medium">Email</th>
-                                <th className="px-4 py-3 font-medium">Fee Status</th>
-                                <th className="px-4 py-3 font-medium">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {noShows.length === 0 ? (
+                    {viewMode === "events" ? (
+                        <table className="w-full text-left text-white">
+                            <thead className="border-b border-white/20 bg-white/5">
                                 <tr>
-                                    <td colSpan={6} className="px-4 py-8 text-center text-white/60">
-                                        No records found
-                                    </td>
+                                    <th className="px-4 py-3 font-medium">Event Date</th>
+                                    <th className="px-4 py-3 font-medium">Event</th>
+                                    <th className="px-4 py-3 font-medium">Name</th>
+                                    <th className="px-4 py-3 font-medium">Email</th>
+                                    <th className="px-4 py-3 font-medium">Fee Status</th>
+                                    <th className="px-4 py-3 font-medium">Actions</th>
                                 </tr>
-                            ) : (
-                                noShows.map((noShow) => (
-                                    <tr
-                                        key={noShow.id}
-                                        className="border-b border-white/10 hover:bg-white/5"
-                                    >
-                                        <td className="px-4 py-3">{formatDate(noShow.eventDate)}</td>
-                                        <td className="px-4 py-3">{noShow.eventTitle}</td>
-                                        <td className="px-4 py-3">
-                                            {noShow.firstName} {noShow.lastName || ""}
-                                        </td>
-                                        <td className="px-4 py-3 font-mono text-sm">{noShow.email}</td>
-                                        <td className="px-4 py-3">
-                                            {noShow.feePaid ? (
-                                                <span className="inline-flex items-center rounded-full bg-green-500/20 px-2 py-1 text-xs font-medium text-green-300">
-                                                    ✅ Paid {noShow.paidAt && `(${formatDate(noShow.paidAt)})`}
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center rounded-full bg-red-500/20 px-2 py-1 text-xs font-medium text-red-300">
-                                                    ❌ Not Paid
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => handleMarkAsPaid(noShow.id, noShow.feePaid)}
-                                                    className={`rounded px-3 py-1 text-sm font-medium transition-colors ${noShow.feePaid
-                                                        ? "bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/30"
-                                                        : "bg-green-500/20 text-green-300 hover:bg-green-500/30"
-                                                        }`}
-                                                >
-                                                    {noShow.feePaid ? "Undo" : "Mark Paid"}
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(noShow.id)}
-                                                    className="rounded bg-red-500/20 px-3 py-1 text-sm font-medium text-red-300 transition-colors hover:bg-red-500/30"
-                                                >
-                                                    Delete
-                                                </button>
-                                            </div>
+                            </thead>
+                            <tbody>
+                                {noShows.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="px-4 py-8 text-center text-white/60">
+                                            No records found
                                         </td>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                                ) : (
+                                    noShows.map((noShow) => (
+                                        <tr
+                                            key={noShow.id}
+                                            className="border-b border-white/10 hover:bg-white/5"
+                                        >
+                                            <td className="px-4 py-3">{formatDate(noShow.eventDate)}</td>
+                                            <td className="px-4 py-3">
+                                                <Link
+                                                    href={`/admin/events/${noShow.eventId}/${noShow.eventId}/registrations`}
+                                                    className="text-indigo-300 hover:text-indigo-200 hover:underline"
+                                                >
+                                                    {noShow.eventTitle}
+                                                </Link>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                {noShow.firstName} {noShow.lastName || ""}
+                                            </td>
+                                            <td className="px-4 py-3 font-mono text-sm">{noShow.email}</td>
+                                            <td className="px-4 py-3">
+                                                {noShow.feePaid ? (
+                                                    <span className="inline-flex items-center rounded-full bg-green-500/20 px-2 py-1 text-xs font-medium text-green-300">
+                                                        ✅ Paid {noShow.paidAt && `(${formatDate(noShow.paidAt)})`}
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center rounded-full bg-red-500/20 px-2 py-1 text-xs font-medium text-red-300">
+                                                        ❌ Not Paid
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => handleMarkAsPaid(noShow.id, noShow.feePaid)}
+                                                        className={`rounded px-3 py-1 text-sm font-medium transition-colors ${noShow.feePaid
+                                                            ? "bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/30"
+                                                            : "bg-green-500/20 text-green-300 hover:bg-green-500/30"
+                                                            }`}
+                                                    >
+                                                        {noShow.feePaid ? "Undo" : "Mark Paid"}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(noShow.id)}
+                                                        className="rounded bg-red-500/20 px-3 py-1 text-sm font-medium text-red-300 transition-colors hover:bg-red-500/30"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <table className="w-full text-left text-white">
+                            <thead className="border-b border-white/20 bg-white/5">
+                                <tr>
+                                    <th className="px-4 py-3 font-medium">Email</th>
+                                    <th className="px-4 py-3 font-medium">Name (Last Known)</th>
+                                    <th className="px-4 py-3 font-medium text-center">Total No-Shows</th>
+                                    <th className="px-4 py-3 font-medium text-center">Unpaid</th>
+                                    <th className="px-4 py-3 font-medium text-center">Paid</th>
+                                    <th className="px-4 py-3 font-medium">Last No-Show</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {sortedPlayers.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="px-4 py-8 text-center text-white/60">
+                                            No records found
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    sortedPlayers.map((player) => (
+                                        <tr
+                                            key={player.email}
+                                            className="border-b border-white/10 hover:bg-white/5"
+                                        >
+                                            <td className="px-4 py-3 font-mono text-sm">{player.email}</td>
+                                            <td className="px-4 py-3">{player.lastKnownName}</td>
+                                            <td className="px-4 py-3 text-center text-lg font-bold">
+                                                {player.totalNoShows}
+                                            </td>
+                                            <td className="px-4 py-3 text-center">
+                                                <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${player.unpaidCount > 0 ? "bg-red-500/20 text-red-300" : "bg-white/10 text-white/50"
+                                                    }`}>
+                                                    {player.unpaidCount}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-center">
+                                                <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${player.paidCount > 0 ? "bg-green-500/20 text-green-300" : "bg-white/10 text-white/50"
+                                                    }`}>
+                                                    {player.paidCount}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-white/70">
+                                                {formatDate(player.lastNoShowDate)}
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
 
                 {/* Summary */}
                 <div className="mt-4 text-white/60">
-                    Total: {noShows.length} records
-                    {filter === "all" && noShows.length > 0 && (
-                        <span className="ml-4">
-                            ({noShows.filter((n) => !n.feePaid).length} unpaid, {noShows.filter((n) => n.feePaid).length} paid)
-                        </span>
+                    {viewMode === "events" ? (
+                        <>
+                            Total: {noShows.length} records
+                            {filter === "all" && noShows.length > 0 && (
+                                <span className="ml-4">
+                                    ({noShows.filter((n) => !n.feePaid).length} unpaid, {noShows.filter((n) => n.feePaid).length} paid)
+                                </span>
+                            )}
+                        </>
+                    ) : (
+                        <>
+                            Total: {sortedPlayers.length} unique players found
+                        </>
                     )}
                 </div>
             </div>

@@ -55,6 +55,68 @@ export async function PATCH(
             data: updateData,
         });
 
+
+
+        // Propagate payment status to the original registration if it exists
+        if (typeof feePaid === "boolean") {
+            try {
+                // Find the registration for this user and event
+                console.log(`Attempting to propagate to registration. EventId: ${noShow.eventId}, Email: ${noShow.email}, Name: ${noShow.firstName} ${noShow.lastName}`);
+
+                const matchCriteria: any = {
+                    event_id: noShow.eventId,
+                    email: {
+                        equals: noShow.email,
+                        mode: 'insensitive'
+                    },
+                    first_name: {
+                        equals: noShow.firstName,
+                        mode: 'insensitive'
+                    }
+                };
+
+                if (noShow.lastName) {
+                    matchCriteria.last_name = {
+                        equals: noShow.lastName,
+                        mode: 'insensitive'
+                    };
+                } else {
+                    matchCriteria.last_name = null;
+                }
+
+                console.log("Match criteria:", JSON.stringify(matchCriteria));
+
+                const registration = await prisma.registration.findFirst({
+                    where: matchCriteria,
+                    include: {
+                        payment: true,
+                    },
+                });
+
+                if (!registration) {
+                    console.warn(`No registration found for event ${noShow.eventId} and email ${noShow.email}`);
+                } else if (!registration.payment) {
+                    console.warn(`Registration found (${registration.id}) but has no payment record`);
+                }
+
+                // If registration and payment exist, update the payment status
+                if (registration && registration.payment) {
+                    await prisma.payment.update({
+                        where: {
+                            id: registration.payment.id,
+                        },
+                        data: {
+                            paid: feePaid,
+                        },
+                    });
+                    console.log(`Propagated payment status ${feePaid} to registration ${registration.id}`);
+                }
+            } catch (propError) {
+                // Don't fail the request if propagation fails, just log it
+                console.error("Failed to propagate payment status to registration:", propError);
+            }
+        }
+
         return NextResponse.json({
             success: true,
             noShow,

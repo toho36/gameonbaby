@@ -36,6 +36,14 @@ interface Event {
   created_at: string;
 }
 
+// Emails to exclude from "Unpaid" filter (organizers/VIPs)
+const EXEMPT_EMAILS = [
+  "tikovska.lenka@gmail.com",
+  "tominhduc07@gmail.com",
+  "tohoangviet1998@gmail.com",
+  "misaluongova@seznam.cz",
+];
+
 interface RegistrationSummary {
   total: number;
   paid: number;
@@ -273,11 +281,10 @@ const RegistrationTable: React.FC<RegistrationTableProps> = ({
             {registrations.map((registration) => (
               <tr
                 key={registration.id}
-                className={`transition-colors duration-200 ${
-                  lastArrivedId === registration.id
-                    ? "bg-green-50"
-                    : "hover:bg-gray-50"
-                }`}
+                className={`transition-colors duration-200 ${lastArrivedId === registration.id
+                  ? "bg-green-50"
+                  : "hover:bg-gray-50"
+                  }`}
               >
                 <td className="whitespace-nowrap px-6 py-4">
                   <div
@@ -318,11 +325,10 @@ const RegistrationTable: React.FC<RegistrationTableProps> = ({
                     <button
                       onClick={() => togglePaymentStatus(registration.id)}
                       disabled={processing === "payment" + registration.id}
-                      className={`${
-                        registration.status === "PAID"
-                          ? "bg-green-100 text-green-800 hover:bg-green-200"
-                          : "bg-red-100 text-red-800 hover:bg-red-200"
-                      } inline-flex items-center rounded-md px-3 py-1 text-xs font-medium`}
+                      className={`${registration.status === "PAID"
+                        ? "bg-green-100 text-green-800 hover:bg-green-200"
+                        : "bg-red-100 text-red-800 hover:bg-red-200"
+                        } inline-flex items-center rounded-md px-3 py-1 text-xs font-medium`}
                     >
                       {processing === "payment" + registration.id ? (
                         <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
@@ -367,7 +373,7 @@ const RegistrationTable: React.FC<RegistrationTableProps> = ({
                                 <span className="ml-1">
                                   (
                                   {registration.paymentMethod === "CARD" ||
-                                  registration.paymentMethod === "QR"
+                                    registration.paymentMethod === "QR"
                                     ? "QR"
                                     : "Cash"}
                                   )
@@ -382,11 +388,10 @@ const RegistrationTable: React.FC<RegistrationTableProps> = ({
                     <button
                       onClick={() => toggleAttendance(registration.id)}
                       disabled={processing === "attendance" + registration.id}
-                      className={`${
-                        registration.attended
-                          ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
-                          : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                      } inline-flex items-center rounded-md px-3 py-1 text-xs font-medium`}
+                      className={`${registration.attended
+                        ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                        : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                        } inline-flex items-center rounded-md px-3 py-1 text-xs font-medium`}
                     >
                       {processing === "attendance" + registration.id ? (
                         <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
@@ -598,11 +603,10 @@ const PageHeader = ({
         </button>
         <button
           onClick={() => setCompactView(!compactView)}
-          className={`inline-flex items-center justify-center rounded-md border px-4 py-2 text-sm font-medium shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
-            compactView
-              ? "border-green-500 bg-green-50 text-green-700 hover:bg-green-100"
-              : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-          }`}
+          className={`inline-flex items-center justify-center rounded-md border px-4 py-2 text-sm font-medium shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${compactView
+            ? "border-green-500 bg-green-50 text-green-700 hover:bg-green-100"
+            : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+            }`}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -940,40 +944,54 @@ export default function EventRegistrationsPage({
   }
 
   // Add a sorted version of registrations
-  const sortedRegistrations = [...registrations].sort((a, b) => {
-    // Sort only by creation date (newest first)
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  });
+  const sortedRegistrations = useMemo(() => {
+    return [...registrations].sort((a, b) => {
+      // Sort only by creation date (newest first)
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
+  }, [registrations]);
 
   // Add a new state for search functionality
   const [searchQuery, setSearchQuery] = useState("");
+  const [showUnpaidOnly, setShowUnpaidOnly] = useState(false);
 
   // Add a helper function to toggle the "filter attended" flag
   const toggleActive = () => setIsActive((prev) => !prev);
 
-  // Add filtered registrations based on search query and attended filter
-  const filteredRegistrations = useMemo(() => {
-    // Start with the base, already date-sorted list
-    let list = [...sortedRegistrations];
+  // Add filtered registrations based on search query, attended filter, and unpaid filter
+  // usage of useMemo removed to ensure reactivity
+  console.log("Rendering registration list. UnpaidFilter:", showUnpaidOnly, "ActiveFilter:", isActive);
 
-    // Apply the text search first (if any)
-    if (searchQuery.trim()) {
-      list = list.filter((registration) =>
-        registration.user.name
-          ?.toLowerCase()
-          .includes(searchQuery.toLowerCase()),
-      );
-    }
+  // Start with the base, already date-sorted list
+  let filteredRegistrations = [...sortedRegistrations];
 
-    // If the filter is active, move attended users to the bottom
-    if (isActive) {
-      const unattended = list.filter((r) => !r.attended);
-      const attended = list.filter((r) => r.attended);
-      list = [...unattended, ...attended];
-    }
+  // Apply the text search first (if any)
+  if (searchQuery.trim()) {
+    filteredRegistrations = filteredRegistrations.filter((registration) =>
+      registration.user.name
+        ?.toLowerCase()
+        .includes(searchQuery.toLowerCase()),
+    );
+  }
 
-    return list;
-  }, [sortedRegistrations, searchQuery, isActive]);
+  // Apply unpaid only filter
+  if (showUnpaidOnly) {
+    filteredRegistrations = filteredRegistrations.filter((registration) => {
+      const isPaid = registration.status === "PAID";
+      const email = registration.user.email || "";
+      const isExempt = EXEMPT_EMAILS.includes(email.toLowerCase());
+
+      // Show only if NOT paid AND NOT in exempt list
+      return !isPaid && !isExempt;
+    });
+  }
+
+  // If the filter is active, move attended users to the bottom
+  if (isActive) {
+    const unattended = filteredRegistrations.filter((r) => !r.attended);
+    const attended = filteredRegistrations.filter((r) => r.attended);
+    filteredRegistrations = [...unattended, ...attended];
+  }
 
   // Handle form submission
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -1201,41 +1219,61 @@ export default function EventRegistrationsPage({
                 /* Event-mode: quick search input + filter button */
                 <div className="flex items-center justify-between gap-2">
                   <input
-                    type="text"
                     placeholder="Quick search by name..."
                     className="w-1/2 rounded-lg border border-gray-300 bg-white px-4 py-2"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
-                  <button
-                    className={`w-1/2 rounded-lg border border-gray-300 px-4 py-2.5 pr-10 text-sm focus:outline-none ${
-                      isActive
+                  <div className="flex w-1/2 gap-2">
+                    <button
+                      type="button"
+                      className={`flex-1 rounded-lg border border-gray-300 px-2 py-2.5 text-sm focus:outline-none ${showUnpaidOnly
+                        ? "bg-red-500 text-white"
+                        : "bg-white text-black"
+                        }`}
+                      onClick={() => setShowUnpaidOnly((prev) => !prev)}
+                    >
+                      {showUnpaidOnly ? "Filtered" : "Unpaid Only"}
+                    </button>
+                    <button
+                      type="button"
+                      className={`flex-1 rounded-lg border border-gray-300 px-2 py-2.5 text-sm focus:outline-none ${isActive
                         ? "bg-blue-500 text-white"
                         : "bg-white text-black"
-                    }`}
-                    onClick={toggleActive}
-                  >
-                    {isActive ? "filtered" : "filter attended"}
-                  </button>
+                        }`}
+                      onClick={toggleActive}
+                    >
+                      {isActive ? "Filtered" : "Attended"}
+                    </button>
+                  </div>
                 </div>
               ) : (
                 /* Non-event mode: only the filter button, aligned right */
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-2">
                   <button
-                    className={`rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none ${
-                      isActive
-                        ? "bg-blue-500 text-white"
-                        : "bg-white text-black"
-                    }`}
+                    type="button"
+                    className={`rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none ${showUnpaidOnly
+                      ? "bg-red-500 text-white"
+                      : "bg-white text-black"
+                      }`}
+                    onClick={() => setShowUnpaidOnly((prev) => !prev)}
+                  >
+                    {showUnpaidOnly ? "Unpaid Only" : "Filter Unpaid"}
+                  </button>
+                  <button
+                    type="button"
+                    className={`rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:outline-none ${isActive
+                      ? "bg-blue-500 text-white"
+                      : "bg-white text-black"
+                      }`}
                     onClick={toggleActive}
                   >
-                    {isActive ? "filtered" : "filter attended"}
+                    {isActive ? "Filtered" : "Filter Attended"}
                   </button>
                 </div>
               )}
             </div>
           </div>
-
           {/* Desktop view */}
           <div className="hidden sm:block">
             <div className="min-w-full overflow-hidden overflow-x-auto align-middle shadow sm:rounded-lg">
@@ -1314,11 +1352,10 @@ export default function EventRegistrationsPage({
                             disabled={
                               processing === "payment" + registration.id
                             }
-                            className={`${
-                              registration.status === "PAID"
-                                ? "bg-green-100 text-green-800 hover:bg-green-200"
-                                : "bg-red-100 text-red-800 hover:bg-red-200"
-                            } inline-flex items-center rounded-md px-3 py-1 text-xs font-medium`}
+                            className={`${registration.status === "PAID"
+                              ? "bg-green-100 text-green-800 hover:bg-green-200"
+                              : "bg-red-100 text-red-800 hover:bg-red-200"
+                              } inline-flex items-center rounded-md px-3 py-1 text-xs font-medium`}
                           >
                             {processing === "payment" + registration.id ? (
                               <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
@@ -1365,7 +1402,7 @@ export default function EventRegistrationsPage({
                                           (
                                           {registration.paymentMethod ===
                                             "CARD" ||
-                                          registration.paymentMethod === "QR"
+                                            registration.paymentMethod === "QR"
                                             ? "QR"
                                             : "Cash"}
                                           )
@@ -1382,11 +1419,10 @@ export default function EventRegistrationsPage({
                             disabled={
                               processing === "attendance" + registration.id
                             }
-                            className={`${
-                              registration.attended
-                                ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
-                                : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                            } inline-flex items-center rounded-md px-3 py-1 text-xs font-medium`}
+                            className={`${registration.attended
+                              ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                              : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                              } inline-flex items-center rounded-md px-3 py-1 text-xs font-medium`}
                           >
                             {processing === "attendance" + registration.id ? (
                               <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
@@ -1492,11 +1528,10 @@ export default function EventRegistrationsPage({
               {filteredRegistrations.map((registration) => (
                 <div
                   key={registration.id}
-                  className={`rounded-lg border bg-white p-4 shadow-sm ${
-                    lastArrivedId === registration.id
-                      ? "border-green-300 bg-green-50"
-                      : "border-gray-200"
-                  }`}
+                  className={`rounded-lg border bg-white p-4 shadow-sm ${lastArrivedId === registration.id
+                    ? "border-green-300 bg-green-50"
+                    : "border-gray-200"
+                    }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="min-w-0 flex-1 pr-2">
@@ -1521,11 +1556,10 @@ export default function EventRegistrationsPage({
                       <button
                         onClick={() => togglePaymentStatus(registration.id)}
                         disabled={processing === "payment" + registration.id}
-                        className={`${
-                          registration.status === "PAID"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        } rounded-md px-2 py-1 text-xs font-medium`}
+                        className={`${registration.status === "PAID"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                          } rounded-md px-2 py-1 text-xs font-medium`}
                       >
                         {processing === "payment" + registration.id ? (
                           <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
@@ -1540,7 +1574,7 @@ export default function EventRegistrationsPage({
                                   <span className="ml-1">
                                     (
                                     {registration.paymentMethod === "CARD" ||
-                                    registration.paymentMethod === "QR"
+                                      registration.paymentMethod === "QR"
                                       ? "QR"
                                       : "Cash"}
                                     )
@@ -1555,11 +1589,10 @@ export default function EventRegistrationsPage({
                       <button
                         onClick={() => toggleAttendance(registration.id)}
                         disabled={processing === "attendance" + registration.id}
-                        className={`${
-                          registration.attended
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-gray-100 text-gray-800"
-                        } rounded-md px-2 py-1 text-xs font-medium`}
+                        className={`${registration.attended
+                          ? "bg-blue-100 text-blue-800"
+                          : "bg-gray-100 text-gray-800"
+                          } rounded-md px-2 py-1 text-xs font-medium`}
                       >
                         {processing === "attendance" + registration.id ? (
                           <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]"></span>
@@ -1646,6 +1679,7 @@ export default function EventRegistrationsPage({
     showDeleteModal,
     searchQuery,
     isActive,
+    showUnpaidOnly,
   ]);
 
   return memoizedRender();

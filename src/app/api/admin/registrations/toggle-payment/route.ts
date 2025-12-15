@@ -111,6 +111,47 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Propagate changes to No-Show records
+    try {
+      const matchCriteria: any = {
+        eventId: registration.event_id,
+        email: {
+          equals: registration.email,
+          mode: 'insensitive'
+        },
+        firstName: {
+          equals: registration.first_name,
+          mode: 'insensitive'
+        }
+      };
+
+      if (registration.last_name) {
+        matchCriteria.lastName = {
+          equals: registration.last_name,
+          mode: 'insensitive'
+        };
+      } else {
+        matchCriteria.lastName = null;
+      }
+
+      const noShow = await prisma.noShow.findFirst({
+        where: matchCriteria
+      });
+
+      if (noShow) {
+        await prisma.noShow.update({
+          where: { id: noShow.id },
+          data: {
+            feePaid: paid,
+            paidAt: paid ? new Date() : null
+          }
+        });
+        console.log(`Propagated payment status ${paid} to No-Show ${noShow.id}`);
+      }
+    } catch (propError) {
+      console.error("Failed to propagate payment status to No-Show:", propError);
+    }
+
     return NextResponse.json({
       success: true,
       message: paid

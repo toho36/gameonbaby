@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
+import DeleteConfirmationModal from "~/features/admin/components/DeleteConfirmationModal";
 
 interface NoShow {
     id: string;
@@ -53,6 +54,10 @@ export default function NoShowsPage() {
     const [isImporting, setIsImporting] = useState(false);
     const [isLoadingEvents, setIsLoadingEvents] = useState(false);
     const [isLoadingCandidates, setIsLoadingCandidates] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [noShowToDelete, setNoShowToDelete] = useState<string | null>(null);
+    const [noShowNameToDelete, setNoShowNameToDelete] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const router = useRouter();
     const { isAuthenticated, isLoading: authLoading } = useKindeBrowserClient();
@@ -222,16 +227,28 @@ export default function NoShowsPage() {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm("Are you sure you want to delete this no-show record?")) return;
+        // find the noShow to get the name
+        const ns = noShows.find(n => n.id === id);
+        const displayName = ns ? `${ns.firstName} ${ns.lastName || ""}`.trim() : null;
+        setNoShowToDelete(id);
+        setNoShowNameToDelete(displayName);
+        setShowDeleteModal(true);
+    };
 
+    const confirmDelete = async () => {
+        if (!noShowToDelete) return;
+        setIsDeleting(true);
         try {
-            const response = await fetch(`/api/admin/no-shows/${id}`, {
+            const response = await fetch(`/api/admin/no-shows/${noShowToDelete}`, {
                 method: "DELETE",
             });
 
             const data = await response.json();
             if (data.success) {
                 toast.success("Record deleted");
+                setShowDeleteModal(false);
+                setNoShowToDelete(null);
+                setNoShowNameToDelete(null);
                 fetchNoShows();
             } else {
                 toast.error(data.message || "Failed to delete");
@@ -239,6 +256,8 @@ export default function NoShowsPage() {
         } catch (error) {
             console.error("Error deleting no-show:", error);
             toast.error("Failed to delete");
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -636,6 +655,24 @@ export default function NoShowsPage() {
                         </div>
                     </div>
                 </div>
+            )}
+            {showDeleteModal && (
+                <DeleteConfirmationModal
+                    onConfirm={confirmDelete}
+                    onCancel={() => {
+                        setShowDeleteModal(false);
+                        setNoShowToDelete(null);
+                        setNoShowNameToDelete(null);
+                    }}
+                    title="Delete No-show Record"
+                    message={
+                        noShowNameToDelete
+                            ? `Are you sure you want to delete ${noShowNameToDelete}?`
+                            : "Are you sure you want to delete this no-show record?"
+                    }
+                    confirmButtonText="Delete"
+                    isProcessing={isDeleting}
+                />
             )}
         </main>
     );

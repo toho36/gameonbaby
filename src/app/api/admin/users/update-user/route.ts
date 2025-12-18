@@ -55,10 +55,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user exists
-    const userExists = await prisma.user.findUnique({
+    // Check if user exists by id first, then fallback to email (accept either)
+    let userExists = await prisma.user.findUnique({
       where: { id: userId },
     });
+
+    if (!userExists) {
+      // Try finding by email if an id match wasn't found
+      userExists = await prisma.user.findFirst({
+        where: { email: userId },
+      });
+    }
 
     if (!userExists) {
       return NextResponse.json(
@@ -67,9 +74,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update user information
+    // Update user information (use resolved id)
     const updatedUser = await prisma.user.update({
-      where: { id: userId },
+      where: { id: userExists.id },
       data: {
         name,
         email,

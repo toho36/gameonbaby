@@ -709,6 +709,9 @@ export default function EventRegistrationsPage({
   const [registrationToDelete, setRegistrationToDelete] = useState<
     string | null
   >(null);
+  const [registrationNameToDelete, setRegistrationNameToDelete] = useState<
+    string | null
+  >(null);
 
   // React Query hooks - ensure it uses proper event ID
   const { refetch, isLoading: registrationsLoading } = useRegistrations(
@@ -868,6 +871,12 @@ export default function EventRegistrationsPage({
 
   function handleDeleteClick(registrationId: string) {
     setRegistrationToDelete(registrationId);
+    const registration = registrations.find((r) => r.id === registrationId);
+    const nameFallback =
+      registration?.user?.name ||
+      registration?.user?.email ||
+      "this registration";
+    setRegistrationNameToDelete(nameFallback);
     setShowDeleteModal(true);
   }
 
@@ -880,6 +889,7 @@ export default function EventRegistrationsPage({
         onSuccess: () => {
           setShowDeleteModal(false);
           setRegistrationToDelete(null);
+          setRegistrationNameToDelete(null);
           setProcessing(null);
           toast.success("Registration deleted successfully");
         },
@@ -940,6 +950,24 @@ export default function EventRegistrationsPage({
       paymentType: registration.paymentMethod || "CASH",
     });
     setFormType("duplicate");
+    setShowForm(true);
+  }
+
+  // Open edit modal for an existing registration
+  function handleEditRegistration(registration: Registration) {
+    const nameParts = registration.user?.name?.split(" ") || [];
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || "";
+
+    setCurrentRegistration(registration);
+    setFormData({
+      firstName: firstName,
+      lastName: lastName,
+      email: registration.user?.email || "",
+      phoneNumber: registration.user?.phone || "",
+      paymentType: registration.paymentMethod || "CASH",
+    });
+    setFormType("edit");
     setShowForm(true);
   }
 
@@ -1061,40 +1089,72 @@ export default function EventRegistrationsPage({
         }
       } else if (formType === "edit" && currentRegistration) {
         // Call API to update participant
-        // First update the user information
-        const response = await fetch(`/api/admin/users/update-user`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userId: currentRegistration.userId,
-            name: fullName,
-            email: formData.email,
-            phoneNumber: formData.phoneNumber,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to update user information");
+        // Defensive: ensure we have a userId to update
+        if (!currentRegistration.userId) {
+          throw new Error("Missing userId for the current registration");
         }
 
-        // Then update the registration payment method
-        updateRegistration(
+        // Call single combined endpoint that upserts user (if provided) and updates registration in one transaction
+        const combinedResponse = await fetch(
+          `/api/admin/registrations/${currentRegistration.id}`,
           {
-            registrationId: currentRegistration.id,
-            updates: { paymentMethod: formData.paymentType },
-          },
-          {
-            onSuccess: () => {
-              refetch();
-              setShowForm(false);
-              setCurrentRegistration(null);
-            },
-            onError: (error) => {
-              // Error handling without console.error
-              toast.error("Failed to update participant");
-            },
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              firstName: formData.firstName,
+              lastName: formData.lastName,
+              email: formData.email,
+              phoneNumber: formData.phoneNumber,
+              paymentType: formData.paymentType,
+              user: {
+                userId: currentRegistration.userId,
+                name: fullName,
+                email: formData.email,
+                phone: formData.phoneNumber,
+              },
+            }),
           },
         );
+
+        const combinedData = await combinedResponse.json().catch(() => null);
+        if (!combinedResponse.ok || !combinedData?.success) {
+          throw new Error(combinedData?.message || "Failed to update registration");
+        }
+
+        // Update the local store immediately using returned data
+        const updatedReg = combinedData.registration;
+        // Map server response shape to store shape
+        const mappedUpdates: any = {
+          paymentMethod: updatedReg.paymentType,
+        };
+        // Update user details in the registration store by replacing the registration entry
+        useRegistrationStore.getState().updateRegistration(updatedReg.id, {
+          ...mappedUpdates,
+          // update nested user object by setting name/email/phone via spread
+        });
+
+        // Also apply a direct store replace for user information for that registration
+        const store = useRegistrationStore.getState();
+        store.setRegistrations(
+          store.registrations.map((r) =>
+            r.id === updatedReg.id
+              ? {
+                  ...r,
+                  paymentMethod: updatedReg.paymentType,
+                  user: {
+                    name: updatedReg.user?.name || `${updatedReg.firstName} ${updatedReg.lastName}`.trim() || null,
+                    email: updatedReg.user?.email || updatedReg.email || null,
+                    phone: updatedReg.user?.phoneNumber || updatedReg.phoneNumber || null,
+                  },
+                }
+              : r,
+          ),
+        );
+
+        // Close modal, set current registration null and show toast
+        setShowForm(false);
+        setCurrentRegistration(null);
+        toast.success("Participant updated successfully");
       }
     } catch (error) {
       // Error handling without console.error
@@ -1473,6 +1533,21 @@ export default function EventRegistrationsPage({
                       <td className="whitespace-nowrap px-6 py-4">
                         <div className="flex space-x-2">
                           <button
+                            onClick={() => handleEditRegistration(registration)}
+                            className="inline-flex items-center rounded-md bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="mr-1 h-4 w-4"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                            </svg>
+                            Edit
+                          </button>
+
+                          <button
                             onClick={() =>
                               handleDuplicateRegistration(registration)
                             }
@@ -1617,6 +1692,12 @@ export default function EventRegistrationsPage({
                           : "Duplicate"}
                       </button>
                       <button
+                        onClick={() => handleEditRegistration(registration)}
+                        className="flex-1 rounded-md bg-blue-50 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
+                      >
+                        Edit
+                      </button>
+                      <button
                         onClick={() => handleDeleteClick(registration.id)}
                         className="flex-1 rounded-md bg-red-50 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100"
                       >
@@ -1652,9 +1733,14 @@ export default function EventRegistrationsPage({
                 onCancel={() => {
                   setShowDeleteModal(false);
                   setRegistrationToDelete(null);
+                  setRegistrationNameToDelete(null);
                 }}
                 title="Delete Registration"
-                message="Are you sure you want to delete this registration? This action cannot be undone."
+                message={
+                  registrationNameToDelete
+                    ? `Are you sure you want to delete ${registrationNameToDelete} from this event? This action cannot be undone.`
+                    : "Are you sure you want to delete this registration? This action cannot be undone."
+                }
                 confirmButtonText="Delete"
                 isProcessing={!!processing}
               />

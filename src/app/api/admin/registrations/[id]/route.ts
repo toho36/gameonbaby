@@ -77,17 +77,60 @@ export async function PUT(
       );
     }
 
-    // Update the registration
-    const updatedRegistration = await prisma.registration.update({
-      where: { id: params.id },
-      data: {
-        first_name: data.firstName,
-        last_name: data.lastName,
-        email: data.email,
-        phone_number: data.phoneNumber,
-        payment_type: data.paymentType,
-      },
+    // Perform a transaction: upsert/create user (if requested) and update the registration
+    const result = await prisma.$transaction(async (tx) => {
+      let resolvedUser = null;
+
+      // If client provided user payload, try to resolve or create/update a user
+      if (data.user) {
+        const { userId, name, email, phone } = data.user;
+
+        // Try find by id first, then by email
+        if (userId) {
+          resolvedUser = await tx.user.findUnique({ where: { id: userId } });
+        }
+        if (!resolvedUser && email) {
+          resolvedUser = await tx.user.findFirst({ where: { email } });
+        }
+
+        if (resolvedUser) {
+          // Update existing user
+          resolvedUser = await tx.user.update({
+            where: { id: resolvedUser.id },
+            data: {
+              name,
+              email,
+              phoneNumber: phone || undefined,
+            },
+          });
+        } else if (email) {
+          // Create a new user if email provided
+          resolvedUser = await tx.user.create({
+            data: {
+              name,
+              email,
+              phoneNumber: phone || undefined,
+            },
+          });
+        }
+      }
+
+      // Update the registration row
+      const updatedRegistration = await tx.registration.update({
+        where: { id: params.id },
+        data: {
+          first_name: data.firstName,
+          last_name: data.lastName,
+          email: data.email,
+          phone_number: data.phoneNumber,
+          payment_type: data.paymentType,
+        },
+      });
+
+      return { updatedRegistration, resolvedUser };
     });
+
+    const { updatedRegistration, resolvedUser } = result;
 
     return NextResponse.json({
       success: true,
@@ -98,6 +141,14 @@ export async function PUT(
         email: updatedRegistration.email,
         phoneNumber: updatedRegistration.phone_number,
         paymentType: updatedRegistration.payment_type,
+        user: resolvedUser
+          ? {
+              id: resolvedUser.id,
+              name: resolvedUser.name,
+              email: resolvedUser.email,
+              phoneNumber: resolvedUser.phoneNumber,
+            }
+          : null,
       },
     });
   } catch (error) {

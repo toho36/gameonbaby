@@ -252,12 +252,13 @@ export async function POST(
       );
     }
 
-    if (event._count.Registration >= event.capacity) {
-      return NextResponse.json(
-        { success: false, message: "Event is at capacity" },
-        { status: 400 },
-      );
-    }
+    // Capacity check removed to allow admin override
+    // if (event._count.Registration >= event.capacity) {
+    //   return NextResponse.json(
+    //     { success: false, message: "Event is at capacity" },
+    //     { status: 400 },
+    //   );
+    // }
 
     // Create a registration for this user
     const registration = await prisma.registration.create({

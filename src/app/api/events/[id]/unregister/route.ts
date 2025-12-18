@@ -142,10 +142,21 @@ export async function POST(
     });
 
     if (waitingListEntry) {
-      // Get event details for the email
+      // Get event details for the email and capacity check
       const event = await prisma.event.findUnique({
         where: { id: eventId },
+        include: {
+          _count: {
+            select: { Registration: true },
+          },
+        },
       });
+
+      // Check if we have space to promote
+      if (
+        event &&
+        (event._count?.Registration || 0) < event.capacity
+      ) {
 
       // Move the first person from the waiting list to registrations
       const newRegistration = await prisma.registration.create({
@@ -232,6 +243,7 @@ export async function POST(
           );
           // Continue with the operation even if email fails
         }
+      }
       }
     }
 

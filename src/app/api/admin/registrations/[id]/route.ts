@@ -232,7 +232,14 @@ export async function DELETE(
         },
       });
 
-      if (waitingListEntry) {
+      // Check current registration count
+      const registrationCount = await tx.registration.count({
+        where: { event_id: registration.event_id },
+      });
+
+      const eventCapacity = registration.event?.capacity || 0;
+
+      if (waitingListEntry && registrationCount < eventCapacity) {
         // Move the first person from the waiting list to registrations
         const newRegistration = await tx.registration.create({
           data: {

@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import prisma from "~/lib/db";
 
-// Check if user has moderator/admin access
+// Check if user has admin access
 async function checkPermission(kindeUser: { id: string }) {
     const user = await prisma.user.findFirst({
         where: { kindeId: kindeUser.id },
         select: { role: true },
     });
-    return user?.role === "MODERATOR" || user?.role === "ADMIN";
+    return user?.role === "ADMIN";
 }
 
 // PATCH - Mark no-show as paid

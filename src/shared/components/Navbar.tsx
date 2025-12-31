@@ -104,20 +104,20 @@ export default function Navbar() {
                       >
                         Manage Events
                       </Link>
-                      <Link
-                        href="/admin/no-shows"
-                        className="rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-                      >
-                        No Shows
-                      </Link>
-                      <Link
-                        href="/admin/event-stats"
-                        className="rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-                      >
-                        Event Statistics
-                      </Link>
                       {isAdmin && (
                         <>
+                          <Link
+                            href="/admin/no-shows"
+                            className="rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                          >
+                            No Shows
+                          </Link>
+                          <Link
+                            href="/admin/event-stats"
+                            className="rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                          >
+                            Event Statistics
+                          </Link>
                           <Link
                             href="/admin/registration-history"
                             className="rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
@@ -221,22 +221,22 @@ export default function Navbar() {
                               >
                                 Manage Events
                               </Link>
-                              <Link
-                                href="/admin/no-shows"
-                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                onClick={() => setMenuOpen(false)}
-                              >
-                                No Shows
-                              </Link>
-                              <Link
-                                href="/admin/event-stats"
-                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                onClick={() => setMenuOpen(false)}
-                              >
-                                Event Statistics
-                              </Link>
                               {isAdmin && (
                                 <>
+                                  <Link
+                                    href="/admin/no-shows"
+                                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    onClick={() => setMenuOpen(false)}
+                                  >
+                                    No Shows
+                                  </Link>
+                                  <Link
+                                    href="/admin/event-stats"
+                                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    onClick={() => setMenuOpen(false)}
+                                  >
+                                    Event Statistics
+                                  </Link>
                                   <Link
                                     href="/admin/registration-history"
                                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

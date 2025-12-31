@@ -44,6 +44,8 @@ export default function NoShowsPage() {
     const [filter, setFilter] = useState<FilterType>("all");
     const [viewMode, setViewMode] = useState<ViewMode>("events");
     const [searchEmail, setSearchEmail] = useState("");
+    const [isCheckingRole, setIsCheckingRole] = useState(true);
+    const [isAdmin, setIsAdmin] = useState(false);
 
     // Bulk Import State
     const [showImportModal, setShowImportModal] = useState(false);
@@ -97,9 +99,28 @@ export default function NoShowsPage() {
             return;
         }
         if (isAuthenticated) {
-            fetchNoShows();
+            checkAdminRole();
         }
-    }, [isAuthenticated, authLoading, router, fetchNoShows]);
+    }, [isAuthenticated, authLoading, router]);
+
+    const checkAdminRole = async () => {
+        try {
+            const response = await fetch("/api/admin/check");
+            const data = await response.json();
+            setIsAdmin(data.isAdmin);
+            setIsCheckingRole(false);
+
+            if (!data.isAdmin) {
+                router.push("/admin");
+                return;
+            }
+
+            fetchNoShows();
+        } catch (error) {
+            console.error("Error checking admin role:", error);
+            router.push("/admin");
+        }
+    };
 
     // Bulk Import Functions
     const openImportModal = async () => {
@@ -305,7 +326,7 @@ export default function NoShowsPage() {
 
     const sortedPlayers = Object.values(playerStats).sort((a, b) => b.unpaidCount - a.unpaidCount);
 
-    if (authLoading || isLoading) {
+    if (authLoading || isLoading || isCheckingRole) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c]">
                 <div className="text-white">Loading...</div>

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "~/lib/db";
-import { PrismaClient } from "@prisma/client";
 import { getCurrentUser, isUserModerator } from "~/server/service/userService";
 
 // Define interface for waiting list entries
@@ -11,9 +10,6 @@ interface WaitingListEntry {
   email?: string;
   payment_type?: string;
 }
-
-// Create a separate client for raw queries
-const prismaRaw = new PrismaClient();
 
 export async function GET(
   request: NextRequest,
@@ -39,7 +35,7 @@ export async function GET(
     }
 
     // Get active registration count (non-deleted registrations)
-    const registrationCountResult = await prismaRaw.$queryRaw`
+    const registrationCountResult = await prisma.$queryRaw`
       SELECT COUNT(*) as count
       FROM "Registration"
       WHERE event_id = ${eventId} AND deleted = false
@@ -50,7 +46,7 @@ export async function GET(
     );
 
     // Get waiting list count
-    const waitingListCountResult = await prismaRaw.$queryRaw`
+    const waitingListCountResult = await prisma.$queryRaw`
       SELECT COUNT(*) as count
       FROM "WaitingList"
       WHERE event_id = ${eventId}
@@ -81,7 +77,7 @@ export async function GET(
     // If user is admin or moderator, fetch full participant data including emails
     if (hasPermission) {
       // Fetch registrations with email for identification
-      const registrationsRaw = await prismaRaw.$queryRaw`
+      const registrationsRaw = await prisma.$queryRaw`
         SELECT first_name, last_name, created_at, email, payment_type
         FROM "Registration"
         WHERE event_id = ${eventId} AND deleted = false
@@ -99,7 +95,7 @@ export async function GET(
       // Fetch waiting list entries with raw query
       let waitingList: WaitingListEntry[] = [];
       try {
-        waitingList = await prismaRaw.$queryRaw<WaitingListEntry[]>`
+        waitingList = await prisma.$queryRaw<WaitingListEntry[]>`
           SELECT first_name, last_name, created_at, email, payment_type 
           FROM "WaitingList"
           WHERE event_id = ${eventId}
@@ -122,7 +118,7 @@ export async function GET(
     // For regular users and unauthenticated users, fetch participant data without emails
     else {
       // Fetch registrations without sensitive information
-      const registrationsRaw = await prismaRaw.$queryRaw`
+      const registrationsRaw = await prisma.$queryRaw`
         SELECT first_name, last_name, created_at
         FROM "Registration"
         WHERE event_id = ${eventId} AND deleted = false
@@ -138,7 +134,7 @@ export async function GET(
       // Fetch waiting list entries without sensitive information
       let waitingList: WaitingListEntry[] = [];
       try {
-        waitingList = await prismaRaw.$queryRaw<WaitingListEntry[]>`
+        waitingList = await prisma.$queryRaw<WaitingListEntry[]>`
           SELECT first_name, last_name, created_at
           FROM "WaitingList"
           WHERE event_id = ${eventId}

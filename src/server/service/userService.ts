@@ -1,9 +1,8 @@
 "use server";
 
-import { PrismaClient, UserRole } from "@prisma/client";
+import { UserRole } from "@prisma/client";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-
-const prisma = new PrismaClient();
+import prisma from "~/lib/db";
 
 export async function syncKindeUser() {
   try {

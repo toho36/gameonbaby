@@ -1,8 +1,4 @@
 import prisma from "~/lib/db";
-import { PrismaClient } from "@prisma/client";
-
-// Create a raw client for SQL queries
-const prismaRaw = new PrismaClient();
 
 /**
  * Enum for different types of registration actions
@@ -96,7 +92,7 @@ export async function recordRegistrationHistory({
       if (typeof global[cacheKey as keyof typeof global] === "boolean") {
         tableExists = global[cacheKey as keyof typeof global] as boolean;
       } else {
-        const result = await prismaRaw.$queryRaw`
+        const result = await prisma.$queryRaw`
           SELECT EXISTS (
             SELECT FROM information_schema.tables 
             WHERE table_schema = 'public'
@@ -109,7 +105,7 @@ export async function recordRegistrationHistory({
 
       // If the table exists, insert directly using raw SQL
       if (tableExists) {
-        await prismaRaw.$executeRaw`
+        await prisma.$executeRaw`
           INSERT INTO "RegistrationHistory" (
             id, event_id, registration_id, waiting_list_id, 
             first_name, last_name, email, phone_number, 
@@ -148,7 +144,7 @@ export async function getRegistrationHistory(): Promise<
     if (typeof global[cacheKey as keyof typeof global] === "boolean") {
       tableExists = global[cacheKey as keyof typeof global] as boolean;
     } else {
-      const result = await prismaRaw.$queryRaw`
+      const result = await prisma.$queryRaw`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
           WHERE table_schema = 'public'
@@ -161,7 +157,7 @@ export async function getRegistrationHistory(): Promise<
 
     // If table exists, get data from database
     if (tableExists) {
-      const history = await prismaRaw.$queryRaw<RegistrationHistoryEntry[]>`
+      const history = await prisma.$queryRaw<RegistrationHistoryEntry[]>`
         SELECT * FROM "RegistrationHistory"
         ORDER BY timestamp DESC
         LIMIT 200;
@@ -196,7 +192,7 @@ export async function getEventRegistrationHistory(
     if (typeof global[cacheKey as keyof typeof global] === "boolean") {
       tableExists = global[cacheKey as keyof typeof global] as boolean;
     } else {
-      const result = await prismaRaw.$queryRaw`
+      const result = await prisma.$queryRaw`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
           WHERE table_schema = 'public'
@@ -212,7 +208,7 @@ export async function getEventRegistrationHistory(
     // If table exists, get data from database
     if (tableExists) {
       // Add LIMIT to prevent excessive data fetching
-      const history = await prismaRaw.$queryRaw<RegistrationHistoryEntry[]>`
+      const history = await prisma.$queryRaw<RegistrationHistoryEntry[]>`
         SELECT * FROM "RegistrationHistory"
         WHERE event_id = ${eventId}
         ORDER BY timestamp DESC

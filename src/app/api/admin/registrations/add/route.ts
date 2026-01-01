@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { sendRegistrationEmail } from "~/server/service/emailService";
 import { generateQRCodeURL } from "~/utils/qrCodeUtils";
-
-const prisma = new PrismaClient();
+import prisma from "~/lib/db";
 
 // Define user interface with role property
 interface DbUser {

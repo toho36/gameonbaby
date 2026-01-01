@@ -7,15 +7,12 @@ import {
   CheckRegistrationStatus,
   CapacityDisplay,
 } from "~/features/events";
-import { PrismaClient, UserRole } from "@prisma/client";
+import { UserRole } from "@prisma/client";
 import {
   getCurrentUser,
   hasSpecialAccess,
   isUserModerator,
 } from "~/server/service/userService";
-
-// Create a separate client for raw queries
-const prismaRaw = new PrismaClient();
 
 // Define Event interface to match the database schema
 interface EventData {
@@ -167,7 +164,7 @@ export default async function EventPage({
     console.log(`Attempting to fetch waiting list for event ID: ${params.id}`);
 
     // Simply use raw query with PascalCase table name as it should work after db reset
-    waitingListEntries = await prismaRaw.$queryRaw<WaitingListEntry[]>`
+    waitingListEntries = await prisma.$queryRaw<WaitingListEntry[]>`
       SELECT first_name, last_name, created_at 
       FROM "WaitingList"
       WHERE event_id = ${params.id}

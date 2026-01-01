@@ -1,5 +1,4 @@
 import type { Event, Registration } from "@prisma/client";
-import { PrismaClient } from "@prisma/client";
 import getCode, { ErrorCodes, Modules } from "~/app/api/error/error-codes";
 import { PaymentType } from "~/app/constant/paymentType";
 import { ApiError } from "~/utils/ApiError";
@@ -8,8 +7,7 @@ import {
   recordRegistrationHistory,
   RegistrationAction,
 } from "~/utils/registrationHistory";
-
-const prisma = new PrismaClient();
+import prisma from "~/lib/db";
 
 // Extended Event type with count
 interface EventWithCount extends Event {

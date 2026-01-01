@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "~/lib/db";
 import { PaymentType } from "~/app/constant/paymentType";
-import { PrismaClient } from "@prisma/client";
-
-// Create a separate client for raw queries
-const prismaRaw = new PrismaClient();
 
 export async function POST(request: Request) {
   try {
@@ -34,7 +30,7 @@ export async function POST(request: Request) {
     }
 
     // Check if already on waiting list
-    const existingWaitingListEntries = await prismaRaw.$queryRaw`
+    const existingWaitingListEntries = await prisma.$queryRaw`
       SELECT * FROM "WaitingList" 
       WHERE event_id = ${eventId} 
       AND email = ${email}
@@ -56,7 +52,7 @@ export async function POST(request: Request) {
     }
 
     // Add to waiting list using raw query
-    await prismaRaw.$executeRaw`
+    await prisma.$executeRaw`
       INSERT INTO "WaitingList" (id, event_id, first_name, last_name, email, phone_number, payment_type, created_at)
       VALUES (${crypto.randomUUID()}, ${eventId}, ${firstName}, ${lastName || ""}, ${email}, ${phoneNumber || null}, ${paymentType}, ${new Date()})
     `;

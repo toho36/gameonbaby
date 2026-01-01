@@ -2,10 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import prisma from "~/lib/db";
 import { PaymentType } from "~/app/constant/paymentType";
-import { PrismaClient } from "@prisma/client";
-
-// Create a separate client for raw queries
-const prismaRaw = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
@@ -70,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     // Check if user is already on the waiting list for this event
     // We'll use a raw query since the schema isn't updated yet
-    const existingWaitingListEntries = await prismaRaw.$queryRaw`
+    const existingWaitingListEntries = await prisma.$queryRaw`
       SELECT * FROM "WaitingList" 
       WHERE event_id = ${eventId} 
       AND email = ${userEmail}
@@ -100,7 +96,7 @@ export async function POST(request: NextRequest) {
           : PaymentType.CASH;
 
     // Add to waiting list using raw query
-    const waitingListEntry = await prismaRaw.$executeRaw`
+    const waitingListEntry = await prisma.$executeRaw`
       INSERT INTO "WaitingList" (id, event_id, first_name, last_name, email, phone_number, payment_type, created_at)
       VALUES (${crypto.randomUUID()}, ${eventId}, ${firstName}, ${lastName || ""}, ${userEmail}, ${null}, ${paymentType}, ${new Date()})
       RETURNING *

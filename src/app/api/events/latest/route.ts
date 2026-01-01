@@ -1,11 +1,11 @@
 export const dynamic = "force-dynamic";
 
 import { NextResponse } from "next/server";
-import { type Event, PrismaClient } from "@prisma/client";
+import { type Event } from "@prisma/client";
 import getCode, { ErrorCodes, Modules } from "~/app/api/error/error-codes";
 import { ApiError } from "~/utils/ApiError";
 import { withErrorHandling } from "~/utils/errorHandler";
-const prisma = new PrismaClient();
+import prisma from "~/lib/db";
 
 type LatestEventResponse = {
   id: string;

@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-
-const prisma = new PrismaClient();
+import prisma from "~/lib/db";
 
 // Function to check if user has admin or moderator permission
 async function checkPermission(kindeUser: any) {

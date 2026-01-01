@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-
-const prisma = new PrismaClient();
+import prisma from "~/lib/db";
 
 // Role types to match the database enum
 type UserRole = "USER" | "REGULAR" | "MODERATOR" | "ADMIN";

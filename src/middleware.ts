@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "~/lib/db";
 
 // Define paths where we don't need to check authentication
 const publicPaths = ["/", "/api/auth", "/login", "/register"];

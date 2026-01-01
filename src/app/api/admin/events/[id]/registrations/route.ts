@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import prisma from "~/lib/db";
-import { PrismaClient } from "@prisma/client";
-
-// Create a raw client for SQL queries
-const prismaRaw = new PrismaClient();
 
 // Define user interface with role property
 interface DbUser {
@@ -68,7 +64,7 @@ export async function GET(
     }
 
     // Use a more optimized query
-    const registrations = await prismaRaw.$queryRaw`
+    const registrations = await prisma.$queryRaw`
       SELECT 
         r.id, r.first_name, r.last_name, r.email, r.phone_number, 
         r.payment_type, r.created_at, r.attended,

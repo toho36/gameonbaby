@@ -1,5 +1,7 @@
 "use server";
 
+import { cache } from "react";
+
 import { UserRole } from "@prisma/client";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import prisma from "~/lib/db";
@@ -45,13 +47,13 @@ export async function syncKindeUser() {
   }
 }
 
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async () => {
   try {
     return await syncKindeUser();
   } catch (error) {
     return null;
   }
-}
+});
 
 export async function getAllUsers(search?: string) {
   try {

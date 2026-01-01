@@ -74,7 +74,7 @@ export async function syncKindeUser() {
  * Invalidate user cache (call when user is updated)
  * Exported for use in profile update routes
  */
-export function invalidateCurrentUserCache(userId: string) {
+export async function invalidateCurrentUserCache(userId: string) {
   invalidateUserCache(userId);
 }
 

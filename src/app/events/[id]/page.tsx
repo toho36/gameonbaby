@@ -129,54 +129,50 @@ export default async function EventPage({
 
   // OPTIMIZATION: Check cache first for event details
   let eventData: EventData | null = getCachedEventDetails<any>(params.id);
-  
+
   if (!eventData) {
     console.log("Event details cache miss, querying database for:", params.id);
     eventData = (await prisma.event.findUnique({
-    where: {
-      id: params.id,
-    },
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      price: true,
-      place: true,
-      capacity: true,
-      from: true,
-      to: true,
-      visible: true,
-      bankAccountId: true,
-      Registration: {
-        orderBy: {
-          created_at: "asc",
-        },
-        select: {
-          first_name: true,
-          last_name: true,
-          created_at: true,
-        },
+      where: {
+        id: params.id,
       },
-      _count: {
-        select: {
-          Registration: true,
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        price: true,
+        place: true,
+        capacity: true,
+        from: true,
+        to: true,
+        visible: true,
+        bankAccountId: true,
+        Registration: {
+          orderBy: {
+            created_at: "asc",
+          },
+          select: {
+            first_name: true,
+            last_name: true,
+            created_at: true,
+          },
         },
-      },
+        _count: {
+          select: {
+            Registration: true,
+          },
+        },
       },
     })) as unknown as
-    | (Omit<EventData, "_count"> & {
-        _count: { Registration: number };
-      })
-    | null;
+      | (Omit<EventData, "_count"> & {
+          _count: { Registration: number };
+        })
+      | null;
 
-  // OPTIMIZATION: Cache event details for future requests
-  if (!cachedEventData && eventData) {
-    setCachedEventDetails(params.id, eventData);
-  }
-
-  // OPTIMIZATION: Cache waiting list for future requests
-  if (waitingListEntries && waitingListEntries.length > 0) {
-    setCachedWaitingList(params.id, waitingListEntries);
+    // OPTIMIZATION: Cache event details for future requests
+    if (eventData) {
+      setCachedEventDetails(params.id, eventData);
+    }
   }
 
   if (!eventData) {

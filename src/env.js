@@ -1,10 +1,10 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
-// Check if we're in a build environment
+// Check if we're in a build environment (production or any Vercel deployment)
 const isBuildEnv =
-  process.env.NODE_ENV === "production" &&
-  process.env.VERCEL_ENV === "production";
+  process.env.NODE_ENV === "production" ||
+  process.env.VERCEL_ENV !== undefined;
 
 // Default URLs for local development
 const localUrl = "http://localhost:3000";
@@ -50,8 +50,8 @@ export const env = createEnv({
    * `NEXT_PUBLIC_`.
    */
   client: {
-    NEXT_PUBLIC_RESEND_API_KEY: z.string(),
-    NEXT_PUBLIC_BANK_ACCOUNT: z.string(),
+    NEXT_PUBLIC_RESEND_API_KEY: isBuildEnv ? z.string().optional() : z.string(),
+    NEXT_PUBLIC_BANK_ACCOUNT: isBuildEnv ? z.string().optional() : z.string(),
     NEXT_PUBLIC_KINDE_AUTH_URL: isBuildEnv
       ? z.string().url().optional()
       : z.string().url(),

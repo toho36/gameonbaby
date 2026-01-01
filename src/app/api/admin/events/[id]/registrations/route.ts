@@ -15,9 +15,10 @@ export async function GET(
 ) {
   // OPTIMIZATION: Support pagination
   const url = new URL(request.url);
-  const page = parseInt(url.searchParams.get("page") || "1", 10);
-  const limit = Math.min(parseInt(url.searchParams.get("limit") || "50", 100); // Max 100 per page
-  
+  const searchParams = url.searchParams;
+  const page = parseInt(searchParams.get("page") || "1", 10);
+  const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 100); // Max 100 per page
+
   const skip = (page - 1) * limit;
   try {
     const { getUser, isAuthenticated } = getKindeServerSession();
@@ -70,12 +71,12 @@ export async function GET(
     }
 
   // Use a more optimized query
-  const registrations = await prisma.$queryRaw`
-    SELECT 
-      r.id, r.first_name, r.last_name, r.email, r.phone_number, 
+    const registrations = await prisma.$queryRaw`
+    SELECT
+      r.id, r.first_name, r.last_name, r.email, r.phone_number,
       r.payment_type, r.created_at, r.attended,
       p.paid as payment_paid
-    FROM "Registration" r
+    FROM "Registration" AS r
     LEFT JOIN "Payment" p ON r.id = p.registration_id
     WHERE r.event_id = ${params.id} AND r.deleted = false
     ORDER BY r.created_at ASC

@@ -28,10 +28,10 @@ export async function GET(request: Request) {
     }
 
     // Get filter parameters from URL
-    const { searchParams } = new URL(request.url);
-    const eventId = searchParams.get("eventId");
-    const limit = Math.min(parseInt(searchParams.get("limit") || "50", 100); // Max 100 per page
-    const page = Math.max(parseInt(searchParams.get("page") || "1", 1); // Start at page 1
+    const url = new URL(request.url);
+    const eventId = url.searchParams.get("eventId");
+    const limit = Math.min(parseInt(url.searchParams.get("limit") || "50", 10), 100); // Max 100 per page
+    const page = Math.max(parseInt(url.searchParams.get("page") || "1", 10), 1); // Start at page 1
     const offset = (page - 1) * limit;
 
     // Fetch registration history entries

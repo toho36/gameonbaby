@@ -165,7 +165,10 @@ export default async function EventPage({
       },
     })) as unknown as
       | (Omit<EventData, "_count"> & {
-          _count: { Registration: number };
+          _count: {
+            Registration: number;
+            WaitingList: number;
+          };
         })
       | null;
 

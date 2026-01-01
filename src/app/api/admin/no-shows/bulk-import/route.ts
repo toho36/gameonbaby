@@ -8,7 +8,7 @@ async function checkPermission(kindeUser: { id: string }) {
         where: { kindeId: kindeUser.id },
         select: { role: true },
     });
-    return user?.role === "MODERATOR" || user?.role === "ADMIN";
+    return user?.role === "ADMIN";
 }
 
 // POST - Bulk create no-show records

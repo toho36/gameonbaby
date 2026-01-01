@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
 import { toast } from "react-hot-toast";
@@ -29,6 +29,8 @@ export default function EventStatsPage() {
     const [fromDate, setFromDate] = useState("");
     const [toDate, setToDate] = useState("");
     const [hasFetched, setHasFetched] = useState(false);
+    const [isCheckingRole, setIsCheckingRole] = useState(true);
+    const [isAdmin, setIsAdmin] = useState(false);
 
     const router = useRouter();
     const { isAuthenticated, isLoading: authLoading } = useKindeBrowserClient();
@@ -76,17 +78,39 @@ export default function EventStatsPage() {
         });
     };
 
-    if (authLoading) {
+    useEffect(() => {
+        if (!authLoading && !isAuthenticated) {
+            router.push("/api/auth/login");
+            return;
+        }
+        if (isAuthenticated) {
+            checkAdminRole();
+        }
+    }, [isAuthenticated, authLoading, router]);
+
+    const checkAdminRole = async () => {
+        try {
+            const response = await fetch("/api/admin/check");
+            const data = await response.json();
+            setIsAdmin(data.isAdmin);
+            setIsCheckingRole(false);
+
+            if (!data.isAdmin) {
+                router.push("/admin");
+                return;
+            }
+        } catch (error) {
+            console.error("Error checking admin role:", error);
+            router.push("/admin");
+        }
+    };
+
+    if (authLoading || isCheckingRole) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c]">
                 <div className="text-white">Loading...</div>
             </div>
         );
-    }
-
-    if (!isAuthenticated) {
-        router.push("/api/auth/login");
-        return null;
     }
 
     return (

@@ -40,10 +40,7 @@ export async function GET(request: NextRequest) {
             },
         })) as unknown as DbUser;
 
-        if (
-            !currentUser ||
-            (currentUser.role !== "ADMIN" && currentUser.role !== "MODERATOR")
-        ) {
+        if (!currentUser || currentUser.role !== "ADMIN") {
             return NextResponse.json(
                 { success: false, message: "Unauthorized" },
                 { status: 403 },

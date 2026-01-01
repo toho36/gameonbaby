@@ -40,24 +40,37 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get search query
+    // Get search and pagination query parameters
     const searchParams = request.nextUrl.searchParams;
     const search = searchParams.get("search") || "";
+    const page = Math.max(parseInt(searchParams.get("page") || "1", 10), 1);
+    const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 100); // Max 100 per page
+    const skip = (page - 1) * limit;
 
-    // Fetch users with search if provided
-    const users = (await prisma.user.findMany({
-      where: search
-        ? {
-            OR: [
-              { name: { contains: search } },
-              { email: { contains: search } },
-            ],
-          }
-        : undefined,
-      orderBy: {
-        email: "asc",
-      },
-    })) as unknown as DbUser[];
+    // Build where clause for search
+    const whereClause = search
+      ? {
+          OR: [
+            { name: { contains: search } },
+            { email: { contains: search } },
+          ],
+        }
+      : undefined;
+
+    // Fetch users with search and pagination in parallel with count
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where: whereClause,
+        orderBy: {
+          email: "asc",
+        },
+        take: limit,
+        skip: skip,
+      }) as Promise<DbUser[]>,
+      prisma.user.count({
+        where: whereClause,
+      }),
+    ]);
 
     return NextResponse.json({
       success: true,
@@ -68,6 +81,14 @@ export async function GET(request: NextRequest) {
         role: user.role,
         createdAt: user.createdAt.toISOString(),
       })),
+      pagination: {
+        page,
+        limit,
+        skip,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasMore: page * limit < total,
+      },
     });
   } catch (error) {
     console.error("Error fetching users:", error);

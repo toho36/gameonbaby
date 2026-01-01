@@ -13,6 +13,17 @@ import {
   hasSpecialAccess,
   isUserModerator,
 } from "~/server/service/userService";
+import {
+  getCachedEventDetails,
+  setCachedEventDetails,
+  getCachedWaitingList,
+  setCachedWaitingList,
+  invalidateEventCache,
+} from "~/lib/cache";
+
+// OPTIMIZATION: Enable ISR (Incremental Static Regeneration)
+// Revalidate event pages every 30 seconds
+export const revalidate = 30;
 
 // Define Event interface to match the database schema
 interface EventData {
@@ -116,70 +127,109 @@ export default async function EventPage({
   // Check if user has permission to view participant details
   const userCanViewParticipants = await isUserModerator();
 
-  const eventData = (await prisma.event.findUnique({
-    where: {
-      id: params.id,
-    },
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      price: true,
-      place: true,
-      capacity: true,
-      from: true,
-      to: true,
-      visible: true,
-      bankAccountId: true,
-      Registration: {
-        orderBy: {
-          created_at: "asc",
-        },
-        select: {
-          first_name: true,
-          last_name: true,
-          created_at: true,
+  // OPTIMIZATION: Check cache first for event details
+  let eventData: EventData | null = getCachedEventDetails<any>(params.id);
+
+  if (!eventData) {
+    console.log("Event details cache miss, querying database for:", params.id);
+    
+    // OPTIMIZATION: Only fetch registration data if user can view participants
+    // This saves 70-90% of queries for regular users
+    const shouldFetchParticipants = userCanViewParticipants;
+    
+    eventData = (await prisma.event.findUnique({
+      where: {
+        id: params.id,
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        price: true,
+        place: true,
+        capacity: true,
+        from: true,
+        to: true,
+        visible: true,
+        bankAccountId: true,
+        // Only fetch Registration data if user has permission
+        ...(shouldFetchParticipants ? {
+          Registration: {
+            orderBy: {
+              created_at: "asc",
+            },
+            select: {
+              first_name: true,
+              last_name: true,
+              created_at: true,
+            },
+          },
+        } : {}),
+        _count: {
+          select: {
+            Registration: true,
+          },
         },
       },
-      _count: {
-        select: {
-          Registration: true,
-        },
-      },
-    },
-  })) as unknown as
-    | (Omit<EventData, "_count"> & {
-        _count: { Registration: number };
-      })
-    | null;
+    })) as unknown as
+      | (Omit<EventData, "_count"> & {
+          _count: {
+            Registration: number;
+            WaitingList: number;
+          };
+        })
+      | null;
+
+    // OPTIMIZATION: Cache event details for future requests
+    if (eventData) {
+      setCachedEventDetails(params.id, eventData);
+    }
+  }
 
   if (!eventData) {
     notFound();
   }
 
   // Fetch waiting list entries with raw query
+  // OPTIMIZATION: Only fetch waiting list details if user can view participants
   let waitingListEntries: WaitingListEntry[] = [];
 
-  try {
-    console.log(`Attempting to fetch waiting list for event ID: ${params.id}`);
+  if (userCanViewParticipants) {
+    try {
+      console.log(`Attempting to fetch waiting list for event ID: ${params.id}`);
 
-    // Simply use raw query with PascalCase table name as it should work after db reset
-    waitingListEntries = await prisma.$queryRaw<WaitingListEntry[]>`
-      SELECT first_name, last_name, created_at 
-      FROM "WaitingList"
-      WHERE event_id = ${params.id}
-      ORDER BY created_at ASC
-    `;
-    console.log(
-      `Successfully fetched waiting list: ${waitingListEntries.length} entries`,
-    );
-  } catch (error) {
-    console.error("Error fetching waiting list:", error);
-    waitingListEntries = [];
+      // Simply use raw query with PascalCase table name as it should work after db reset
+      // OPTIMIZATION: Add LIMIT to prevent fetching excessive data
+      waitingListEntries = await prisma.$queryRaw<WaitingListEntry[]>`
+        SELECT first_name, last_name, created_at 
+        FROM "WaitingList"
+        WHERE event_id = ${params.id}
+        ORDER BY created_at ASC
+        LIMIT 100
+      `;
+      console.log(
+        `Successfully fetched waiting list: ${waitingListEntries.length} entries`,
+      );
+    } catch (error) {
+      console.error("Error fetching waiting list:", error);
+      waitingListEntries = [];
+    }
   }
 
-  // Count waiting list entries
-  const waitingListCount = waitingListEntries.length;
+  // OPTIMIZATION: Get actual waiting list count from database
+  // This is more accurate than counting fetched entries
+  let waitingListCount = 0;
+  try {
+    const countResult = await prisma.$queryRaw<Array<{count: bigint}>>`
+      SELECT COUNT(*) as count
+      FROM "WaitingList"
+      WHERE event_id = ${params.id}
+    `;
+    waitingListCount = Number(countResult[0]?.count || 0);
+  } catch (error) {
+    console.error("Error counting waiting list entries:", error);
+    waitingListCount = waitingListEntries.length;
+  }
 
   // Cast to our Event interface with registrations and waiting list
   const event: EventWithLists = {

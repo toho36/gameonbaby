@@ -90,6 +90,8 @@ model Registration {
   event        Event    @relation(fields: [event_id], references: [id])
 
   @@unique([event_id, email, first_name, last_name])
+  @@index([event_id, created_at])
+  @@index([email])
 }
 
 model WaitingList {
@@ -102,6 +104,9 @@ model WaitingList {
   payment_type String
   created_at   DateTime
   event        Event    @relation(fields: [event_id], references: [id])
+
+  @@index([event_id, created_at])
+  @@index([email])
 }
 
 model Payment {
@@ -127,6 +132,9 @@ model RegistrationHistory {
   timestamp       DateTime @default(now())
   user_id         String?
   event_title     String?
+
+  @@index([event_id, timestamp])
+  @@index([email])
 }
 
 model playing_with_neon {

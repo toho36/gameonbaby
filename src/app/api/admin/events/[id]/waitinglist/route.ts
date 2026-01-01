@@ -62,12 +62,25 @@ export async function GET(
       );
     }
 
-    // Fetch waiting list entries for this event
-    const waitingListEntries = await prisma.$queryRaw`
-      SELECT * FROM "WaitingList"
-      WHERE event_id = ${params.id}
-      ORDER BY created_at ASC
-    `;
+    // Fetch waiting list entries for this event with LIMIT to prevent excessive data
+    const waitingListEntries = await prisma.waitingList.findMany({
+      where: {
+        event_id: params.id,
+      },
+      select: {
+        id: true,
+        first_name: true,
+        last_name: true,
+        email: true,
+        phone_number: true,
+        payment_type: true,
+        created_at: true,
+      },
+      orderBy: {
+        created_at: "asc",
+      },
+      take: 100,
+    });
 
     return NextResponse.json({
       success: true,
@@ -147,11 +160,10 @@ export async function DELETE(
       );
     }
 
-    // Delete the waiting list entry
-    await prisma.$executeRaw`
-      DELETE FROM "WaitingList"
-      WHERE id = ${entryId}
-    `;
+    // Delete the waiting list entry using Prisma delete
+    await prisma.waitingList.delete({
+      where: { id: entryId },
+    });
 
     return NextResponse.json({
       success: true,
@@ -213,23 +225,19 @@ export async function POST(
       );
     }
 
-    // Get the waiting list entry
-    const waitingListEntriesResult = await prisma.$queryRaw`
-      SELECT * FROM "WaitingList"
-      WHERE id = ${entryId}
-    `;
+    // Get the waiting list entry using findMany for type safety
+    const waitingListEntries = await prisma.waitingList.findMany({
+      where: { id: entryId },
+    });
 
-    if (
-      !Array.isArray(waitingListEntriesResult) ||
-      waitingListEntriesResult.length === 0
-    ) {
+    if (waitingListEntries.length === 0) {
       return NextResponse.json(
         { success: false, message: "Waiting list entry not found" },
         { status: 404 },
       );
     }
 
-    const waitingListEntry = waitingListEntriesResult[0];
+    const waitingListEntry = waitingListEntries[0]!;
 
     // Check if there's capacity in the event
     const event = await prisma.event.findUnique({
@@ -269,11 +277,10 @@ export async function POST(
       },
     });
 
-    // Delete the waiting list entry
-    await prisma.$executeRaw`
-      DELETE FROM "WaitingList"
-      WHERE id = ${entryId}
-    `;
+    // Delete the waiting list entry using Prisma delete
+    await prisma.waitingList.delete({
+      where: { id: entryId },
+    });
 
     // Record in registration history
     await recordRegistrationHistory({

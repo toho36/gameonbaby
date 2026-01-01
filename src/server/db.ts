@@ -2,6 +2,8 @@ import { PrismaClient } from "@prisma/client";
 
 const createPrismaClient = () =>
   new PrismaClient({
+    // Only log errors in production to reduce compute overhead
+    // In development, log queries for debugging
     log:
       process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
   });

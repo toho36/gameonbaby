@@ -23,23 +23,22 @@ export async function GET(
     const firstName = user.given_name || "";
     const lastName = user.family_name || "";
 
-    // Check if user is on the waiting list for this event
-    const waitingListEntries = await prisma.$queryRaw`
-      SELECT * FROM "WaitingList" 
-      WHERE event_id = ${params.id} 
-      AND email = ${userEmail}
-      AND first_name = ${firstName}
-      AND last_name = ${lastName || ""}
-    `;
+    // Check if user is on the waiting list for this event using findFirst
+    const waitingListEntry = await prisma.waitingList.findFirst({
+      where: {
+        event_id: params.id,
+        email: userEmail,
+        first_name: firstName,
+        last_name: lastName || "",
+      },
+    });
 
-    if (!Array.isArray(waitingListEntries) || waitingListEntries.length === 0) {
+    if (!waitingListEntry) {
       return NextResponse.json({
         success: true,
         isOnWaitingList: false,
       });
     }
-
-    const waitingListEntry = waitingListEntries[0];
 
     return NextResponse.json({
       success: true,

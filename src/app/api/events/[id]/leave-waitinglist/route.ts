@@ -23,16 +23,17 @@ export async function POST(
     const firstName = user.given_name || "";
     const lastName = user.family_name || "";
 
-    // Check if user is on the waiting list for this event
-    const waitingListEntries = await prisma.$queryRaw`
-      SELECT * FROM "WaitingList" 
-      WHERE event_id = ${params.id} 
-      AND email = ${userEmail}
-      AND first_name = ${firstName}
-      AND last_name = ${lastName || ""}
-    `;
+    // Check if user is on the waiting list for this event using findFirst
+    const waitingListEntry = await prisma.waitingList.findFirst({
+      where: {
+        event_id: params.id,
+        email: userEmail,
+        first_name: firstName,
+        last_name: lastName || "",
+      },
+    });
 
-    if (!Array.isArray(waitingListEntries) || waitingListEntries.length === 0) {
+    if (!waitingListEntry) {
       return NextResponse.json(
         {
           success: false,
@@ -42,14 +43,10 @@ export async function POST(
       );
     }
 
-    // Get the ID of the waiting list entry
-    const waitingListEntryId = waitingListEntries[0].id;
-
-    // Remove user from waiting list
-    await prisma.$executeRaw`
-      DELETE FROM "WaitingList"
-      WHERE id = ${waitingListEntryId}
-    `;
+    // Remove user from waiting list using Prisma delete
+    await prisma.waitingList.delete({
+      where: { id: waitingListEntry.id },
+    });
 
     return NextResponse.json({
       success: true,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import prisma from "~/lib/db";
+import { syncKindeUser } from "~/server/service/userService";
 
 // Define paths where we don't need to check authentication
 const publicPaths = ["/", "/api/auth", "/login", "/register"];
@@ -77,8 +78,9 @@ export async function middleware(request: NextRequest) {
   const name =
     `${kindeUser.given_name || ""} ${kindeUser.family_name || ""}`.trim();
 
-  // Don't await this to avoid slowing down response
-  syncUser(kindeUser.id, kindeUser.email, name).catch(console.error);
+  // OPTIMIZATION: Use cached sync from userService
+  // This will cache user data and reduce database queries
+  syncKindeUser(kindeUser.id, kindeUser.email, name).catch(console.error);
 
   return NextResponse.next();
 }

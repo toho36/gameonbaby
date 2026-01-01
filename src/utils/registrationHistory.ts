@@ -1,4 +1,10 @@
 import prisma from "~/lib/db";
+import {
+  getRegistrationHistoryTableExists,
+  setRegistrationHistoryTableExists,
+  getCachedRegistrationHistory,
+  setCachedRegistrationHistory,
+} from "~/lib/cache";
 
 /**
  * Enum for different types of registration actions
@@ -36,7 +42,7 @@ export type RegistrationHistoryEntry = {
 const registrationHistoryStorage: RegistrationHistoryEntry[] = [];
 
 /**
- * Records an entry in the registration history
+ * Records an entry in registration history
  * Tries to write to database if table exists, otherwise stores in memory
  */
 export async function recordRegistrationHistory({
@@ -85,13 +91,11 @@ export async function recordRegistrationHistory({
     };
 
     try {
-      // Use the same caching approach for table existence check
-      const cacheKey = `registrationHistoryTable_exists_${process.env.NODE_ENV}`;
-      let tableExists = false;
+      // OPTIMIZATION: Use cache instead of querying information_schema every time
+      let tableExists = getRegistrationHistoryTableExists();
 
-      if (typeof global[cacheKey as keyof typeof global] === "boolean") {
-        tableExists = global[cacheKey as keyof typeof global] as boolean;
-      } else {
+      if (tableExists === null) {
+        // First time: check table existence and cache result
         const result = await prisma.$queryRaw`
           SELECT EXISTS (
             SELECT FROM information_schema.tables 
@@ -100,10 +104,10 @@ export async function recordRegistrationHistory({
           );
         `;
         tableExists = (result as any)[0]?.exists;
-        (global as any)[cacheKey] = tableExists;
+        setRegistrationHistoryTableExists(tableExists);
       }
 
-      // If the table exists, insert directly using raw SQL
+      // If table exists, insert directly using raw SQL
       if (tableExists) {
         await prisma.$executeRaw`
           INSERT INTO "RegistrationHistory" (
@@ -137,13 +141,11 @@ export async function getRegistrationHistory(): Promise<
   RegistrationHistoryEntry[]
 > {
   try {
-    // Use the same caching approach as in getEventRegistrationHistory
-    const cacheKey = `registrationHistoryTable_exists_${process.env.NODE_ENV}`;
-    let tableExists = false;
+    // OPTIMIZATION: Use cache instead of querying information_schema every time
+    let tableExists = getRegistrationHistoryTableExists();
 
-    if (typeof global[cacheKey as keyof typeof global] === "boolean") {
-      tableExists = global[cacheKey as keyof typeof global] as boolean;
-    } else {
+    if (tableExists === null) {
+      // First time: check table existence and cache result
       const result = await prisma.$queryRaw`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
@@ -152,16 +154,26 @@ export async function getRegistrationHistory(): Promise<
         );
       `;
       tableExists = (result as any)[0]?.exists;
-      (global as any)[cacheKey] = tableExists;
+      setRegistrationHistoryTableExists(tableExists);
     }
 
-    // If table exists, get data from database
+    // If table exists, get data from database or cache
     if (tableExists) {
+      // OPTIMIZATION: Check cache first
+      const cachedHistory = getCachedRegistrationHistory<RegistrationHistoryEntry[]>();
+      
+      if (cachedHistory) {
+        return cachedHistory;
+      }
+
       const history = await prisma.$queryRaw<RegistrationHistoryEntry[]>`
         SELECT * FROM "RegistrationHistory"
         ORDER BY timestamp DESC
         LIMIT 200;
       `;
+      
+      // Cache for 5 minutes
+      setCachedRegistrationHistory(history);
       return history;
     } else {
       return [...registrationHistoryStorage]
@@ -184,14 +196,11 @@ export async function getEventRegistrationHistory(
   eventId: string,
 ): Promise<RegistrationHistoryEntry[]> {
   try {
-    // Check if the table exists with a cached approach to avoid redundant schema queries
-    const cacheKey = `registrationHistoryTable_exists_${process.env.NODE_ENV}`;
-    let tableExists = false;
+    // OPTIMIZATION: Use cache instead of querying information_schema every time
+    let tableExists = getRegistrationHistoryTableExists();
 
-    // Use cache if available (could be enhanced with actual caching library)
-    if (typeof global[cacheKey as keyof typeof global] === "boolean") {
-      tableExists = global[cacheKey as keyof typeof global] as boolean;
-    } else {
+    if (tableExists === null) {
+      // First time: check table existence and cache result
       const result = await prisma.$queryRaw`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
@@ -200,13 +209,18 @@ export async function getEventRegistrationHistory(
         );
       `;
       tableExists = (result as any)[0]?.exists;
-
-      // Cache the result
-      (global as any)[cacheKey] = tableExists;
+      setRegistrationHistoryTableExists(tableExists);
     }
 
-    // If table exists, get data from database
+    // If table exists, get data from database or cache
     if (tableExists) {
+      // OPTIMIZATION: Check cache first
+      const cachedHistory = getCachedRegistrationHistory<RegistrationHistoryEntry[]>(eventId);
+      
+      if (cachedHistory) {
+        return cachedHistory;
+      }
+
       // Add LIMIT to prevent excessive data fetching
       const history = await prisma.$queryRaw<RegistrationHistoryEntry[]>`
         SELECT * FROM "RegistrationHistory"
@@ -214,6 +228,9 @@ export async function getEventRegistrationHistory(
         ORDER BY timestamp DESC
         LIMIT 200;
       `;
+      
+      // Cache for 5 minutes
+      setCachedRegistrationHistory(history, eventId);
       return history;
     } else {
       return [...registrationHistoryStorage]

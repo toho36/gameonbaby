@@ -1,5 +1,9 @@
 export const dynamic = "force-dynamic";
 
+// OPTIMIZATION: Enable ISR (Incremental Static Regeneration)
+// Revalidate events list every 30 seconds
+export const revalidate = 30;
+
 import { NextResponse } from "next/server";
 import { type Event } from "@prisma/client";
 import getCode, { ErrorCodes, Modules } from "~/app/api/error/error-codes";

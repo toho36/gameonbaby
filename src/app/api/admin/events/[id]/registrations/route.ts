@@ -13,6 +13,12 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } },
 ) {
+  // OPTIMIZATION: Support pagination
+  const url = new URL(request.url);
+  const page = parseInt(url.searchParams.get("page") || "1", 10);
+  const limit = Math.min(parseInt(url.searchParams.get("limit") || "50", 100); // Max 100 per page
+  
+  const skip = (page - 1) * limit;
   try {
     const { getUser, isAuthenticated } = getKindeServerSession();
     const user = await getUser();
@@ -63,18 +69,18 @@ export async function GET(
       );
     }
 
-    // Use a more optimized query
-    const registrations = await prisma.$queryRaw`
-      SELECT 
-        r.id, r.first_name, r.last_name, r.email, r.phone_number, 
-        r.payment_type, r.created_at, r.attended,
-        p.paid as payment_paid
-      FROM "Registration" r
-      LEFT JOIN "Payment" p ON r.id = p.registration_id
-      WHERE r.event_id = ${params.id} AND r.deleted = false
-      ORDER BY r.created_at ASC
-      LIMIT 500
-    `;
+  // Use a more optimized query
+  const registrations = await prisma.$queryRaw`
+    SELECT 
+      r.id, r.first_name, r.last_name, r.email, r.phone_number, 
+      r.payment_type, r.created_at, r.attended,
+      p.paid as payment_paid
+    FROM "Registration" r
+    LEFT JOIN "Payment" p ON r.id = p.registration_id
+    WHERE r.event_id = ${params.id} AND r.deleted = false
+    ORDER BY r.created_at ASC
+    LIMIT ${limit} OFFSET ${skip}
+  `;
 
     const formattedRegistrations = (registrations as any[]).map((reg) => ({
       id: reg.id,
@@ -99,6 +105,12 @@ export async function GET(
         created_at: event.created_at.toISOString(),
       },
       registrations: formattedRegistrations,
+      pagination: {
+        page,
+        limit,
+        total: formattedRegistrations.length,
+        hasMore: formattedRegistrations.length === limit,
+      },
     });
   } catch (error) {
     console.error("Error fetching registrations:", error);

@@ -30,8 +30,9 @@ export async function GET(request: Request) {
     // Get filter parameters from URL
     const { searchParams } = new URL(request.url);
     const eventId = searchParams.get("eventId");
-    const limit = parseInt(searchParams.get("limit") || "100", 10);
-    const offset = parseInt(searchParams.get("offset") || "0", 10);
+    const limit = Math.min(parseInt(searchParams.get("limit") || "50", 100); // Max 100 per page
+    const page = Math.max(parseInt(searchParams.get("page") || "1", 1); // Start at page 1
+    const offset = (page - 1) * limit;
 
     // Fetch registration history entries
     const historyEntries = await (prisma as any).registrationHistory.findMany({
@@ -203,14 +204,27 @@ export async function GET(request: Request) {
     const totalHistory = await (prisma as any).registrationHistory.count({
       where: eventId ? { event_id: eventId } : {},
     });
+    
+    const totalRegistrations = await prisma.registration.count({
+      where: { deleted: false, ...(eventId ? { event_id: eventId } : {}) },
+    });
+    
+    const totalWaitingList = await prisma.waitingList.count({
+      where: eventId ? { event_id: eventId } : {},
+    });
 
     return NextResponse.json({
       success: true,
       history: combinedResults,
       pagination: {
-        total: totalHistory,
-        offset,
+        page,
         limit,
+        offset,
+        totalHistory,
+        totalRegistrations,
+        totalWaitingList,
+        total: combinedResults.length,
+        hasMore: combinedResults.length === limit,
       },
     });
   } catch (error) {

@@ -8,6 +8,11 @@ import {
   RegistrationAction,
 } from "~/utils/registrationHistory";
 import prisma from "~/lib/db";
+import {
+  getCachedEventWithCount,
+  setCachedEventWithCount,
+  invalidateEventCache,
+} from "~/lib/cache";
 
 // Extended Event type with count
 interface EventWithCount extends Event {
@@ -49,16 +54,30 @@ export async function createRegistration(
 
   try {
     console.log("Looking up event with ID:", command.eventId);
-    const event: EventWithCount | null = await prisma.event.findFirst({
-      where: {
-        id: command.eventId,
-      },
-      include: {
-        _count: {
-          select: { Registration: true },
+    
+    // Check cache first for event with count
+    let event: EventWithCount | null = getCachedEventWithCount<EventWithCount>(command.eventId);
+    
+    if (!event) {
+      console.log("Event cache miss, querying database");
+      event = await prisma.event.findFirst({
+        where: {
+          id: command.eventId,
         },
-      },
-    });
+        include: {
+          _count: {
+            select: { Registration: true },
+          },
+        },
+      });
+
+      // Cache the result for 30 seconds
+      if (event) {
+        setCachedEventWithCount(command.eventId, event);
+      }
+    } else {
+      console.log("Event cache hit");
+    }
 
     if (!event) {
       console.error(`Event not found with ID: ${command.eventId}`);
@@ -89,24 +108,44 @@ export async function createRegistration(
     });
 
     try {
-      const existingRegistration: Registration | null =
-        await prisma.registration.findFirst({
+      // OPTIMIZATION: Combine duplicate checks into single parallel queries
+      // This reduces 2 sequential queries to 2 parallel queries
+      const [existingRegistration, existingWaitlistEntry] = await Promise.all([
+        prisma.registration.findFirst({
           where: {
             event_id: command.eventId,
             email: {
               equals: command.email,
-              mode: "insensitive", // This makes the comparison case-insensitive
+              mode: "insensitive",
             },
             first_name: {
               equals: command.firstName,
-              mode: "insensitive", // Case-insensitive name comparison
+              mode: "insensitive",
             },
             last_name: {
               equals: command.lastName || "",
-              mode: "insensitive", // Case-insensitive name comparison
+              mode: "insensitive",
             },
           },
-        });
+        }),
+        prisma.waitingList.findFirst({
+          where: {
+            event_id: command.eventId,
+            email: {
+              equals: command.email,
+              mode: "insensitive",
+            },
+            first_name: {
+              equals: command.firstName,
+              mode: "insensitive",
+            },
+            last_name: {
+              equals: command.lastName || "",
+              mode: "insensitive",
+            },
+          },
+        }),
+      ]);
 
       if (existingRegistration) {
         console.log("Duplicate registration found!");
@@ -116,25 +155,6 @@ export async function createRegistration(
           getCode(Modules.REGISTRATION, ErrorCodes.REGISTRATION_ALREADY_EXISTS),
         );
       }
-
-      // Also check waiting list for duplicates
-      const existingWaitlistEntry = await prisma.waitingList.findFirst({
-        where: {
-          event_id: command.eventId,
-          email: {
-            equals: command.email,
-            mode: "insensitive",
-          },
-          first_name: {
-            equals: command.firstName,
-            mode: "insensitive",
-          },
-          last_name: {
-            equals: command.lastName || "",
-            mode: "insensitive",
-          },
-        },
-      });
 
       if (existingWaitlistEntry) {
         console.log("Duplicate waiting list entry found!");
@@ -185,10 +205,13 @@ export async function createRegistration(
           },
         });
 
-        console.log(
-          "Waiting list entry created successfully with ID:",
-          waitingListEntry.id,
-        );
+      console.log(
+        "Waiting list entry created successfully with ID:",
+        waitingListEntry.id,
+      );
+
+      // OPTIMIZATION: Invalidate event cache so capacity check is fresh
+      invalidateEventCache(command.eventId);
 
         // Record waiting list history
         try {
@@ -252,6 +275,9 @@ export async function createRegistration(
         "Registration record created successfully with ID:",
         registration.id,
       );
+
+      // OPTIMIZATION: Invalidate event cache so capacity check is fresh
+      invalidateEventCache(command.eventId);
     } catch (error) {
       console.error("Failed to create registration record:", error);
       throw new ApiError(

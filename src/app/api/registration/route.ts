@@ -9,6 +9,10 @@ import { withErrorHandling } from "~/utils/errorHandler";
 import { sendRegistrationEmail } from "~/server/service/emailService";
 import { generateQRCodeURL, generateQRCodeURLWithAccountId } from "~/utils/qrCodeUtils";
 import prisma from "~/lib/db";
+import {
+  getCachedEventDetails,
+  setCachedEventDetails,
+} from "~/lib/cache";
 
 interface CreateRegistrationRequest {
   firstName: string;
@@ -68,9 +72,19 @@ export const POST = withErrorHandling(
 
         // Get event details for the email
         try {
-          const event = await prisma.event.findUnique({
-            where: { id: request.eventId },
-          });
+          // OPTIMIZATION: Check cache first to avoid redundant query
+          let event = getCachedEventDetails<any>(request.eventId);
+          
+          if (!event) {
+            event = await prisma.event.findUnique({
+              where: { id: request.eventId },
+            });
+            
+            // Cache for 30 seconds
+            if (event) {
+              setCachedEventDetails(request.eventId, event);
+            }
+          }
 
           let qrCodeUrl: string | null = null;
           if (event) {

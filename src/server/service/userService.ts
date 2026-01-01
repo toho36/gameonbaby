@@ -5,6 +5,14 @@ import { cache } from "react";
 import { UserRole } from "@prisma/client";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import prisma from "~/lib/db";
+import {
+  getCachedUser,
+  setCachedUser,
+  getCachedRole,
+  setCachedRole,
+  invalidateUserCache,
+  CacheKeys,
+} from "~/lib/cache";
 
 export async function syncKindeUser() {
   try {
@@ -15,29 +23,44 @@ export async function syncKindeUser() {
       throw new Error("User not authenticated");
     }
 
-    let user = await prisma.user.findUnique({
-      where: { kindeId: kindeUser.id },
-    });
-
+    // OPTIMIZATION: Check cache first
+    const cacheKey = CacheKeys.userById(kindeUser.id);
+    let user = getCachedUser<any>(cacheKey);
+    
     if (!user) {
       user = await prisma.user.findUnique({
-        where: { email: kindeUser.email },
+        where: { kindeId: kindeUser.id },
       });
 
+      if (!user) {
+        user = await prisma.user.findUnique({
+          where: { email: kindeUser.email },
+        });
+
+        if (user) {
+          user = await prisma.user.update({
+            where: { id: user.id },
+            data: { kindeId: kindeUser.id },
+          });
+        } else {
+          user = await prisma.user.create({
+            data: {
+              kindeId: kindeUser.id,
+              email: kindeUser.email,
+              name: `${kindeUser.given_name || ""} ${kindeUser.family_name || ""}`.trim(),
+              role: UserRole.USER,
+            },
+          });
+        }
+      }
+      
+      // Cache the user for 5 minutes
       if (user) {
-        user = await prisma.user.update({
-          where: { id: user.id },
-          data: { kindeId: kindeUser.id },
-        });
-      } else {
-        user = await prisma.user.create({
-          data: {
-            kindeId: kindeUser.id,
-            email: kindeUser.email,
-            name: `${kindeUser.given_name || ""} ${kindeUser.family_name || ""}`.trim(),
-            role: UserRole.USER,
-          },
-        });
+        setCachedUser(cacheKey, user);
+        // Also cache by email
+        setCachedUser(CacheKeys.userByEmail(kindeUser.email), user);
+        // Cache role
+        setCachedRole(kindeUser.id, user.role);
       }
     }
 
@@ -45,6 +68,14 @@ export async function syncKindeUser() {
   } catch (error) {
     throw error;
   }
+}
+
+/**
+ * Invalidate user cache (call when user is updated)
+ * Exported for use in profile update routes
+ */
+export function invalidateCurrentUserCache(userId: string) {
+  invalidateUserCache(userId);
 }
 
 export const getCurrentUser = cache(async () => {

@@ -13,6 +13,17 @@ import {
   hasSpecialAccess,
   isUserModerator,
 } from "~/server/service/userService";
+import {
+  getCachedEventDetails,
+  setCachedEventDetails,
+  getCachedWaitingList,
+  setCachedWaitingList,
+  invalidateEventCache,
+} from "~/lib/cache";
+
+// OPTIMIZATION: Enable ISR (Incremental Static Regeneration)
+// Revalidate event pages every 30 seconds
+export const revalidate = 30;
 
 // Define Event interface to match the database schema
 interface EventData {
@@ -116,7 +127,12 @@ export default async function EventPage({
   // Check if user has permission to view participant details
   const userCanViewParticipants = await isUserModerator();
 
-  const eventData = (await prisma.event.findUnique({
+  // OPTIMIZATION: Check cache first for event details
+  let eventData: EventData | null = getCachedEventDetails<any>(params.id);
+  
+  if (!eventData) {
+    console.log("Event details cache miss, querying database for:", params.id);
+    eventData = (await prisma.event.findUnique({
     where: {
       id: params.id,
     },
@@ -146,12 +162,22 @@ export default async function EventPage({
           Registration: true,
         },
       },
-    },
-  })) as unknown as
+      },
+    })) as unknown as
     | (Omit<EventData, "_count"> & {
         _count: { Registration: number };
       })
     | null;
+
+  // OPTIMIZATION: Cache event details for future requests
+  if (!cachedEventData && eventData) {
+    setCachedEventDetails(params.id, eventData);
+  }
+
+  // OPTIMIZATION: Cache waiting list for future requests
+  if (waitingListEntries && waitingListEntries.length > 0) {
+    setCachedWaitingList(params.id, waitingListEntries);
+  }
 
   if (!eventData) {
     notFound();

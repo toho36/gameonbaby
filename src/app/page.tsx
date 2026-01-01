@@ -4,6 +4,10 @@ import { Button } from "~/shared";
 import { EventList } from "~/features/events";
 import { hasSpecialAccess } from "~/server/service/userService";
 
+// OPTIMIZATION: Enable ISR (Incremental Static Regeneration)
+// Revalidate homepage every 60 seconds to reduce database queries
+export const revalidate = 60;
+
 export default async function HomePage() {
   // Get special access status
   const userHasSpecialAccess = await hasSpecialAccess();

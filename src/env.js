@@ -21,13 +21,14 @@ export const env = createEnv({
    */
   server: {
     DATABASE_URL: z.string().url(),
-    DATABASE_URL_NO_SSL: z.string().url(),
-    DATABASE_URL_NON_POOLING: z.string().url(),
-    DATABASE_PRISMA_URL: z.string().url(),
-    DATABASE_HOST: z.string(),
-    DATABASE_USER: z.string(),
-    DATABASE_PASSWORD: z.string(),
-    DATABASE_DATABASE: z.string(),
+    DIRECT_URL: z.string().url().optional(),
+    DATABASE_URL_NO_SSL: z.string().url().optional(),
+    DATABASE_URL_NON_POOLING: z.string().url().optional(),
+    DATABASE_PRISMA_URL: z.string().url().optional(),
+    DATABASE_HOST: z.string().optional(),
+    DATABASE_USER: z.string().optional(),
+    DATABASE_PASSWORD: z.string().optional(),
+    DATABASE_DATABASE: z.string().optional(),
     KINDE_CLIENT_ID: isBuildEnv ? z.string().optional() : z.string(),
     KINDE_CLIENT_SECRET: isBuildEnv ? z.string().optional() : z.string(),
     KINDE_ISSUER_URL: isBuildEnv
@@ -72,6 +73,7 @@ export const env = createEnv({
    */
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,
+    DIRECT_URL: process.env.DIRECT_URL,
     DATABASE_URL_NO_SSL: process.env.DATABASE_URL_NO_SSL,
     DATABASE_URL_NON_POOLING: process.env.DATABASE_URL_NON_POOLING,
     DATABASE_PRISMA_URL: process.env.DATABASE_PRISMA_URL,

@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import prisma from "~/lib/db";
-import { PrismaClient } from "@prisma/client";
-
-// Create a separate client for raw queries
-const prismaRaw = new PrismaClient();
 
 export async function POST(
   request: NextRequest,
@@ -28,7 +24,7 @@ export async function POST(
     const lastName = user.family_name || "";
 
     // Check if user is on the waiting list for this event
-    const waitingListEntries = await prismaRaw.$queryRaw`
+    const waitingListEntries = await prisma.$queryRaw`
       SELECT * FROM "WaitingList" 
       WHERE event_id = ${params.id} 
       AND email = ${userEmail}
@@ -50,7 +46,7 @@ export async function POST(
     const waitingListEntryId = waitingListEntries[0].id;
 
     // Remove user from waiting list
-    await prismaRaw.$executeRaw`
+    await prisma.$executeRaw`
       DELETE FROM "WaitingList"
       WHERE id = ${waitingListEntryId}
     `;

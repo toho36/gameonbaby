@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-
-const prisma = new PrismaClient();
-// Create a raw client for SQL queries
-const prismaRaw = new PrismaClient();
+import prisma from "~/lib/db";
 
 // Define user interface with role property
 interface DbUser {
@@ -136,7 +132,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Record in history
-      await prismaRaw.$executeRaw`
+      await prisma.$executeRaw`
         INSERT INTO "RegistrationHistory" (
           id, event_id, registration_id, 
           first_name, last_name, email, phone_number, 
@@ -169,7 +165,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Record in history
-      await prismaRaw.$executeRaw`
+      await prisma.$executeRaw`
         INSERT INTO "RegistrationHistory" (
           id, event_id, registration_id, 
           first_name, last_name, email, phone_number, 

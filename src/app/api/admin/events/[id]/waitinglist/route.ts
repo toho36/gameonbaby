@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import prisma from "~/lib/db";
-import { PrismaClient } from "@prisma/client";
 import { sendWaitingListPromotionEmail } from "~/server/service/emailService";
 import {
   recordRegistrationHistory,
   RegistrationAction,
 } from "~/utils/registrationHistory";
-
-// Create a separate client for raw queries
-const prismaRaw = new PrismaClient();
 
 // Define the DbUser interface
 interface DbUser {
@@ -67,7 +63,7 @@ export async function GET(
     }
 
     // Fetch waiting list entries for this event
-    const waitingListEntries = await prismaRaw.$queryRaw`
+    const waitingListEntries = await prisma.$queryRaw`
       SELECT * FROM "WaitingList"
       WHERE event_id = ${params.id}
       ORDER BY created_at ASC
@@ -152,7 +148,7 @@ export async function DELETE(
     }
 
     // Delete the waiting list entry
-    await prismaRaw.$executeRaw`
+    await prisma.$executeRaw`
       DELETE FROM "WaitingList"
       WHERE id = ${entryId}
     `;
@@ -218,7 +214,7 @@ export async function POST(
     }
 
     // Get the waiting list entry
-    const waitingListEntriesResult = await prismaRaw.$queryRaw`
+    const waitingListEntriesResult = await prisma.$queryRaw`
       SELECT * FROM "WaitingList"
       WHERE id = ${entryId}
     `;
@@ -274,7 +270,7 @@ export async function POST(
     });
 
     // Delete the waiting list entry
-    await prismaRaw.$executeRaw`
+    await prisma.$executeRaw`
       DELETE FROM "WaitingList"
       WHERE id = ${entryId}
     `;

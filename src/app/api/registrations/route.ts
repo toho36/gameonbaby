@@ -97,15 +97,12 @@ export async function POST(request: NextRequest) {
           ? PaymentType.CARD
           : PaymentType.CASH;
 
-    // Get user's phone number from profile if available using direct database access
-    type UserRecord = { phoneNumber: string | null };
-    const userRecords = await prisma.$queryRaw<UserRecord[]>`
-      SELECT "phoneNumber" FROM "User" WHERE "email" = ${userEmail}
-    `;
-    const userPhoneNumber =
-      userRecords && userRecords.length > 0
-        ? userRecords[0]?.phoneNumber
-        : null;
+    // Get user's phone number from profile if available using findFirst + select
+    const userRecord = await prisma.user.findFirst({
+      where: { email: userEmail },
+      select: { phoneNumber: true },
+    });
+    const userPhoneNumber = userRecord?.phoneNumber ?? null;
 
     let newRegistration;
 

@@ -70,20 +70,36 @@ export async function GET(
       );
     }
 
-  // Use a more optimized query
-    const registrations = await prisma.$queryRaw`
-    SELECT
-      r.id, r.first_name, r.last_name, r.email, r.phone_number,
-      r.payment_type, r.created_at, r.attended,
-      p.paid as payment_paid
-    FROM "Registration" AS r
-    LEFT JOIN "Payment" p ON r.id = p.registration_id
-    WHERE r.event_id = ${params.id} AND r.deleted = false
-    ORDER BY r.created_at ASC
-    LIMIT ${limit} OFFSET ${skip}
-  `;
+    // OPTIMIZATION: Use findMany with select instead of $queryRaw for better type safety
+    // and automatic query optimization by Prisma
+    const registrations = await prisma.registration.findMany({
+      where: {
+        event_id: params.id,
+        deleted: false,
+      },
+      select: {
+        id: true,
+        first_name: true,
+        last_name: true,
+        email: true,
+        phone_number: true,
+        payment_type: true,
+        created_at: true,
+        attended: true,
+        payment: {
+          select: {
+            paid: true,
+          },
+        },
+      },
+      orderBy: {
+        created_at: "asc",
+      },
+      skip,
+      take: limit,
+    });
 
-    const formattedRegistrations = (registrations as any[]).map((reg) => ({
+    const formattedRegistrations = registrations.map((reg) => ({
       id: reg.id,
       firstName: reg.first_name,
       lastName: reg.last_name,
@@ -91,8 +107,8 @@ export async function GET(
       phoneNumber: reg.phone_number,
       paymentType: reg.payment_type,
       createdAt: new Date(reg.created_at).toISOString(),
-      paid: reg.payment_paid || false,
-      attended: reg.attended,
+      paid: reg.payment?.paid || false,
+      attended: reg.attended || false,
     }));
 
     return NextResponse.json({

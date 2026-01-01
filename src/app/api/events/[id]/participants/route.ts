@@ -35,26 +35,19 @@ export async function GET(
     }
 
     // Get active registration count (non-deleted registrations)
-    const registrationCountResult = await prisma.$queryRaw`
-      SELECT COUNT(*) as count
-      FROM "Registration"
-      WHERE event_id = ${eventId} AND deleted = false
-    `;
-
-    const registrationCount = Number(
-      (registrationCountResult as any)[0]?.count || 0,
-    );
+    const registrationCount = await prisma.registration.count({
+      where: {
+        event_id: eventId,
+        deleted: false,
+      },
+    });
 
     // Get waiting list count
-    const waitingListCountResult = await prisma.$queryRaw`
-      SELECT COUNT(*) as count
-      FROM "WaitingList"
-      WHERE event_id = ${eventId}
-    `;
-
-    const waitingListCount = Number(
-      (waitingListCountResult as any)[0]?.count || 0,
-    );
+    const waitingListCount = await prisma.waitingList.count({
+      where: {
+        event_id: eventId,
+      },
+    });
 
     // Check if user is admin or moderator (will be false for unauthenticated users)
     const hasPermission = currentUser ? await isUserModerator() : false;
@@ -76,31 +69,44 @@ export async function GET(
 
     // If user is admin or moderator, fetch full participant data including emails
     if (hasPermission) {
-      // Fetch registrations with email for identification
-      const registrationsRaw = await prisma.$queryRaw`
-        SELECT first_name, last_name, created_at, email, payment_type
-        FROM "Registration"
-        WHERE event_id = ${eventId} AND deleted = false
-        ORDER BY created_at ASC
-      `;
+      // Fetch registrations with email for identification using findMany + select
+      const registrations = await prisma.registration.findMany({
+        where: {
+          event_id: eventId,
+          deleted: false,
+        },
+        select: {
+          first_name: true,
+          last_name: true,
+          created_at: true,
+          email: true,
+          payment_type: true,
+        },
+        orderBy: {
+          created_at: "asc",
+        },
+        take: 100,
+      });
 
-      const registrations = registrationsRaw as {
-        first_name: string;
-        last_name: string | null;
-        created_at: Date;
-        email: string;
-        payment_type: string;
-      }[];
-
-      // Fetch waiting list entries with raw query
+      // Fetch waiting list entries using findMany + select
       let waitingList: WaitingListEntry[] = [];
       try {
-        waitingList = await prisma.$queryRaw<WaitingListEntry[]>`
-          SELECT first_name, last_name, created_at, email, payment_type 
-          FROM "WaitingList"
-          WHERE event_id = ${eventId}
-          ORDER BY created_at ASC
-        `;
+        waitingList = await prisma.waitingList.findMany({
+          where: {
+            event_id: eventId,
+          },
+          select: {
+            first_name: true,
+            last_name: true,
+            created_at: true,
+            email: true,
+            payment_type: true,
+          },
+          orderBy: {
+            created_at: "asc",
+          },
+          take: 100,
+        });
       } catch (error) {
         console.error("Error fetching waiting list:", error);
         waitingList = [];
@@ -117,29 +123,40 @@ export async function GET(
     }
     // For regular users and unauthenticated users, fetch participant data without emails
     else {
-      // Fetch registrations without sensitive information
-      const registrationsRaw = await prisma.$queryRaw`
-        SELECT first_name, last_name, created_at
-        FROM "Registration"
-        WHERE event_id = ${eventId} AND deleted = false
-        ORDER BY created_at ASC
-      `;
+      // Fetch registrations without sensitive information using findMany + select
+      const registrations = await prisma.registration.findMany({
+        where: {
+          event_id: eventId,
+          deleted: false,
+        },
+        select: {
+          first_name: true,
+          last_name: true,
+          created_at: true,
+        },
+        orderBy: {
+          created_at: "asc",
+        },
+        take: 100,
+      });
 
-      const registrations = registrationsRaw as {
-        first_name: string;
-        last_name: string | null;
-        created_at: Date;
-      }[];
-
-      // Fetch waiting list entries without sensitive information
+      // Fetch waiting list entries without sensitive information using findMany + select
       let waitingList: WaitingListEntry[] = [];
       try {
-        waitingList = await prisma.$queryRaw<WaitingListEntry[]>`
-          SELECT first_name, last_name, created_at
-          FROM "WaitingList"
-          WHERE event_id = ${eventId}
-          ORDER BY created_at ASC
-        `;
+        waitingList = await prisma.waitingList.findMany({
+          where: {
+            event_id: eventId,
+          },
+          select: {
+            first_name: true,
+            last_name: true,
+            created_at: true,
+          },
+          orderBy: {
+            created_at: "asc",
+          },
+          take: 100,
+        });
       } catch (error) {
         console.error("Error fetching waiting list:", error);
         waitingList = [];

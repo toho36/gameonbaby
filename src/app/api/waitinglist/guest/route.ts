@@ -29,19 +29,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if already on waiting list
-    const existingWaitingListEntries = await prisma.$queryRaw`
-      SELECT * FROM "WaitingList" 
-      WHERE event_id = ${eventId} 
-      AND email = ${email}
-      AND first_name = ${firstName}
-      AND last_name = ${lastName || ""}
-    `;
+    // Check if already on waiting list using findFirst
+    const existingWaitingListEntry = await prisma.waitingList.findFirst({
+      where: {
+        event_id: eventId,
+        email: email,
+        first_name: firstName,
+        last_name: lastName || "",
+      },
+    });
 
-    if (
-      Array.isArray(existingWaitingListEntries) &&
-      existingWaitingListEntries.length > 0
-    ) {
+    if (existingWaitingListEntry) {
       return NextResponse.json(
         {
           success: false,
@@ -51,11 +49,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // Add to waiting list using raw query
-    await prisma.$executeRaw`
-      INSERT INTO "WaitingList" (id, event_id, first_name, last_name, email, phone_number, payment_type, created_at)
-      VALUES (${crypto.randomUUID()}, ${eventId}, ${firstName}, ${lastName || ""}, ${email}, ${phoneNumber || null}, ${paymentType}, ${new Date()})
-    `;
+    // Add to waiting list using Prisma create
+    await prisma.waitingList.create({
+      data: {
+        id: crypto.randomUUID(),
+        event_id: eventId,
+        first_name: firstName,
+        last_name: lastName || "",
+        email: email,
+        phone_number: phoneNumber || null,
+        payment_type: paymentType,
+        created_at: new Date(),
+      },
+    });
 
     return NextResponse.json(
       {

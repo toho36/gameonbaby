@@ -110,6 +110,19 @@ const EventForm: React.FC = () => {
           ></textarea>
         </div>
 
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="autoPromote"
+            name="autoPromote"
+            value="true"
+            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+          />
+          <label htmlFor="autoPromote" className="text-sm font-medium text-gray-700">
+            Auto-promote from waiting list (default: off)
+          </label>
+        </div>
+
         <div className="hidden">
           <input
             type="datetime-local"

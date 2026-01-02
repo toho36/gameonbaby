@@ -39,6 +39,7 @@ export default function EventManagement() {
     to: "",
     visible: "true",
     capacity: 0,
+    autoPromote: false,
     bankAccountId: "",
   });
   const [editFormData, setEditFormData] = useState({
@@ -50,6 +51,7 @@ export default function EventManagement() {
     to: "",
     visible: "true",
     capacity: 0,
+    autoPromote: false,
     bankAccountId: "",
   });
   const router = useRouter();
@@ -130,6 +132,7 @@ export default function EventManagement() {
       from: toISODateTimeString(eventToModify.from),
       to: toISODateTimeString(eventToModify.to),
       visible: eventToModify.visible ? "true" : "false",
+      autoPromote: eventToModify.autoPromote || false,
       bankAccountId: eventToModify.bankAccountId || "",
     });
     setShowEditModal(true);
@@ -149,6 +152,7 @@ export default function EventManagement() {
       formData.append("from", new Date(editFormData.from).toISOString());
       formData.append("to", new Date(editFormData.to).toISOString());
       formData.append("visible", editFormData.visible);
+      formData.append("autoPromote", editFormData.autoPromote.toString());
       formData.append("bankAccountId", editFormData.bankAccountId || "");
 
       updateEventMutation({ eventId: eventToEdit.id, formData });
@@ -172,6 +176,7 @@ export default function EventManagement() {
       from: toISODateTimeString(eventToClone.from),
       to: toISODateTimeString(eventToClone.to),
       visible: eventToClone.visible ? "true" : "false",
+      autoPromote: false,
       bankAccountId: eventToClone.bankAccountId || "",
     });
     setShowDuplicateModal(true);
@@ -191,6 +196,7 @@ export default function EventManagement() {
       formData.append("from", new Date(duplicateFormData.from).toISOString());
       formData.append("to", new Date(duplicateFormData.to).toISOString());
       formData.append("visible", duplicateFormData.visible);
+      formData.append("autoPromote", duplicateFormData.autoPromote.toString());
       formData.append("bankAccountId", duplicateFormData.bankAccountId || "");
 
       duplicateEventMutation(formData);
@@ -201,16 +207,30 @@ export default function EventManagement() {
   }
 
   function handleFormChange(
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    > | { target: { name: string; value: string } },
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
     formType: "duplicate" | "edit",
   ) {
-    const { name, value } = e.target;
+    const target = e.target as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+    const { name } = target;
+    
     if (formType === "duplicate") {
-      setDuplicateFormData((prev) => ({ ...prev, [name]: name === "visible" ? value : value }));
+      setDuplicateFormData((prev) => ({ 
+        ...prev, 
+        [name]: name === "autoPromote" 
+          ? (target as HTMLInputElement).checked ?? false 
+          : name === "visible" 
+          ? target.value 
+          : target.value
+      }));
     } else {
-      setEditFormData((prev) => ({ ...prev, [name]: name === "visible" ? value : value }));
+      setEditFormData((prev) => ({ 
+        ...prev, 
+        [name]: name === "autoPromote" 
+          ? (target as HTMLInputElement).checked ?? false 
+          : name === "visible" 
+          ? target.value 
+          : target.value
+      }));
     }
   }
 
@@ -905,6 +925,20 @@ export default function EventManagement() {
                 </div>
               </div>
 
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="duplicateAutoPromote"
+                  name="autoPromote"
+                  checked={duplicateFormData.autoPromote}
+                  onChange={(e) => handleFormChange(e, "duplicate")}
+                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <label htmlFor="duplicateAutoPromote" className="text-sm font-medium text-gray-700">
+                  Auto-promote from waiting list (default: off)
+                </label>
+              </div>
+
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">
@@ -945,7 +979,7 @@ export default function EventManagement() {
                 </label>
                 <BankAccountSelector
                   selectedAccountId={duplicateFormData.bankAccountId || ""}
-                  onAccountChange={(id) => handleFormChange({ target: { name: "bankAccountId", value: id } }, "duplicate")}
+                  onAccountChange={(id) => setDuplicateFormData((prev) => ({ ...prev, bankAccountId: id }))}
                 />
               </div>
             </div>
@@ -1072,6 +1106,20 @@ export default function EventManagement() {
                 </div>
               </div>
 
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="editAutoPromote"
+                  name="autoPromote"
+                  checked={editFormData.autoPromote}
+                  onChange={(e) => handleFormChange(e, "edit")}
+                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <label htmlFor="editAutoPromote" className="text-sm font-medium text-gray-700">
+                  Auto-promote from waiting list (default: off)
+                </label>
+              </div>
+
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700">
@@ -1111,7 +1159,7 @@ export default function EventManagement() {
                 </label>
                 <BankAccountSelector
                   selectedAccountId={editFormData.bankAccountId || ""}
-                  onAccountChange={(id) => handleFormChange({ target: { name: "bankAccountId", value: id } }, "edit")}
+                  onAccountChange={(id) => setEditFormData((prev) => ({ ...prev, bankAccountId: id }))}
                 />
               </div>
             </div>

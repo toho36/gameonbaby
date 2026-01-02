@@ -23,6 +23,7 @@ type EventResponse = {
   capacity: number;
   created_at: Date;
   visible: boolean;
+  autoPromote: boolean;
 }[];
 
 export const GET = withErrorHandling(
@@ -60,6 +61,7 @@ export const GET = withErrorHandling(
         capacity: true,
         created_at: true,
         visible: true,
+        autoPromote: true,
       },
     });
 
@@ -83,6 +85,7 @@ export const GET = withErrorHandling(
       capacity: event.capacity,
       created_at: event.created_at,
       visible: event.visible,
+      autoPromote: event.autoPromote,
     }));
 
     return NextResponse.json(response);

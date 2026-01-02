@@ -24,6 +24,7 @@ export default function CreateEventPage() {
     from: "",
     to: "",
     visible: true,
+    autoPromote: false,
     manualDateInput: false,
   });
 
@@ -244,6 +245,20 @@ export default function CreateEventPage() {
               <option value="true">Visible</option>
               <option value="false">Hidden</option>
             </select>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="autoPromote"
+              name="autoPromote"
+              defaultChecked={formData.autoPromote}
+              onChange={(e) => setFormData((prev) => ({ ...prev, autoPromote: e.target.checked }))}
+              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            <label htmlFor="autoPromote" className="text-sm font-medium text-gray-700">
+              Auto-promote from waiting list (default: off)
+            </label>
           </div>
 
           <div className="flex justify-end space-x-4">

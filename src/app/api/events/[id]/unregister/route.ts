@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "~/lib/db";
 import { getCurrentUser } from "~/server/service/userService";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { sendWaitingListPromotionEmail } from "~/server/service/emailService";
 import {
   recordRegistrationHistory,
@@ -28,8 +28,8 @@ export async function POST(
 
     const eventId = params.id;
 
-    // Check if event exists
-    const event = await prisma.event.findUnique({
+    // Check if event exists and get initial event data
+    let event = await prisma.event.findUnique({
       where: {
         id: eventId,
       },
@@ -49,6 +49,9 @@ export async function POST(
         { status: 400 },
       );
     }
+
+    // Store the event title for later use
+    const eventTitle = event.title;
 
     // Check if user is registered for this event
     // Only search by email if it exists
@@ -96,7 +99,7 @@ export async function POST(
           phoneNumber: waitingListEntry.phone_number,
           actionType: RegistrationAction.UNREGISTERED,
           userId: user.id,
-          eventTitle: event.title,
+          eventTitle: eventTitle,
         });
 
         return NextResponse.json({
@@ -128,10 +131,20 @@ export async function POST(
       phoneNumber: registration.phone_number,
       actionType: RegistrationAction.UNREGISTERED,
       userId: user.id,
-      eventTitle: event.title,
+      eventTitle: eventTitle,
     });
 
-    // Check if there's anyone on the waiting list for this event
+    // Get event details for the email and capacity check
+    event = await prisma.event.findUnique({
+      where: { id: eventId },
+      include: {
+        _count: {
+          select: { Registration: true },
+        },
+      },
+    });
+
+    // Check if there's anyone on the waiting list for this event and auto-promotion is enabled
     const waitingListEntry = await prisma.waitingList.findFirst({
       where: {
         event_id: eventId,
@@ -141,25 +154,14 @@ export async function POST(
       },
     });
 
-    if (waitingListEntry) {
-      // Get event details for the email and capacity check
-      const event = await prisma.event.findUnique({
-        where: { id: eventId },
-        include: {
-          _count: {
-            select: { Registration: true },
-          },
-        },
-      });
-
+    if (event && event.autoPromote && waitingListEntry) {
       // Check if we have space to promote
-      if (
-        event &&
-        (event._count?.Registration || 0) < event.capacity
-      ) {
-
-      // Move the first person from the waiting list to registrations
-      const newRegistration = await prisma.registration.create({
+      const eventWithCount = event as Prisma.EventGetPayload<{
+        include: { _count: { select: { Registration: true } } };
+      }>;
+      if ((eventWithCount._count?.Registration || 0) < event.capacity) {
+        // Move the first person from the waiting list to registrations
+        const newRegistration = await prisma.registration.create({
         data: {
           event_id: eventId,
           first_name: waitingListEntry.first_name,

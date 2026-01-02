@@ -36,6 +36,7 @@ export async function createEvent(formData: FormData) {
         from: fromDate,
         to: toDate,
         created_at: new Date(),
+        autoPromote: formData.get("autoPromote") === "true",
       },
     });
 
@@ -75,6 +76,7 @@ export async function updateEvent(id: string, formData: FormData) {
       place: (formData.get("place") as string) ?? null,
       visible: formData.get("visible") === "true",
       capacity: Number(formData.get("capacity") ?? 0),
+      autoPromote: formData.get("autoPromote") === "true",
     };
 
     // Only update dates if they are provided in the form
@@ -114,6 +116,7 @@ export async function updateEvent(id: string, formData: FormData) {
     });
 
     // Check if we have available spots and people on waiting list
+    // Only auto-promote if the event has autoPromote enabled
     const currentCapacity = updateData.capacity as number;
     if (currentCapacity > 0) {
       const registrationCount = await prisma.registration.count({
@@ -122,7 +125,7 @@ export async function updateEvent(id: string, formData: FormData) {
 
       const availableSpots = currentCapacity - registrationCount;
 
-      if (availableSpots > 0) {
+      if (availableSpots > 0 && existingEvent.autoPromote) {
         // Get people from waiting list
         const waitingListCandidates = await prisma.waitingList.findMany({
           where: { event_id: id },
@@ -258,6 +261,7 @@ export async function duplicateEvent(id: string, bankAccountId?: string) {
         to: toDate,
         created_at: new Date(),
         visible: existingEvent.visible,
+        autoPromote: false, // Default to false when duplicating
         bankAccountId: typeof bankAccountId !== 'undefined' ? bankAccountId : existingEvent.bankAccountId ?? null,
       },
     });
@@ -409,6 +413,7 @@ export async function deleteRegistration(id: string) {
     });
 
     // Check if there's anyone on the waiting list for this event
+    // Only auto-promote if the event has autoPromote enabled
     const waitingListEntry = await prisma.waitingList.findFirst({
       where: {
         event_id: registration.event_id,
@@ -418,7 +423,7 @@ export async function deleteRegistration(id: string) {
       },
     });
 
-    if (waitingListEntry) {
+    if (waitingListEntry && registration.event?.autoPromote) {
       // Move the first person from the waiting list to registrations
       const newRegistration = await prisma.registration.create({
         data: {

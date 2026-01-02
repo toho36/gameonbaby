@@ -177,8 +177,8 @@ export function getRegistrationHistoryTableExists(): boolean | null {
 /**
  * Set registration history table existence (call once at startup)
  */
-export function setRegistrationHistoryTableExists(exists: boolean): void {
-  cache.set(CacheKeys.registrationHistoryExists(), exists, CACHE_TTL.REGISTRATION_HISTORY_EXISTS);
+export function setRegistrationHistoryTableExists(exists: boolean | null): void {
+  cache.set(CacheKeys.registrationHistoryExists(), exists ?? false, CACHE_TTL.REGISTRATION_HISTORY_EXISTS);
 }
 
 /**
@@ -242,4 +242,3 @@ export function clearAllCache(): void {
 
 // Export cache instance for advanced use cases
 export { cache };
-

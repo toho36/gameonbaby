@@ -8,6 +8,7 @@ export interface Event {
   from: string;
   to: string;
   visible: boolean;
+  autoPromote: boolean;
   _count: {
     Registration: number;
   };

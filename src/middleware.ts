@@ -75,12 +75,9 @@ export async function middleware(request: NextRequest) {
   }
 
   // If authenticated, sync user to database
-  const name =
-    `${kindeUser.given_name || ""} ${kindeUser.family_name || ""}`.trim();
-
   // OPTIMIZATION: Use cached sync from userService
   // This will cache user data and reduce database queries
-  syncKindeUser(kindeUser.id, kindeUser.email, name).catch(console.error);
+  syncKindeUser().catch(console.error);
 
   return NextResponse.next();
 }

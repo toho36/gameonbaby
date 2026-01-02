@@ -237,7 +237,12 @@ export async function DELETE(
 
       const eventCapacity = registration.event?.capacity || 0;
 
-      if (waitingListEntry && registrationCount < eventCapacity) {
+      // Only auto-promote if the event has autoPromote enabled
+      if (
+        registration.event?.autoPromote &&
+        waitingListEntry &&
+        registrationCount < eventCapacity
+      ) {
         // Move the first person from the waiting list to registrations
         const newRegistration = await tx.registration.create({
           data: {

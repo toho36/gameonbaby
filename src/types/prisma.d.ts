@@ -1,13 +1,10 @@
 import { PrismaClient } from "@prisma/client";
 
-// Extend the Prisma User type to include the custom fields
+// Extend the Prisma types to include custom fields
 declare global {
-  namespace PrismaJson {
-    interface User {
-      role: "USER" | "REGULAR" | "MODERATOR" | "ADMIN";
-      createdAt: Date;
-      updatedAt: Date;
-      kindeId?: string | null;
+  namespace Prisma {
+    namespace User {
+      export type role = "USER" | "REGULAR" | "MODERATOR" | "ADMIN";
     }
   }
 }

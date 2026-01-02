@@ -16,6 +16,7 @@ interface EventData {
   to: string;
   visible: boolean;
   capacity: number;
+  autoPromote: boolean;
 }
 
 export default function DuplicateEventPage({
@@ -225,7 +226,27 @@ export default function DuplicateEventPage({
             </div>
           </div>
 
-          {/* Rest of the form */}
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="autoPromote"
+              name="autoPromote"
+              value="true"
+              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            <label htmlFor="autoPromote" className="text-sm font-medium text-gray-700">
+              Auto-promote from waiting list (default: off)
+            </label>
+          </div>
+
+          <div className="flex justify-end space-x-3">
+            <Link href="/admin/events">
+              <Button variant="outline">Cancel</Button>
+            </Link>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Creating..." : "Duplicate Event"}
+            </Button>
+          </div>
         </form>
       </div>
     </div>

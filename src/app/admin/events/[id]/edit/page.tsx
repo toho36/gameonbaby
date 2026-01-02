@@ -14,6 +14,7 @@ interface Event {
   from: string;
   to: string;
   visible: boolean;
+  autoPromote: boolean;
 }
 
 function formatDateForInput(dateStr: string): string {
@@ -81,6 +82,7 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
     fromDisplay: "",
     toDisplay: "",
     visible: true,
+    autoPromote: false,
     manualDateInput: false,
   });
 
@@ -121,6 +123,7 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
             fromDisplay: fromDisplayFormat,
             toDisplay: toDisplayFormat,
             visible: data.event.visible,
+            autoPromote: data.event.autoPromote || false,
             manualDateInput: false,
           });
         }
@@ -417,6 +420,20 @@ export default function EditEventPage({ params }: { params: { id: string } }) {
                   <option value="true">Visible</option>
                   <option value="false">Hidden</option>
                 </select>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="autoPromote"
+                  name="autoPromote"
+                  value="true"
+                  defaultChecked={formData.autoPromote}
+                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <label htmlFor="autoPromote" className="text-sm font-medium text-gray-700">
+                  Auto-promote from waiting list
+                </label>
               </div>
 
               <div className="flex justify-end space-x-3">

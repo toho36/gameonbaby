@@ -103,7 +103,7 @@ export async function recordRegistrationHistory({
             AND table_name = 'RegistrationHistory'
           );
         `;
-        tableExists = (result as any)[0]?.exists;
+        tableExists = (result as any)[0]?.exists ?? false;
         setRegistrationHistoryTableExists(tableExists);
       }
 
@@ -153,7 +153,7 @@ export async function getRegistrationHistory(): Promise<
           AND table_name = 'RegistrationHistory'
         );
       `;
-      tableExists = (result as any)[0]?.exists;
+      tableExists = (result as any)[0]?.exists ?? false;
       setRegistrationHistoryTableExists(tableExists);
     }
 
@@ -208,7 +208,7 @@ export async function getEventRegistrationHistory(
           AND table_name = 'RegistrationHistory'
         );
       `;
-      tableExists = (result as any)[0]?.exists;
+      tableExists = (result as any)[0]?.exists ?? false;
       setRegistrationHistoryTableExists(tableExists);
     }
 

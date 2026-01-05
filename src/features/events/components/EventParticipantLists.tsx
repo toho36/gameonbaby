@@ -89,7 +89,13 @@ export default function EventParticipantLists({
     isModerator,
     isConnected,
     error,
-  } = useEventParticipants(eventId);
+  } = useEventParticipants(eventId, {
+    registrations: initialRegistrations,
+    waitingList: initialWaitingList,
+    registrationCount: initialRegCount,
+    waitingListCount: initialWaitingList.length,
+    capacity,
+  });
 
   // Get registration count from the global store
   const { initialize } = useEventRegistrationStore();

@@ -26,13 +26,23 @@ interface SSEData {
   message?: string;
 }
 
-export function useEventParticipants(eventId: string) {
-  const [registrations, setRegistrations] = useState<Participant[]>([]);
-  const [waitingList, setWaitingList] = useState<Participant[]>([]);
-  const [registrationCount, setRegistrationCount] = useState<number>(0);
-  const [waitingListCount, setWaitingListCount] = useState<number>(0);
-  const [capacity, setCapacity] = useState<number>(0);
-  const [isModerator, setIsModerator] = useState<boolean>(false);
+export function useEventParticipants(
+  eventId: string,
+  initialData?: {
+    registrations: Participant[];
+    waitingList: Participant[];
+    registrationCount: number;
+    waitingListCount: number;
+    capacity: number;
+    isModerator?: boolean;
+  }
+) {
+  const [registrations, setRegistrations] = useState<Participant[]>(initialData?.registrations || []);
+  const [waitingList, setWaitingList] = useState<Participant[]>(initialData?.waitingList || []);
+  const [registrationCount, setRegistrationCount] = useState<number>(initialData?.registrationCount || 0);
+  const [waitingListCount, setWaitingListCount] = useState<number>(initialData?.waitingListCount || 0);
+  const [capacity, setCapacity] = useState<number>(initialData?.capacity || 0);
+  const [isModerator, setIsModerator] = useState<boolean>(initialData?.isModerator || false);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,8 +72,8 @@ export function useEventParticipants(eventId: string) {
           switch (data.type) {
             case "participants:update":
               if (data.data) {
-                setRegistrations(data.data.registrations.slice(0, 20));
-                setWaitingList(data.data.waitingList.slice(0, 20));
+                setRegistrations(data.data.registrations);
+                setWaitingList(data.data.waitingList);
                 setRegistrationCount(data.data.registrationCount);
                 setWaitingListCount(data.data.waitingListCount);
                 setCapacity(data.data.capacity);

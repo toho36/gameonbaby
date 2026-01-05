@@ -76,7 +76,7 @@ export async function GET(
           select: { role: true },
         }).then(u => u?.role === "MODERATOR" || u?.role === "ADMIN") : false;
 
-        // Fetch participants (limited)
+        // Fetch participants
         const registrations = await prisma.registration.findMany({
           where: {
             event_id: params.id,
@@ -92,10 +92,9 @@ export async function GET(
             attended: isModerator,
           },
           orderBy: { created_at: "asc" },
-          take: 20,
         });
 
-        // Fetch waiting list (limited)
+        // Fetch waiting list
         const waitingList = await prisma.waitingList.findMany({
           where: { event_id: params.id },
           select: {
@@ -107,7 +106,6 @@ export async function GET(
             created_at: true,
           },
           orderBy: { created_at: "asc" },
-          take: 20,
         });
 
         // Send initial state

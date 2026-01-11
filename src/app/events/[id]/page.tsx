@@ -2,86 +2,11 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import prisma from "~/lib/db";
 import { RegistrationForm } from "~/features/registration";
-import {
-  EventParticipantLists,
-  CheckRegistrationStatus,
-  CapacityDisplay,
-} from "~/features/events";
-import { UserRole } from "@prisma/client";
-import {
-  getCurrentUser,
-  hasSpecialAccess,
-  isUserModerator,
-} from "~/server/service/userService";
-import {
-  getCachedEventDetails,
-  setCachedEventDetails,
-  getCachedWaitingList,
-  setCachedWaitingList,
-  invalidateEventCache,
-} from "~/lib/cache";
+import { EventParticipantLists, CapacityDisplay } from "~/features/events";
+import { hasSpecialAccess } from "~/server/service/userService";
 
-// OPTIMIZATION: Enable ISR (Incremental Static Regeneration)
-// Revalidate event pages every 30 seconds
 export const revalidate = 30;
 
-// Define Event interface to match the database schema
-interface EventData {
-  id: string;
-  title: string;
-  description: string | null;
-  price: number;
-  place: string | null;
-  from: Date;
-  to: Date;
-  created_at: Date;
-  visible: boolean;
-  capacity: number;
-  bankAccountId?: string | null;
-  Registration: Array<{
-    first_name: string;
-    last_name: string | null;
-    created_at: Date;
-  }>;
-  _count: {
-    Registration: number;
-    WaitingList: number;
-  };
-}
-
-// Interface for WaitingList entries from raw query
-interface WaitingListEntry {
-  first_name: string;
-  last_name: string | null;
-  created_at: Date;
-}
-
-// Interface for combined event data
-interface EventWithLists {
-  id: string;
-  title: string;
-  description: string | null;
-  price: number;
-  place: string | null;
-  from: Date;
-  to: Date;
-  created_at: Date;
-  visible: boolean;
-  capacity: number;
-  bankAccountId?: string | null;
-  _count: {
-    Registration: number;
-    WaitingList: number;
-  };
-  registrations: Array<{
-    first_name: string;
-    last_name: string | null;
-    created_at: Date;
-  }>;
-  waitingList: WaitingListEntry[];
-}
-
-// Interface for RegistrationForm component
 interface RegistrationFormEvent {
   id: string;
   title: string;
@@ -122,25 +47,11 @@ export default async function EventPage({
 }: {
   params: { id: string };
 }) {
-  // Check if user has special access to see hidden events
   const userHasSpecialAccess = await hasSpecialAccess();
-  // Check if user has permission to view participant details
-  const userCanViewParticipants = await isUserModerator();
 
-  // OPTIMIZATION: Check cache first for event details
-  let eventData: EventData | null = getCachedEventDetails<any>(params.id);
-
-  if (!eventData) {
-    console.log("Event details cache miss, querying database for:", params.id);
-    
-    // OPTIMIZATION: Only fetch registration data if user can view participants
-    // This saves 70-90% of queries for regular users
-    const shouldFetchParticipants = userCanViewParticipants;
-    
-    eventData = (await prisma.event.findUnique({
-      where: {
-        id: params.id,
-      },
+  const [eventData, waitingListData, waitingListCount] = await Promise.all([
+    prisma.event.findUnique({
+      where: { id: params.id },
       select: {
         id: true,
         title: true,
@@ -152,92 +63,40 @@ export default async function EventPage({
         to: true,
         visible: true,
         bankAccountId: true,
-        // Only fetch Registration data if user has permission
-        ...(shouldFetchParticipants ? {
-          Registration: {
-            orderBy: {
-              created_at: "asc",
-            },
-            select: {
-              first_name: true,
-              last_name: true,
-              created_at: true,
-            },
-          },
-        } : {}),
-        _count: {
-          select: {
-            Registration: true,
-          },
+        Registration: {
+          take: 50,
+          orderBy: { created_at: "asc" },
+          select: { first_name: true, last_name: true, created_at: true },
         },
+        _count: { select: { Registration: true } },
       },
-    })) as unknown as
-      | (Omit<EventData, "_count"> & {
-          _count: {
-            Registration: number;
-            WaitingList: number;
-          };
-        })
-      | null;
+    }),
+    prisma.waitingList.findMany({
+      where: { event_id: params.id },
+      take: 50,
+      orderBy: { created_at: "asc" },
+      select: { first_name: true, last_name: true, created_at: true },
+    }),
+    prisma.waitingList.count({ where: { event_id: params.id } }),
+  ]);
 
-    // OPTIMIZATION: Cache event details for future requests
-    if (eventData) {
-      setCachedEventDetails(params.id, eventData);
-    }
-  }
+  if (!eventData) notFound();
 
-  if (!eventData) {
-    notFound();
-  }
-
-  // Fetch waiting list entries with raw query
-  // OPTIMIZATION: Only fetch waiting list details if user can view participants
-  let waitingListEntries: WaitingListEntry[] = [];
-
-  if (userCanViewParticipants) {
-    try {
-      console.log(`Attempting to fetch waiting list for event ID: ${params.id}`);
-
-      // Simply use raw query with PascalCase table name as it should work after db reset
-      // OPTIMIZATION: Add LIMIT to prevent fetching excessive data
-      waitingListEntries = await prisma.$queryRaw<WaitingListEntry[]>`
-        SELECT first_name, last_name, created_at 
-        FROM "WaitingList"
-        WHERE event_id = ${params.id}
-        ORDER BY created_at ASC
-        LIMIT 100
-      `;
-      console.log(
-        `Successfully fetched waiting list: ${waitingListEntries.length} entries`,
-      );
-    } catch (error) {
-      console.error("Error fetching waiting list:", error);
-      waitingListEntries = [];
-    }
-  }
-
-  // OPTIMIZATION: Get actual waiting list count from database
-  // This is more accurate than counting fetched entries
-  let waitingListCount = 0;
-  try {
-    const countResult = await prisma.$queryRaw<Array<{count: bigint}>>`
-      SELECT COUNT(*) as count
-      FROM "WaitingList"
-      WHERE event_id = ${params.id}
-    `;
-    waitingListCount = Number(countResult[0]?.count || 0);
-  } catch (error) {
-    console.error("Error counting waiting list entries:", error);
-    waitingListCount = waitingListEntries.length;
-  }
-
-  // Cast to our Event interface with registrations and waiting list
-  const event: EventWithLists = {
-    ...eventData,
+  const event = {
+    id: eventData.id,
+    title: eventData.title,
+    description: eventData.description,
+    price: eventData.price,
+    place: eventData.place,
+    from: eventData.from,
+    to: eventData.to,
+    visible: eventData.visible,
+    capacity: eventData.capacity,
+    bankAccountId: eventData.bankAccountId,
     registrations: eventData.Registration || [],
-    waitingList: waitingListEntries || [],
+    waitingList: waitingListData || [],
     _count: {
-      ...eventData._count,
+      Registration: eventData._count.Registration,
       WaitingList: waitingListCount,
     },
   };
@@ -248,15 +107,6 @@ export default async function EventPage({
   }
 
   const isEventInPast = new Date(event.to) < new Date();
-
-  // For regular users, filter out the participant data but keep the counts
-  const registrationsForComponent = userCanViewParticipants
-    ? event.registrations
-    : [];
-
-  const waitingListForComponent = userCanViewParticipants
-    ? event.waitingList
-    : [];
 
   return (
     <main className="min-h-screen bg-[#1a0a3a] px-4 py-6 md:py-8">
@@ -509,7 +359,6 @@ export default async function EventPage({
 
             {/* Show participant lists to everyone */}
             <EventParticipantLists
-              eventId={event.id}
               initialRegistrations={event.registrations}
               initialWaitingList={event.waitingList}
               initialRegCount={event._count.Registration}

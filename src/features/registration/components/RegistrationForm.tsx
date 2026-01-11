@@ -1,18 +1,18 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useKindeBrowserClient } from "@kinde-oss/kinde-auth-nextjs";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { RegistrationFormValues } from "~/features/registration/types";
+import type { RegistrationFormValues } from "~/features/registration/types";
 import { RegistrationFormSchema } from "~/features/registration/validation";
-import { Event } from "~/features/events/types";
+import type { Event } from "~/features/events/types";
 import { useEventRegistrationStore } from "~/stores/eventRegistrationStore";
-import useRegistrationStatus from "~/features/registration/hooks/useRegistrationStatus";
+import useRegistrationStatus, {
+  type Registration,
+} from "~/features/registration/hooks/useRegistrationStatus";
 
 // Custom hooks
 import usePaymentPreference from "~/features/registration/hooks/usePaymentPreference";
-import useUserProfile from "~/shared/hooks/useUserProfile";
 
 // Components
 import GuestView from "./GuestView";
@@ -21,29 +21,32 @@ import GuestRegistrationSuccess from "./GuestRegistrationSuccess";
 import AuthenticatedUserView from "./AuthenticatedUserView";
 import RegistrationSuccess from "./RegistrationSuccess";
 import WaitingListSuccess from "./WaitingListSuccess";
-import DuplicateRegistrationModal from "./DuplicateRegistrationModal";
 
 interface RegistrationFormProps {
   event: Event;
   eventId: string;
   eventDate: string;
+  onSuccess?: () => void;
 }
 
 export default function RegistrationForm({
   event,
   eventId,
   eventDate,
+  onSuccess,
 }: RegistrationFormProps) {
   const { user, isAuthenticated, isLoading } = useKindeBrowserClient();
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const [showGuestForm, setShowGuestForm] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [duplicateName, setDuplicateName] = useState("");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isNameError, setIsNameError] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [duplicateEmail, setDuplicateEmail] = useState("");
   const [paymentTypeSelected, setPaymentTypeSelected] =
     useState<string>("CARD");
-  const router = useRouter();
 
   // Initialize the store with the event registration count and capacity
   const { initialize } = useEventRegistrationStore();
@@ -62,19 +65,10 @@ export default function RegistrationForm({
   const { paymentPreference, setPaymentPreference, updatePaymentPreference } =
     usePaymentPreference();
 
-  const { isLoading: userProfileLoading, fetchUserProfile } =
-    useUserProfile(user);
-  const profileImage = user?.picture || null;
+  const profileImage = user?.picture ?? null;
 
   // Set up react-hook-form for guest registration
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setValue,
-    getValues,
-    reset,
-  } = useForm<RegistrationFormValues>({
+  const { setValue, reset } = useForm<RegistrationFormValues>({
     resolver: zodResolver(RegistrationFormSchema),
     defaultValues: {
       firstName: "",
@@ -119,18 +113,15 @@ export default function RegistrationForm({
 
   // Handler for successful registration
   const handleRegistrationSuccess = (
-    registration: any,
+    registration: Registration,
     qrCode: string | null = null,
   ) => {
     setUserRegistration(registration);
     setIsRegistered(true);
     setQrCodeUrl(qrCode);
-    console.log(
-      "Registration success with payment type:",
-      registration.paymentType,
-    );
     setPaymentTypeSelected(registration.paymentType || "QR");
     setShowGuestForm(false);
+    onSuccess?.();
   };
 
   // Handler for successful waiting list addition

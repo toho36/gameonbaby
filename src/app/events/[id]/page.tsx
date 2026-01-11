@@ -1,27 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import prisma from "~/lib/db";
-import { RegistrationForm } from "~/features/registration";
-import { EventParticipantLists, CapacityDisplay } from "~/features/events";
+import { EventPageContent, CapacityDisplay } from "~/features/events";
 import { hasSpecialAccess } from "~/server/service/userService";
 
 export const revalidate = 30;
-
-interface RegistrationFormEvent {
-  id: string;
-  title: string;
-  description: string | null;
-  price: number;
-  place: string | null;
-  capacity: number;
-  from: string;
-  to: string;
-  visible: boolean;
-  bankAccountId?: string | null;
-  _count: {
-    Registration: number;
-  };
-}
 
 function formatDate(dateStr: string | Date) {
   const date = new Date(dateStr);
@@ -105,8 +88,6 @@ export default async function EventPage({
   if (!event.visible && !userHasSpecialAccess) {
     notFound();
   }
-
-  const isEventInPast = new Date(event.to) < new Date();
 
   return (
     <main className="min-h-screen bg-[#1a0a3a] px-4 py-6 md:py-8">
@@ -307,62 +288,9 @@ export default async function EventPage({
               </>
             )}
 
-            {isEventInPast ? (
-              <div className="rounded-xl border border-white/20 bg-white/5 p-5 text-center backdrop-blur-sm">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="mx-auto mb-2 h-10 w-10 text-white/70"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <h3 className="mb-1 text-xl font-bold text-white">
-                  Event Completed
-                </h3>
-                <p className="text-white/80">
-                  Registration for this event is now closed.
-                </p>
-              </div>
-            ) : (
-              <>
-                <h2 className="mb-5 text-xl font-bold text-white">Register</h2>
-                <RegistrationForm
-                  event={
-                    {
-                      id: event.id,
-                      title: event.title,
-                      description: event.description,
-                      price: event.price,
-                      place: event.place,
-                      capacity: event.capacity,
-                      from: event.from.toISOString(),
-                      to: event.to.toISOString(),
-                      visible: event.visible,
-                      bankAccountId: event.bankAccountId,
-                      _count: {
-                        Registration: event._count.Registration,
-                      },
-                    } as RegistrationFormEvent
-                  }
-                  eventId={event.id}
-                  eventDate={formatDate(event.from)}
-                />
-              </>
-            )}
-
-            {/* Show participant lists to everyone */}
-            <EventParticipantLists
-              initialRegistrations={event.registrations}
-              initialWaitingList={event.waitingList}
-              initialRegCount={event._count.Registration}
-              capacity={event.capacity}
+            <EventPageContent
+              event={event}
+              formattedEventDate={formatDate(event.from)}
             />
           </div>
         </div>

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
-interface Registration {
+export interface Registration {
   id: string;
   firstName: string;
   lastName: string;
@@ -13,10 +13,10 @@ interface Registration {
   paid: boolean;
   paymentType: string;
   registrationDate: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-interface WaitingList {
+export interface WaitingList {
   id: string;
   firstName: string;
   lastName: string;
@@ -26,7 +26,17 @@ interface WaitingList {
   userId: string | null;
   paymentType: string;
   joinedAt: string;
-  [key: string]: any;
+  [key: string]: unknown;
+}
+
+interface RegistrationStatusResponse {
+  success: boolean;
+  registration: Registration | null;
+}
+
+interface WaitingListStatusResponse {
+  success: boolean;
+  waitingList: WaitingList | null;
 }
 
 export default function useRegistrationStatus(
@@ -43,45 +53,44 @@ export default function useRegistrationStatus(
   );
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (userId) {
-      // Only fetch if we have a user ID
-      checkUserRegistration();
-      checkUserWaitingList();
-    } else {
-      setIsLoading(false);
-    }
-  }, [eventId, userId]);
-
-  async function checkUserRegistration() {
+  const checkUserRegistration = useCallback(async () => {
     try {
       const response = await fetch(
         `/api/events/${eventId}/registration-status`,
       );
-      const data = await response.json();
+      const data = (await response.json()) as RegistrationStatusResponse;
       if (data.success && data.registration) {
         setUserRegistration(data.registration);
         setIsRegistered(true);
       }
-    } catch (error) {
+    } catch {
       // Handle error silently
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [eventId]);
 
-  async function checkUserWaitingList() {
+  const checkUserWaitingList = useCallback(async () => {
     try {
       const response = await fetch(`/api/events/${eventId}/waitinglist-status`);
-      const data = await response.json();
+      const data = (await response.json()) as WaitingListStatusResponse;
       if (data.success && data.waitingList) {
         setUserWaitingList(data.waitingList);
         setIsOnWaitingList(true);
       }
-    } catch (error) {
+    } catch {
       // Handle error silently
     }
-  }
+  }, [eventId]);
+
+  useEffect(() => {
+    if (userId) {
+      void checkUserRegistration();
+      void checkUserWaitingList();
+    } else {
+      setIsLoading(false);
+    }
+  }, [eventId, userId, checkUserRegistration, checkUserWaitingList]);
 
   const resetStatus = () => {
     setIsRegistered(false);

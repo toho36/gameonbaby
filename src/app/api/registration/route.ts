@@ -7,12 +7,17 @@ import * as registrationService from "~/server/service/registrationService";
 import { ApiError } from "~/utils/ApiError";
 import { withErrorHandling } from "~/utils/errorHandler";
 import { sendRegistrationEmail } from "~/server/service/emailService";
-import { generateQRCodeURL, generateQRCodeURLWithAccountId } from "~/utils/qrCodeUtils";
-import prisma from "~/lib/db";
 import {
-  getCachedEventDetails,
-  setCachedEventDetails,
-} from "~/lib/cache";
+  generateQRCodeURL,
+  generateQRCodeURLWithAccountId,
+} from "~/utils/qrCodeUtils";
+import prisma from "~/lib/db";
+import { getCachedEventDetails, setCachedEventDetails } from "~/lib/cache";
+import {
+  rateLimit,
+  getRateLimitHeaders,
+  rateLimitExceededHeaders,
+} from "~/utils/rateLimit";
 
 interface CreateRegistrationRequest {
   firstName: string;
@@ -34,6 +39,18 @@ interface CreateRegistrationResponse {
 
 export const POST = withErrorHandling(
   async (req: Request): Promise<NextResponse> => {
+    // Rate limiting check
+    const { allowed, resetTime } = rateLimit(req, "registration");
+    if (!allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Too many registration attempts. Please try again later.",
+        },
+        { status: 429, headers: rateLimitExceededHeaders() },
+      );
+    }
+
     console.log("📌 API ENTRY: /api/registration POST endpoint called");
     try {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -74,12 +91,12 @@ export const POST = withErrorHandling(
         try {
           // OPTIMIZATION: Check cache first to avoid redundant query
           let event = getCachedEventDetails<any>(request.eventId);
-          
+
           if (!event) {
             event = await prisma.event.findUnique({
               where: { id: request.eventId },
             });
-            
+
             // Cache for 30 seconds
             if (event) {
               setCachedEventDetails(request.eventId, event);
@@ -94,11 +111,14 @@ export const POST = withErrorHandling(
             });
 
             // Format time directly in Prague timezone (handles DST automatically)
-            const eventTime = `${new Date(event.from).toLocaleTimeString("cs-CZ", {
-              hour: "2-digit",
-              minute: "2-digit",
-              timeZone: "Europe/Prague",
-            })} - ${new Date(event.to).toLocaleTimeString("cs-CZ", {
+            const eventTime = `${new Date(event.from).toLocaleTimeString(
+              "cs-CZ",
+              {
+                hour: "2-digit",
+                minute: "2-digit",
+                timeZone: "Europe/Prague",
+              },
+            )} - ${new Date(event.to).toLocaleTimeString("cs-CZ", {
               hour: "2-digit",
               minute: "2-digit",
               timeZone: "Europe/Prague",
@@ -139,7 +159,7 @@ export const POST = withErrorHandling(
             console.error("Could not find event details for email");
             return NextResponse.json(
               { success: false, message: "Event not found" },
-              { status: 404 }
+              { status: 404 },
             );
           }
 
@@ -148,7 +168,10 @@ export const POST = withErrorHandling(
               ...registrationDto,
               qrCodeData: qrCodeUrl,
             },
-            { status: 201 },
+            {
+              status: 201,
+              headers: getRateLimitHeaders(4, Date.now() + 60000),
+            },
           );
         } catch (emailError) {
           console.error("Failed to send confirmation email:", emailError);
@@ -163,6 +186,9 @@ export const POST = withErrorHandling(
       throw error; // Re-throw to let the error handler handle it
     }
     // Fallback: should never reach here, but return a 500 if it does
-    return NextResponse.json({ success: false, message: "Unknown error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: "Unknown error" },
+      { status: 500 },
+    );
   },
 );

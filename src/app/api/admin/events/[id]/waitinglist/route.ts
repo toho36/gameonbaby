@@ -6,6 +6,10 @@ import {
   recordRegistrationHistory,
   RegistrationAction,
 } from "~/utils/registrationHistory";
+import {
+  generateQRCodeURL,
+  generateQRCodeURLWithAccountId,
+} from "~/utils/qrCodeUtils";
 
 // Define the DbUser interface
 interface DbUser {
@@ -313,6 +317,23 @@ export async function POST(
         timeZone: "Europe/Prague",
       });
 
+      // Generate QR code if payment type is QR or CARD
+      let qrCodeUrl: string | null = null;
+      if (event.bankAccountId) {
+        qrCodeUrl = generateQRCodeURLWithAccountId(
+          `${waitingListEntry.first_name} ${waitingListEntry.last_name}`,
+          formattedDate,
+          event.price,
+          event.bankAccountId,
+        );
+      } else {
+        qrCodeUrl = generateQRCodeURL(
+          `${waitingListEntry.first_name} ${waitingListEntry.last_name}`,
+          formattedDate,
+          event.price,
+        );
+      }
+
       await sendWaitingListPromotionEmail(
         waitingListEntry.email,
         waitingListEntry.first_name,
@@ -321,6 +342,8 @@ export async function POST(
         `${startTime} - ${endTime}`,
         event.place || "See event details online",
         waitingListEntry.payment_type,
+        qrCodeUrl,
+        event.price,
       );
     } catch (emailError) {
       console.error("Failed to send waiting list promotion email:", emailError);

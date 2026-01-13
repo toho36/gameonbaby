@@ -1,50 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-import prisma from "~/lib/db";
-import { syncKindeUser } from "~/server/service/userService";
 
 // Define paths where we don't need to check authentication
 const publicPaths = ["/", "/api/auth", "/login", "/register"];
-
-async function syncUser(
-  userId: string,
-  email: string | null | undefined,
-  name: string,
-) {
-  try {
-    // Check if user exists in our database
-    let user = await prisma.user.findFirst({
-      where: {
-        OR: [{ kindeId: userId }, { email: email || "" }],
-      },
-    });
-
-    // If not found, create new user
-    if (!user) {
-      await prisma.user.create({
-        data: {
-          kindeId: userId,
-          email: email || "",
-          name: name,
-          // @ts-ignore: Property 'role' does not exist
-          role: "USER",
-        },
-      });
-    }
-    // If found but doesn't have kindeId, update it
-    else if (user && !user.kindeId) {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          // @ts-ignore: Property 'kindeId' does not exist
-          kindeId: userId,
-        },
-      });
-    }
-  } catch (error) {
-    // Silently handle error
-  }
-}
 
 export async function middleware(request: NextRequest) {
   // Pass through public routes or auth routes
@@ -74,10 +32,9 @@ export async function middleware(request: NextRequest) {
     );
   }
 
-  // If authenticated, sync user to database
-  // OPTIMIZATION: Use cached sync from userService
-  // This will cache user data and reduce database queries
-  syncKindeUser().catch(console.error);
+  // If authenticated, user sync is handled lazily in userService
+  // syncKindeUser() removed to avoid DB query on every request
+  // The sync will happen on-demand when user data is actually needed
 
   return NextResponse.next();
 }

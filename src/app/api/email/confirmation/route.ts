@@ -28,7 +28,6 @@ export async function POST(req: Request) {
       subject: "GameOn Event Registration Confirmation",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
-          <img src="https://i.ibb.co/3BBgQf7/Game-On.png" alt="GameOn Logo" style="max-width: 200px; height: auto; margin: 0 auto; display: block;">
           <h2 style="text-align: center; color: #5a2ca0;">Registration Confirmation</h2>
           <p>Zdravíme ${firstName},</p>
           <p>Děkujeme za registraci na událost GameOn Volleyball, která se koná <strong>${eventDate}</strong> ve sportovní hale TJ JM Chodov, Mírového hnutí 2137.</p>

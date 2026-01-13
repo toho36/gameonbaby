@@ -10,18 +10,16 @@ interface CacheEntry<T> {
 
 class SimpleCache {
   private cache: Map<string, CacheEntry<any>> = new Map();
-  private cleanupInterval: NodeJS.Timeout;
 
   constructor() {
-    // Clean up expired entries every 5 minutes
-    this.cleanupInterval = setInterval(() => {
-      this.cleanup();
-    }, 5 * 60 * 1000);
+    // No interval-based cleanup in serverless environments
+    // Instead, we use lazy cleanup on get/set operations
   }
 
   /**
    * Get a value from cache
    * Returns null if expired or not found
+   * Performs lazy cleanup of expired entries
    */
   get<T>(key: string): T | null {
     const entry = this.cache.get(key);
@@ -38,8 +36,13 @@ class SimpleCache {
 
   /**
    * Set a value in cache with TTL in seconds
+   * Performs lazy cleanup with 10% probability to avoid performance impact
    */
   set<T>(key: string, value: T, ttlSeconds: number): void {
+    // Occasional lazy cleanup (10% chance) to avoid perf impact
+    if (Math.random() < 0.1) {
+      this.lazyCleanup();
+    }
     this.cache.set(key, {
       value,
       expiresAt: Date.now() + ttlSeconds * 1000,
@@ -61,9 +64,9 @@ class SimpleCache {
   }
 
   /**
-   * Clean up expired entries
+   * Clean up expired entries (lazy/occasional cleanup)
    */
-  private cleanup(): void {
+  private lazyCleanup(): void {
     const now = Date.now();
     for (const [key, entry] of this.cache.entries()) {
       if (now > entry.expiresAt) {
@@ -104,7 +107,7 @@ export const CacheKeys = {
   userRole: (userId: string) => `user:role:${userId}`,
   eventWithCount: (eventId: string) => `event:withCount:${eventId}`,
   registrationHistoryExists: () => `regHistory:exists`,
-  registrationHistory: (eventId?: string) => 
+  registrationHistory: (eventId?: string) =>
     eventId ? `regHistory:event:${eventId}` : `regHistory:all`,
   eventDetails: (eventId: string) => `event:details:${eventId}`,
   waitingList: (eventId: string) => `waitingList:${eventId}`,
@@ -144,7 +147,7 @@ export function setCachedRole(userId: string, role: string): void {
 export function invalidateUserCache(userId: string): void {
   const roleKey = CacheKeys.userRole(userId);
   cache.delete(roleKey);
-  
+
   // Also clear by ID and email patterns
   for (const key of cache.getStats().keys) {
     if (key.startsWith(`user:${userId}`)) {
@@ -164,7 +167,11 @@ export function getCachedEventWithCount<T>(eventId: string): T | null {
  * Set event with count in cache
  */
 export function setCachedEventWithCount<T>(eventId: string, event: T): void {
-  cache.set(CacheKeys.eventWithCount(eventId), event, CACHE_TTL.EVENT_WITH_COUNT);
+  cache.set(
+    CacheKeys.eventWithCount(eventId),
+    event,
+    CACHE_TTL.EVENT_WITH_COUNT,
+  );
 }
 
 /**
@@ -177,8 +184,14 @@ export function getRegistrationHistoryTableExists(): boolean | null {
 /**
  * Set registration history table existence (call once at startup)
  */
-export function setRegistrationHistoryTableExists(exists: boolean | null): void {
-  cache.set(CacheKeys.registrationHistoryExists(), exists ?? false, CACHE_TTL.REGISTRATION_HISTORY_EXISTS);
+export function setRegistrationHistoryTableExists(
+  exists: boolean | null,
+): void {
+  cache.set(
+    CacheKeys.registrationHistoryExists(),
+    exists ?? false,
+    CACHE_TTL.REGISTRATION_HISTORY_EXISTS,
+  );
 }
 
 /**
@@ -191,8 +204,15 @@ export function getCachedRegistrationHistory<T>(eventId?: string): T | null {
 /**
  * Set registration history in cache
  */
-export function setCachedRegistrationHistory<T>(history: T, eventId?: string): void {
-  cache.set(CacheKeys.registrationHistory(eventId), history, CACHE_TTL.REGISTRATION_HISTORY);
+export function setCachedRegistrationHistory<T>(
+  history: T,
+  eventId?: string,
+): void {
+  cache.set(
+    CacheKeys.registrationHistory(eventId),
+    history,
+    CACHE_TTL.REGISTRATION_HISTORY,
+  );
 }
 
 /**
@@ -220,7 +240,11 @@ export function getCachedWaitingList<T>(eventId: string): T | null {
  * Set waiting list in cache
  */
 export function setCachedWaitingList<T>(eventId: string, waitingList: T): void {
-  cache.set(CacheKeys.waitingList(eventId), waitingList, CACHE_TTL.WAITING_LIST);
+  cache.set(
+    CacheKeys.waitingList(eventId),
+    waitingList,
+    CACHE_TTL.WAITING_LIST,
+  );
 }
 
 /**

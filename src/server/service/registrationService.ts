@@ -14,6 +14,26 @@ import {
   invalidateEventCache,
 } from "~/lib/cache";
 
+const isDev = process.env.NODE_ENV === "development";
+
+function devLog(...args: unknown[]): void {
+  if (isDev) {
+    console.log(...args);
+  }
+}
+
+function devError(...args: unknown[]): void {
+  if (isDev) {
+    console.error(...args);
+  }
+}
+
+function devWarn(...args: unknown[]): void {
+  if (isDev) {
+    console.warn(...args);
+  }
+}
+
 // Extended Event type with count
 interface EventWithCount extends Event {
   _count?: {
@@ -43,9 +63,8 @@ interface RegistragionDto {
 export async function createRegistration(
   command: CreateRegistrationCommand,
 ): Promise<RegistragionDto> {
-  console.log("📌 SERVICE: Starting createRegistration with data:", {
+  devLog("📌 SERVICE: Starting createRegistration with data:", {
     ...command,
-    // Hide sensitive parts for logging
     email:
       command.email.slice(0, 3) +
       "***" +
@@ -53,13 +72,15 @@ export async function createRegistration(
   });
 
   try {
-    console.log("Looking up event with ID:", command.eventId);
-    
+    devLog("Looking up event with ID:", command.eventId);
+
     // Check cache first for event with count
-    let event: EventWithCount | null = getCachedEventWithCount<EventWithCount>(command.eventId);
-    
+    let event: EventWithCount | null = getCachedEventWithCount<EventWithCount>(
+      command.eventId,
+    );
+
     if (!event) {
-      console.log("Event cache miss, querying database");
+      devLog("Event cache miss, querying database");
       event = await prisma.event.findFirst({
         where: {
           id: command.eventId,
@@ -76,11 +97,11 @@ export async function createRegistration(
         setCachedEventWithCount(command.eventId, event);
       }
     } else {
-      console.log("Event cache hit");
+      devLog("Event cache hit");
     }
 
     if (!event) {
-      console.error(`Event not found with ID: ${command.eventId}`);
+      devError(`Event not found with ID: ${command.eventId}`);
       throw new ApiError(
         `The event ${command.eventId} was not found.`,
         404,
@@ -88,7 +109,7 @@ export async function createRegistration(
       );
     }
 
-    console.log("Event found:", {
+    devLog("Event found:", {
       id: event.id,
       title: event.title,
       capacity: event.capacity,
@@ -97,7 +118,7 @@ export async function createRegistration(
     });
 
     // Check for duplicate registration (same email AND same name)
-    console.log("Checking for duplicate registration with:", {
+    devLog("Checking for duplicate registration with:", {
       eventId: command.eventId,
       email:
         command.email.slice(0, 3) +
@@ -148,7 +169,7 @@ export async function createRegistration(
       ]);
 
       if (existingRegistration) {
-        console.log("Duplicate registration found!");
+        devLog("Duplicate registration found!");
         throw new ApiError(
           `There already exists a registration for ${command.firstName} ${command.lastName} with email ${command.email} for this event`,
           409,
@@ -157,7 +178,7 @@ export async function createRegistration(
       }
 
       if (existingWaitlistEntry) {
-        console.log("Duplicate waiting list entry found!");
+        devLog("Duplicate waiting list entry found!");
         throw new ApiError(
           `There already exists a waiting list entry for ${command.firstName} ${command.lastName} with email ${command.email} for this event`,
           409,
@@ -165,14 +186,14 @@ export async function createRegistration(
         );
       }
 
-      console.log(
+      devLog(
         "No duplicate registration found, proceeding with registration creation",
       );
     } catch (error) {
       if (error instanceof ApiError) {
         throw error;
       }
-      console.error("Error checking for duplicate registration:", error);
+      devError("Error checking for duplicate registration:", error);
       throw new ApiError(
         "Failed to check for existing registrations",
         500,
@@ -184,7 +205,7 @@ export async function createRegistration(
     const isEventFull = (event._count?.Registration || 0) >= event.capacity;
 
     if (isEventFull) {
-      console.log(
+      devLog(
         `Event is at capacity (${event._count?.Registration || 0}/${event.capacity}), adding to waiting list`,
       );
 
@@ -205,13 +226,13 @@ export async function createRegistration(
           },
         });
 
-      console.log(
-        "Waiting list entry created successfully with ID:",
-        waitingListEntry.id,
-      );
+        devLog(
+          "Waiting list entry created successfully with ID:",
+          waitingListEntry.id,
+        );
 
-      // OPTIMIZATION: Invalidate event cache so capacity check is fresh
-      invalidateEventCache(command.eventId);
+        // OPTIMIZATION: Invalidate event cache so capacity check is fresh
+        invalidateEventCache(command.eventId);
 
         // Record waiting list history
         try {
@@ -225,9 +246,9 @@ export async function createRegistration(
             actionType: RegistrationAction.ADDED_TO_WAITLIST,
             eventTitle: event.title,
           });
-          console.log("Waiting list history recorded successfully");
+          devLog("Waiting list history recorded successfully");
         } catch (historyError) {
-          console.warn(
+          devWarn(
             "Warning: Failed to record waiting list history:",
             historyError,
           );
@@ -245,7 +266,7 @@ export async function createRegistration(
           isWaitlisted: true,
         };
       } catch (error) {
-        console.error("Failed to create waiting list entry:", error);
+        devError("Failed to create waiting list entry:", error);
         throw new ApiError(
           "Failed to add to waiting list",
           500,
@@ -255,7 +276,7 @@ export async function createRegistration(
     }
 
     // Create the registration if event is not full
-    console.log("Creating new registration record...");
+    devLog("Creating new registration record...");
     let registration: Registration;
     try {
       registration = await prisma.registration.create({
@@ -271,7 +292,7 @@ export async function createRegistration(
           created_at: new Date(),
         },
       });
-      console.log(
+      devLog(
         "Registration record created successfully with ID:",
         registration.id,
       );
@@ -279,7 +300,7 @@ export async function createRegistration(
       // OPTIMIZATION: Invalidate event cache so capacity check is fresh
       invalidateEventCache(command.eventId);
     } catch (error) {
-      console.error("Failed to create registration record:", error);
+      devError("Failed to create registration record:", error);
       throw new ApiError(
         "Failed to create registration",
         500,
@@ -288,7 +309,7 @@ export async function createRegistration(
     }
 
     // Record registration history
-    console.log("Recording registration history...");
+    devLog("Recording registration history...");
     try {
       await recordRegistrationHistory({
         eventId: event.id,
@@ -300,34 +321,31 @@ export async function createRegistration(
         actionType: RegistrationAction.REGISTERED,
         eventTitle: event.title,
       });
-      console.log("Registration history recorded successfully");
+      devLog("Registration history recorded successfully");
     } catch (error) {
-      console.warn("Warning: Failed to record registration history:", error);
+      devWarn("Warning: Failed to record registration history:", error);
       // Don't throw error here, registration history is optional
     }
 
     // Handle payment data if needed
-    console.log(
-      "Checking if payment data is needed for type:",
-      command.paymentType,
-    );
+    devLog("Checking if payment data is needed for type:", command.paymentType);
     let paymentData = null;
     if (command.paymentType === PaymentType.CARD) {
       try {
-        console.log("Creating payment data for card payment...");
+        devLog("Creating payment data for card payment...");
         paymentData = await paymentService.createPayment({
           firstName: command.firstName,
           // lastName: command.lastName,
           price: event.price,
         });
-        console.log("Payment data created successfully");
+        devLog("Payment data created successfully");
       } catch (error) {
-        console.error("Error creating payment data:", error);
+        devError("Error creating payment data:", error);
         // Don't throw error, proceed with registration
       }
     }
 
-    console.log("Registration process completed successfully");
+    devLog("Registration process completed successfully");
     return {
       firstName: registration.first_name || "",
       lastName: registration.last_name ?? "",
@@ -339,7 +357,7 @@ export async function createRegistration(
       isWaitlisted: false,
     };
   } catch (error) {
-    console.error("Error in createRegistration service:", error);
+    devError("Error in createRegistration service:", error);
     throw error; // Re-throw to let the caller handle it
   }
 }

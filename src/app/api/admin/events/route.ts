@@ -51,15 +51,47 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch events with registration counts
-    const events = await prisma.event.findMany({
-      orderBy: { from: "desc" },
-      include: {
-        _count: {
-          select: { Registration: true },
-        },
-      },
-    });
+    // Parse pagination params (optional, defaults to fetching all for backward compatibility)
+    const searchParams = request.nextUrl.searchParams;
+    const pageParam = searchParams.get("page");
+    const limitParam = searchParams.get("limit");
+
+    // Only apply pagination if explicitly requested
+    const hasPagination = pageParam !== null || limitParam !== null;
+    const page = hasPagination
+      ? Math.max(1, parseInt(pageParam || "1", 10))
+      : 1;
+    const limit = hasPagination
+      ? Math.min(50, Math.max(1, parseInt(limitParam || "20", 10)))
+      : undefined; // undefined means fetch all
+    const skip = hasPagination && limit ? (page - 1) * limit : 0;
+
+    // Fetch events with registration counts and optional pagination
+    const [events, totalCount] = hasPagination
+      ? await Promise.all([
+          prisma.event.findMany({
+            skip,
+            take: limit,
+            orderBy: { from: "desc" },
+            include: {
+              _count: {
+                select: { Registration: true },
+              },
+            },
+          }),
+          prisma.event.count(),
+        ])
+      : [
+          await prisma.event.findMany({
+            orderBy: { from: "desc" },
+            include: {
+              _count: {
+                select: { Registration: true },
+              },
+            },
+          }),
+          0,
+        ];
 
     return NextResponse.json({
       success: true,
@@ -74,6 +106,14 @@ export async function GET(request: NextRequest) {
             Registration: _count.Registration,
           },
         };
+      }),
+      ...(hasPagination && {
+        pagination: {
+          page,
+          limit: limit!,
+          totalCount,
+          totalPages: Math.ceil(totalCount / limit!),
+        },
       }),
     });
   } catch (error) {
@@ -126,13 +166,21 @@ export async function POST(request: NextRequest) {
     const toString = formData.get("to") as string;
 
     // Convert datetime-local strings (interpreted as Prague time) to UTC
-    const { convertPragueTimeStringToUTC } = await import("~/utils/timezoneUtils");
-    const fromDate = fromString.includes("Z") || fromString.includes("+") || (fromString.includes("-") && fromString.length > 19)
-      ? new Date(fromString)
-      : convertPragueTimeStringToUTC(fromString);
-    const toDate = toString.includes("Z") || toString.includes("+") || (toString.includes("-") && toString.length > 19)
-      ? new Date(toString)
-      : convertPragueTimeStringToUTC(toString);
+    const { convertPragueTimeStringToUTC } = await import(
+      "~/utils/timezoneUtils"
+    );
+    const fromDate =
+      fromString.includes("Z") ||
+      fromString.includes("+") ||
+      (fromString.includes("-") && fromString.length > 19)
+        ? new Date(fromString)
+        : convertPragueTimeStringToUTC(fromString);
+    const toDate =
+      toString.includes("Z") ||
+      toString.includes("+") ||
+      (toString.includes("-") && toString.length > 19)
+        ? new Date(toString)
+        : convertPragueTimeStringToUTC(toString);
 
     // Create the event
     const newEvent = await prisma.event.create({

@@ -43,13 +43,6 @@ const WaitingListPromotionTemplate = ({
       </Preview>
       <Body style={main}>
         <Container style={container}>
-          <Img
-            src="https://gameon.baby/images/logo.png"
-            width="150"
-            height="150"
-            alt="Game On Baby Logo"
-            style={logo}
-          />
           <Heading style={h1}>You're In!</Heading>
 
           <Text style={text}>Hello {firstName},</Text>
@@ -189,11 +182,6 @@ const container = {
   margin: "0 auto",
   padding: "40px 30px",
   maxWidth: "600px",
-};
-
-const logo = {
-  margin: "0 auto 20px",
-  display: "block",
 };
 
 const h1 = {

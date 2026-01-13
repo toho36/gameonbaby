@@ -33,16 +33,6 @@ export default function EmailTemplate({
         backgroundColor: "#ffffff",
       }}
     >
-      <img
-        src="https://i.ibb.co/G4SS7RhD/gameoncrop.png"
-        alt="Game-on-logo"
-        style={{
-          maxWidth: "200px",
-          height: "auto",
-          margin: "0 auto 20px",
-          display: "block",
-        }}
-      />
 
       <div style={{ marginBottom: "30px" }}>
         <h1

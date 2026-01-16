@@ -104,9 +104,7 @@ export default function EventParticipantLists({
                     {reg.first_name} {reg.last_name}
                   </span>
                 </div>
-                <span className="text-sm text-white/70">
-                  {new Date(reg.created_at).toLocaleDateString("cs-CZ")}
-                </span>
+                {/* Date removed per UI-only change request */}
               </div>
             ))}
           </div>
@@ -165,9 +163,7 @@ export default function EventParticipantLists({
                     {entry.first_name} {entry.last_name}
                   </span>
                 </div>
-                <span className="text-sm text-white/70">
-                  {new Date(entry.created_at).toLocaleDateString("cs-CZ")}
-                </span>
+                {/* Date removed per UI-only change request */}
               </div>
             ))}
           </div>

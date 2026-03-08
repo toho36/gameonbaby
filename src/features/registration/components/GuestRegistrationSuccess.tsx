@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Event } from "~/features/events/types";
+import PaymentPolicyNotice from "./PaymentPolicyNotice";
 
 interface GuestRegistrationSuccessProps {
   event: Event;
@@ -19,7 +20,6 @@ export default function GuestRegistrationSuccess({
   paymentType = "QR",
 }: GuestRegistrationSuccessProps) {
   const isCashPayment = paymentType === "CASH";
-  const isQrPayment = paymentType === "QR" || paymentType === "CARD";
 
   return (
     <div className="rounded-xl border border-white/10 bg-gradient-to-br from-purple-900/40 to-indigo-900/40 p-6 shadow-xl backdrop-blur-lg">
@@ -58,6 +58,7 @@ export default function GuestRegistrationSuccess({
         {isCashPayment && (
           <div className="mt-4 rounded-lg bg-purple-500/20 p-3 text-white/90">
             <p>You've selected to pay with cash on site. No QR code needed.</p>
+            <PaymentPolicyNotice className="mt-3" />
           </div>
         )}
       </div>
@@ -74,6 +75,7 @@ export default function GuestRegistrationSuccess({
             Please make your payment of {event.price} Kč by scanning this QR
             code.
           </p>
+          <PaymentPolicyNotice className="mt-4 w-full max-w-md" />
         </div>
       )}
 

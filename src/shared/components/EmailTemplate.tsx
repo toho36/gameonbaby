@@ -109,6 +109,43 @@ export default function EmailTemplate({
 
       <div
         style={{
+          marginBottom: "30px",
+          padding: "20px",
+          borderRadius: "8px",
+          backgroundColor: "#f8f9fa",
+          textAlign: "left",
+        }}
+      >
+        <p
+          style={{
+            marginBottom: "12px",
+            fontSize: "18px",
+            fontWeight: "bold",
+            color: "#5a2ca0",
+          }}
+        >
+          Cancellation policy / Storno podmínky
+        </p>
+        <p style={{ marginBottom: "12px", lineHeight: "1.6" }}>
+          Pokud se potřebujete odhlásit, dejte nám prosím vědět na Instagramu
+          nebo na gameonvb.info@gmail.com nejpozději 24 hodin před akcí, ať
+          můžeme uvolněné místo nabídnout někomu dalšímu. Když nám dáte vědět
+          více než 24 hodin před akcí, můžeme vaši zaplacenou vstupenku převést
+          na další termín. Při pozdějším zrušení nebo pokud bez omluvy
+          nedorazíte, vstupenka propadá.
+        </p>
+        <p style={{ margin: 0, lineHeight: "1.6" }}>
+          If you need to cancel, please let us know on Instagram or at
+          gameonvb.info@gmail.com at least 24 hours before the event so we can
+          offer your reserved spot to someone else. If you contact us more than
+          24 hours before the event, we can move your paid ticket to the next
+          event. For later cancellations or no-shows without notice, the ticket
+          is forfeited.
+        </p>
+      </div>
+
+      <div
+        style={{
           borderTop: "1px solid #eee",
           paddingTop: "20px",
           marginTop: "20px",

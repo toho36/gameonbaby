@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import UnregisterButton from "./UnregisterButton";
-import { Event } from "~/features/events/types";
 import { toast } from "react-hot-toast";
+import { PaymentType } from "~/app/constant/paymentType";
+import { Event } from "~/features/events/types";
 import { useEventRegistrationStore } from "~/stores/eventRegistrationStore";
 import DuplicateRegistrationModal from "./DuplicateRegistrationModal";
-import { PaymentType } from "~/app/constant/paymentType";
+import PaymentPolicyNotice from "./PaymentPolicyNotice";
+import UnregisterButton from "./UnregisterButton";
 
 interface RegistrationSuccessProps {
   event: Event;
@@ -41,6 +42,7 @@ export default function RegistrationSuccess({
   const [friendQrCodeUrl, setFriendQrCodeUrl] = useState<string | null>(null);
 
   const { incrementRegistrationCount } = useEventRegistrationStore();
+  const isCashPayment = paymentPreference === "CASH";
 
   const downloadQRCode = () => {
     if (!qrCodeUrl) return;
@@ -252,6 +254,22 @@ export default function RegistrationSuccess({
                 </svg>
                 Save QR Code
               </button>
+              <PaymentPolicyNotice className="mt-4 w-full" />
+            </div>
+          </div>
+        )}
+
+        {isCashPayment && (
+          <div className="mb-6 w-full overflow-hidden rounded-xl border border-white/20 bg-white/10 p-6">
+            <div className="flex flex-col items-center text-center">
+              <h4 className="mb-3 text-lg font-bold text-white">
+                Cash Payment
+              </h4>
+              <p className="text-sm text-white/85">
+                You&apos;ve selected to pay with cash on site. No QR code is
+                needed.
+              </p>
+              <PaymentPolicyNotice className="mt-4 w-full" />
             </div>
           </div>
         )}
@@ -492,6 +510,7 @@ export default function RegistrationSuccess({
                       </svg>
                       Save QR Code
                     </button>
+                    <PaymentPolicyNotice className="mt-3 w-full" />
                   </div>
                 </div>
               )}

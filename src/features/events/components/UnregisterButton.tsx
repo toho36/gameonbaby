@@ -16,9 +16,9 @@ interface UnregisterButtonProps {
 const messages = {
   cs: {
     cutoffWarning:
-      "Odhlášení není možné méně než 24 hodin před akcí. Kontaktujte nás na IG nebo gameonvb.info@gmail.com. Účastníci, kteří se nedostaví bez omluvy, mohou být při další návštěvě účtováni.",
+      "Odhlášení už není možné méně než 24 hodin před akcí. Pokud nám dáte vědět více než 24 hodin před akcí, můžeme zaplacenou vstupenku přesunout na další akci. Při pozdějším zrušení nebo neúčasti vstupenka propadá, protože jste blokovali místo, které mohlo připadnout někomu dalšímu. Kontaktujte nás na IG nebo gameonvb.info@gmail.com.",
     policyInfo:
-      "Odhlásit se můžete nejpozději 24 hodin před akcí. Pozdější zrušení či neúčast bez omluvy může být zpoplatněna.",
+      "Když nám dáte vědět více než 24 hodin před akcí, můžeme zaplacenou vstupenku přesunout na další akci. Při pozdějším zrušení nebo neúčasti vstupenka propadá, protože jste blokovali místo, které mohlo připadnout někomu dalšímu.",
     tooLate: "Kontaktujte nás",
     unregister: "Odhlásit se",
     confirm: "Potvrdit",
@@ -31,9 +31,9 @@ const messages = {
   },
   en: {
     cutoffWarning:
-      "Unregistration is not available within 24 hours of the event. Contact us on IG or gameonvb.info@gmail.com. No-shows without notice may be charged a fee on the next visit.",
+      "Unregistration is no longer available within 24 hours of the event. If you let us know more than 24 hours before the event, we can move your paid ticket to the next event. Later cancellations or no-shows mean the ticket is forfeited because you reserved a spot that could have gone to someone else. Contact us on IG or gameonvb.info@gmail.com.",
     policyInfo:
-      "You can unregister up to 24 hours before the event. Late cancellation or no-shows may be charged a fee.",
+      "If you let us know more than 24 hours before the event, we can move your paid ticket to the next event. Later cancellations or no-shows mean the ticket is forfeited because you reserved a spot that could have gone to someone else.",
     tooLate: "Contact Us",
     unregister: "Unregister",
     confirm: "Confirm",

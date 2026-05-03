@@ -32,7 +32,7 @@ async function queryClips(extraParams: Record<string, string>): Promise<Clip[]> 
         apikey: YTCLIP_ANON_KEY,
         Authorization: `Bearer ${YTCLIP_ANON_KEY}`,
       },
-      next: { revalidate: 300 },
+      next: { revalidate: 1800 },
     });
 
     if (!res.ok) return [];

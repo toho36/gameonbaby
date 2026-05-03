@@ -3,6 +3,7 @@ import Script from "next/script";
 import prisma from "~/lib/db";
 import { Button } from "~/shared";
 import { EventList } from "~/features/events";
+import { HighlightsSection } from "~/features/highlights/HighlightsSection";
 import { hasSpecialAccess } from "~/server/service/userService";
 
 // OPTIMIZATION: Enable ISR (Incremental Static Regeneration)
@@ -85,6 +86,8 @@ export default async function HomePage() {
 
             <EventList events={upcomingEvents} />
           </section>
+
+          <HighlightsSection />
 
           <footer className="mt-16 border-t border-white/10 pb-6 pt-8 text-center text-white/70">
             <p className="mb-4">Follow us on social media</p>

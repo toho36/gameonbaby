@@ -15,14 +15,16 @@ interface Clip {
   likes_count: number;
 }
 
-async function fetchTopClips(): Promise<Clip[]> {
+async function queryClips(extraParams: Record<string, string>): Promise<Clip[]> {
   try {
     const url =
       `${YTCLIP_SUPABASE_URL}/rest/v1/clips?` +
       new URLSearchParams({
-        select: "id,video_id,video_title,clip_title,timestamp_seconds,likes_count",
+        select:
+          "id,video_id,video_title,clip_title,timestamp_seconds,likes_count",
         order: "likes_count.desc,created_at.desc",
         limit: "6",
+        ...extraParams,
       });
 
     const res = await fetch(url, {
@@ -38,6 +40,14 @@ async function fetchTopClips(): Promise<Clip[]> {
   } catch {
     return [];
   }
+}
+
+async function fetchTopClips(): Promise<Clip[]> {
+  // Try popular this week first; fall back to all-time if empty
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const weekly = await queryClips({ created_at: `gte.${weekAgo}` });
+  if (weekly.length > 0) return weekly;
+  return queryClips({});
 }
 
 function formatTimestamp(seconds: number): string {

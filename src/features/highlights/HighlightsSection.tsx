@@ -97,7 +97,7 @@ export async function HighlightsSection() {
             Be the first to share a highlight from a GameOn match
           </p>
           <Link
-            href={`${YTCLIP_WEB_URL}/how-to-download`}
+            href={`${YTCLIP_WEB_URL}/create-clips`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-block rounded-full bg-[hsl(280,100%,70%)] px-5 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"

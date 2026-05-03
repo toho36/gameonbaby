@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Button } from "~/shared";
 
 // ytclip Supabase project — anon key is safe to expose (public RLS read of gameon clips only)
 const YTCLIP_SUPABASE_URL = "https://kscxrmkfjdgnzdtmuvad.supabase.co";
@@ -80,13 +81,13 @@ export async function HighlightsSection() {
             Share your favourite GameOn moments — clips saved by the community
           </p>
         </div>
-        <Link
-          href={`${YTCLIP_WEB_URL}/`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="rounded-full border border-purple-400/50 bg-purple-800/30 px-4 py-2 text-sm text-white transition-colors hover:bg-purple-700/50"
-        >
-          View all clips →
+        <Link href={`${YTCLIP_WEB_URL}/`} target="_blank" rel="noopener noreferrer">
+          <Button
+            variant="outline"
+            className="px-3 py-1 text-sm text-white hover:bg-white/10"
+          >
+            View all clips
+          </Button>
         </Link>
       </div>
 

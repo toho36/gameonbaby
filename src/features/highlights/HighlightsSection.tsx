@@ -74,17 +74,22 @@ export async function HighlightsSection() {
 
   return (
     <section className="mx-auto mt-12 max-w-5xl">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold">Highlights & Moments</h2>
           <p className="mt-1 text-sm text-white/70">
             Share your favourite GameOn moments — clips saved by the community
           </p>
         </div>
-        <Link href={`${YTCLIP_WEB_URL}/`} target="_blank" rel="noopener noreferrer">
+        <Link
+          href={`${YTCLIP_WEB_URL}/`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="self-start sm:self-auto sm:shrink-0"
+        >
           <Button
             variant="outline"
-            className="px-3 py-1 text-sm text-white hover:bg-white/10"
+            className="whitespace-nowrap px-3 py-1 text-sm text-white hover:bg-white/10"
           >
             View all clips
           </Button>

@@ -193,7 +193,14 @@ export default function EmailTemplate({
           />
         </a>
         <p style={{ marginTop: "10px" }}>
-          <strong>Kontakt:</strong> 792 397 669
+          <strong>Kontakt:</strong>{" "}
+          <a href="https://www.instagram.com/gameon.vb" style={{ color: "#5a2ca0" }}>
+            Instagram
+          </a>{" "}
+          nebo{" "}
+          <a href="mailto:gameonvb.info@gmail.com" style={{ color: "#5a2ca0" }}>
+            gameonvb.info@gmail.com
+          </a>
         </p>
       </div>
     </div>

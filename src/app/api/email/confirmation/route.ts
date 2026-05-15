@@ -40,7 +40,7 @@ export async function POST(req: Request) {
             <a href="https://www.instagram.com/gameon.vb" target="_blank" style="text-decoration: none;">
               <img src="https://ci3.googleusercontent.com/meips/ADKq_NaXPVlF2XGjya2fUzgubUiw-IJofUPsh34YksURrU1JImhp00-dfyFUHn88T9MJp1x5-S4Vh4r7B3VMhWUugaMUsFmIiw=s0-d-e1-ft#https://i.alza.cz/Foto/ImgGalery/Image/ig_1.png" alt="Instagram" style="max-width: 50px; height: auto; display: inline-block; vertical-align: middle;">
             </a>
-            <p><strong>Kontakt:</strong> 792 397 669</p>
+            <p><strong>Kontakt:</strong> <a href="https://www.instagram.com/gameon.vb" style="color: #5a2ca0;">Instagram</a> nebo <a href="mailto:gameonvb.info@gmail.com" style="color: #5a2ca0;">gameonvb.info@gmail.com</a></p>
           </div>
         </div>
       `,

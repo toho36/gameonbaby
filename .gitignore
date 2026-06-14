@@ -46,3 +46,8 @@ yarn-error.log*
 
 # idea files
 .idea
+
+# local dev artifacts
+/.bg-shell/
+/.gsd/
+/unpaid-report.md

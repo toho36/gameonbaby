@@ -25,6 +25,7 @@ async function queryClips(extraParams: Record<string, string>): Promise<Clip[]> 
           "id,video_id,video_title,clip_title,timestamp_seconds,likes_count",
         order: "likes_count.desc,created_at.desc",
         limit: "6",
+        is_public: "eq.true",
         ...extraParams,
       });
 
